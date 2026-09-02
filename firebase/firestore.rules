@@ -41,14 +41,29 @@ service cloud.firestore {
     }
 
     // A suspended, pending or soft-deleted account can read and write nothing.
+    //
+    // The comparisons below are deliberately forgiving about how the document
+    // was written. The first admin has to be created by hand in the Firebase
+    // console, where it is very easy to save `deleted` as the STRING "false"
+    // rather than a boolean, or `role` as "Admin". A strict check turns either
+    // slip into a blanket "permission denied" with nothing to explain it.
+    //
+    // Being lenient here costs no security: anything that is not explicitly
+    // deleted counts as live, and an account is still only as privileged as the
+    // role an admin gave it.
+    function isDeleted() {
+      return userDoc().get('deleted', false) == true
+        || userDoc().get('deleted', false) == 'true';
+    }
+
     function isActive() {
       return userExists()
-        && userDoc().status == 'active'
-        && userDoc().get('deleted', false) == false;
+        && userDoc().get('status', '').lower() == 'active'
+        && !isDeleted();
     }
 
     function role() {
-      return isActive() ? userDoc().role : 'none';
+      return isActive() ? userDoc().get('role', 'none').lower() : 'none';
     }
 
     function isAdmin()   { return role() == 'admin'; }
