@@ -20,7 +20,13 @@ import {
   TOUCH_TARGET,
 } from '@/constants/theme';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'outlineLight'
+  | 'ghost'
+  | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
@@ -47,6 +53,13 @@ const VARIANT: Record<
   primary: { background: colors.accent, text: colors.textOnAccent, elevated: true },
   secondary: { background: colors.primary, text: colors.textInverse, elevated: true },
   outline: { background: colors.transparent, text: colors.primary, border: colors.borderStrong },
+  // For navy backgrounds (auth screens). `outline` uses navy text, which is
+  // invisible there — this is the same shape with inverted ink.
+  outlineLight: {
+    background: colors.transparent,
+    text: colors.textInverse,
+    border: 'rgba(255,255,255,0.45)',
+  },
   ghost: { background: colors.transparent, text: colors.primary },
   danger: { background: colors.danger, text: colors.textInverse, elevated: true },
 };

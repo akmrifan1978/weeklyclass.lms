@@ -154,7 +154,7 @@ export default function LoginScreen() {
                 onPress={() =>
                   router.push({ pathname: '/(auth)/register', params: { role } })
                 }
-                variant="outline"
+                variant="outlineLight"
                 size="sm"
               />
             </View>

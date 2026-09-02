@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '@/contexts/LanguageContext';
-import { APP_NAME, APP_TAGLINE } from '@/constants/app';
+import { APP_NAME } from '@/constants/app';
 import {
   brand,
   colors,
@@ -69,7 +69,7 @@ export default function SplashScreen() {
               {APP_NAME}
             </Text>
             <View style={styles.rule} />
-            <Text style={styles.tagline}>{APP_TAGLINE}</Text>
+            <Text style={styles.tagline}>{t('app.tagline')}</Text>
           </View>
 
           <View style={styles.roleBlock}>

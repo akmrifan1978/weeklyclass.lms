@@ -70,15 +70,25 @@ i18n
  * NOTE: on native, flipping `I18nManager.isRTL` only takes full effect after an
  * app reload. `LanguageProvider` handles prompting the user; the returned flag
  * says whether a restart is needed.
+ *
+ * Pass `{ persist: false }` when restoring at boot — see the comment below.
  */
-export async function applyLanguage(code: LanguageCode): Promise<{ needsRestart: boolean }> {
+export async function applyLanguage(
+  code: LanguageCode,
+  options: { persist?: boolean } = {}
+): Promise<{ needsRestart: boolean }> {
   await i18n.changeLanguage(code);
   const rtl = isRTL(code);
 
-  try {
-    await AsyncStorage.setItem(STORAGE_KEYS.language, code);
-  } catch {
-    // Storage is best-effort; the session language still changes.
+  // Only an explicit choice is written back. Applying the language at boot must
+  // NOT persist, or a transient read failure would fall back to the device
+  // locale and then overwrite the preference the user actually chose.
+  if (options.persist !== false) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.language, code);
+    } catch {
+      // Storage is best-effort; the session language still changes.
+    }
   }
 
   if (Platform.OS === 'web') {

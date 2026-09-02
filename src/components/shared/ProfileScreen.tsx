@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
-import { APP_NAME, APP_TAGLINE } from '@/constants/app';
+import { APP_NAME } from '@/constants/app';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { friendlyMessage } from '@/utils/errors';
 import { humanise } from '@/utils/format';
@@ -327,7 +327,7 @@ export function ProfileScreen() {
 
         <View style={styles.about}>
           <Text style={styles.aboutName}>{APP_NAME}</Text>
-          <Text style={styles.aboutTagline}>{APP_TAGLINE}</Text>
+          <Text style={styles.aboutTagline}>{t('app.tagline')}</Text>
           <Text style={styles.aboutVersion}>{t('profile.version')} 1.0.0</Text>
         </View>
       </Screen>

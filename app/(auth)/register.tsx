@@ -274,7 +274,7 @@ export default function RegisterScreen() {
           <Button
             label={t('common.back')}
             onPress={() => router.replace('/')}
-            variant="outline"
+            variant="outlineLight"
             style={{ marginTop: spacing.xxl }}
           />
         </View>
@@ -374,7 +374,7 @@ export default function RegisterScreen() {
               }}
               error={errors.country}
               placeholder={
-                countryOptions.length ? undefined : t('empty.nothingHere')
+                countryOptions.length ? undefined : t('empty.noCountriesYet')
               }
               searchable
               required

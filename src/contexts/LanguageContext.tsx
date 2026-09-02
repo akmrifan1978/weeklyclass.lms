@@ -40,7 +40,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const stored = await loadStoredLanguage();
       if (cancelled) return;
-      await applyLanguage(stored);
+      // Restoring is not a choice, so it must not overwrite what is stored.
+      await applyLanguage(stored, { persist: false });
       setLanguageState(stored);
       setReady(true);
 
