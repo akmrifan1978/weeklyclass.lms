@@ -90,6 +90,7 @@
     "emailOrUsername": "Email or username",
     "email": "Email",
     "username": "Username",
+    "usernameFromMobileHint": "Your mobile number is used unless you type a different username.",
     "password": "Password",
     "confirmPassword": "Confirm password",
     "fullName": "Full name",

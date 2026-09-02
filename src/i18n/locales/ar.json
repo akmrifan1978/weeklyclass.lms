@@ -90,6 +90,7 @@
     "emailOrUsername": "البريد الإلكتروني أو اسم المستخدم",
     "email": "البريد الإلكتروني",
     "username": "اسم المستخدم",
+    "usernameFromMobileHint": "سيُستخدم رقم جوالك ما لم تكتب اسم مستخدم آخر.",
     "password": "كلمة المرور",
     "confirmPassword": "تأكيد كلمة المرور",
     "fullName": "الاسم الكامل",

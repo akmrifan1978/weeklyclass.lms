@@ -51,6 +51,17 @@ interface FormState {
   classId: string;
 }
 
+/**
+ * Turns a typed mobile number into a legal username: usernames allow only
+ * [a-z0-9._-], so "+94 77 123 4567" becomes "94771234567". Returns '' when the
+ * result would be too short to be valid, so the field simply stays empty rather
+ * than showing a "too short" error while someone is still typing.
+ */
+function usernameFromMobile(mobile: string): string {
+  const digits = mobile.replace(/[^0-9]/g, '');
+  return digits.length >= 4 ? digits.slice(0, 24) : '';
+}
+
 const EMPTY: FormState = {
   fullName: '',
   username: '',
@@ -82,6 +93,9 @@ export default function RegisterScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<{ id: string; pending: boolean } | null>(null);
+  // Until someone edits the username themselves, it mirrors their mobile
+  // number — that is what most people here expect to sign in with.
+  const [usernameEdited, setUsernameEdited] = useState(false);
 
   const [countries, setCountries] = useState<Country[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -336,8 +350,12 @@ export default function RegisterScreen() {
             <TextField
               label={t('auth.username')}
               value={form.username}
-              onChangeText={(v) => set('username', v.toLowerCase().replace(/\s/g, ''))}
+              onChangeText={(v) => {
+                setUsernameEdited(true);
+                set('username', v.toLowerCase().replace(/\s/g, ''));
+              }}
               error={errors.username}
+              hint={usernameEdited ? undefined : t('auth.usernameFromMobileHint')}
               icon="at-outline"
               autoCapitalize="none"
               autoCorrect={false}
@@ -355,7 +373,10 @@ export default function RegisterScreen() {
             <TextField
               label={t('auth.mobile')}
               value={form.mobile}
-              onChangeText={(v) => set('mobile', v)}
+              onChangeText={(v) => {
+                set('mobile', v);
+                if (!usernameEdited) set('username', usernameFromMobile(v));
+              }}
               error={errors.mobile}
               icon="call-outline"
               keyboardType="phone-pad"
