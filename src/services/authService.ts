@@ -86,6 +86,20 @@ export async function login(identifier: string, password: string): Promise<Login
     lastLoginAt: serverTimestamp(),
   }).catch(() => undefined);
 
+  // Self-heal the username index. An account created straight in the Firebase
+  // console — which is how the very first admin has to be made — has a profile
+  // but no `usernames/{username}` row, so signing in by username or mobile
+  // number silently fails for it. Signing in by email once repairs that.
+  // Fire-and-forget: it must never delay or break a successful login.
+  if (profile.username) {
+    void claimIdentity({
+      username: profile.username,
+      email: profile.email,
+      uid: profile.uid,
+      role: profile.role,
+    }).catch(() => undefined);
+  }
+
   await audit.log({
     actor: profile,
     action: 'LOGIN',
