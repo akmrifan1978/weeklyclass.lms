@@ -1,0 +1,89 @@
+{
+  "expo": {
+    "name": "WeeklyClass LMS",
+    "slug": "weeklyclass-lms",
+    "scheme": "weeklyclass",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "backgroundColor": "#041E4A",
+    "primaryColor": "#ED5B03",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#041E4A"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.weeklyclass.lms",
+      "buildNumber": "1",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
+        "NSPhotoLibraryUsageDescription": "WeeklyClass LMS needs photo access so you can set a profile picture and upload study materials.",
+        "NSCameraUsageDescription": "WeeklyClass LMS needs camera access so you can take a profile picture."
+      }
+    },
+    "android": {
+      "package": "com.weeklyclass.lms",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#041E4A"
+      },
+      "permissions": ["NOTIFICATIONS", "READ_EXTERNAL_STORAGE", "CAMERA"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "WeeklyClass LMS",
+      "shortName": "WeeklyClass",
+      "description": "Empowering Islamic Learning Through Technology",
+      "themeColor": "#092F6B",
+      "backgroundColor": "#041E4A",
+      "lang": "en"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-localization",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#041E4A",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#ED5B03",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "WeeklyClass LMS needs photo access so you can set a profile picture and upload study materials."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native builds
+/ios
+/android
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Environment — NEVER commit real credentials
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Firebase service accounts / admin credentials
+# Firebase service account keys — these ARE secrets, unlike the web API key.
+*serviceAccount*.json
+*service-account*.json
+*-firebase-adminsdk-*.json
+firebase-adminsdk*.json
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Build & tooling
+.vercel
+.turbo
+coverage/
+*.tsbuildinfo
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-error.log*

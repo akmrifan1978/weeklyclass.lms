@@ -1,0 +1,143 @@
+rules_version = '2';
+
+// =============================================================================
+// WeeklyClass LMS — Cloud Storage Security Rules
+// =============================================================================
+//
+// IMPORTANT — read this before assuming these rules are weaker than Firestore's.
+//
+// Storage rules CANNOT read Firestore. There is no way here to ask "does this
+// user hold UPLOAD_MATERIAL?", because that flag lives in `users/{uid}`.
+// Role-based Storage rules therefore require Firebase Auth **custom claims**,
+// and claims can only be set by the Admin SDK — i.e. a script run with a
+// service account, or a Cloud Function (Blaze plan).
+//
+// So this project uses a two-layer model that is honest about that limit:
+//
+//   Layer 1 (here)      — authentication, path ownership, MIME type, size caps.
+//   Layer 2 (Firestore) — the real permission check.
+//
+// A file only becomes *discoverable* when a document in `materials`, `videos`,
+// `articles` or `users` points at its URL, and creating that document is gated
+// by the permission rules in firestore.rules. A signed-in student could push a
+// stray 20 MB PDF into `materials/`, but nobody would ever see it, and the
+// audit log would carry no record of a material being created.
+//
+// TO GET TRUE ROLE ENFORCEMENT HERE: run `node scripts/set-claims.js` to mirror
+// each user's role into a custom claim, then swap `isSignedIn()` for
+// `isStaff()` in the material/thumbnail/article blocks below. `isStaff()` is
+// defined and already used for `branding/`, so the change is one word per rule.
+// See docs/SECURITY.md for the full rationale and the Cloud Function that
+// automates claim-setting once billing is enabled.
+//
+// Video and audio are deliberately NOT uploadable. The app stores URLs and
+// plays from YouTube / Vimeo / any direct link, because media files would
+// exhaust both the 5 GB storage quota and the 1 GB/day download allowance of
+// the free Spark plan almost immediately.
+// =============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // --- Helpers ------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Populated only once custom claims have been set (see the note above).
+    // Until then this is false for everyone, which is why `branding/` is the
+    // one path that stays locked down by default.
+    function role() {
+      return isSignedIn() ? request.auth.token.get('role', 'none') : 'none';
+    }
+
+    function isAdmin() { return role() == 'admin'; }
+    function isStaff() { return role() == 'admin' || role() == 'teacher'; }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function underBytes(limit) {
+      return request.resource.size < limit;
+    }
+
+    // What a person may upload as study material. Executables, archives and
+    // anything unrecognised are excluded by omission.
+    function isAllowedDocument() {
+      return request.resource.contentType.matches('image/.*')
+          || request.resource.contentType.matches('audio/.*')
+          || request.resource.contentType.matches('text/plain')
+          || request.resource.contentType in [
+               'application/pdf',
+               'application/msword',
+               'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+               'application/vnd.ms-excel',
+               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+               'application/vnd.ms-powerpoint',
+               'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+             ];
+    }
+
+    // --- Profile photos -----------------------------------------------------
+    //
+    // Genuinely owner-scoped: the path carries the uid, so no Firestore lookup
+    // is needed and this rule is as strong as its Firestore counterpart.
+
+    match /avatars/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
+                   && (request.auth.uid == uid || isAdmin())
+                   && isImage()
+                   && underBytes(5 * 1024 * 1024);
+      allow delete: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // --- Study materials ----------------------------------------------------
+    //
+    // `scope` is a classId, or "shared" for material offered to everyone.
+    // Swap `isSignedIn()` for `isStaff()` once claims are set.
+
+    match /materials/{scope}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
+                   && isAllowedDocument()
+                   && underBytes(20 * 1024 * 1024);
+      allow delete: if isStaff() || isAdmin();
+    }
+
+    // --- Content imagery ----------------------------------------------------
+
+    match /thumbnails/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() && isImage() && underBytes(5 * 1024 * 1024);
+      allow delete: if isStaff();
+    }
+
+    match /articles/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() && isImage() && underBytes(5 * 1024 * 1024);
+      allow delete: if isStaff();
+    }
+
+    // --- Branding -----------------------------------------------------------
+    //
+    // World readable because the splash screen renders the logo before anyone
+    // signs in. Writing requires a genuine admin claim — this path is the one
+    // that would let someone deface the app for every user, so it stays shut
+    // until claims are configured.
+
+    match /branding/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && isImage() && underBytes(5 * 1024 * 1024);
+      allow delete: if isAdmin();
+    }
+
+    // --- Default deny -------------------------------------------------------
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

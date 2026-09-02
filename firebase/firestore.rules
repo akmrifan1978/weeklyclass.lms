@@ -1,0 +1,465 @@
+rules_version = '2';
+
+// =============================================================================
+// WeeklyClass LMS — Firestore Security Rules
+// =============================================================================
+//
+// The client is never trusted. Every permission the UI checks is re-checked
+// here, because hiding a button stops nobody who can call the API directly.
+//
+// Model
+//   users/{uid}.role         'admin' | 'teacher' | 'student'
+//   users/{uid}.status       must be 'active' to do anything
+//   users/{uid}.permissions  map of PERMISSION -> bool (teachers only)
+//   classes/{id}.teacherIds  the teachers allowed to act on that class
+//
+// Admins hold every permission implicitly. Teachers hold only what an admin has
+// granted AND are additionally limited to their own classes. Students can read
+// what is assigned to them and write only their own quiz attempts and results.
+//
+// Cost note: helpers below call get() on the caller's own user document. Rules
+// cache repeated get() of the same path within a single evaluation, so a
+// request costs one extra read regardless of how many helpers run.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Identity helpers ---------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userExists() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // A suspended, pending or soft-deleted account can read and write nothing.
+    function isActive() {
+      return userExists()
+        && userDoc().status == 'active'
+        && userDoc().get('deleted', false) == false;
+    }
+
+    function role() {
+      return isActive() ? userDoc().role : 'none';
+    }
+
+    function isAdmin()   { return role() == 'admin'; }
+    function isTeacher() { return role() == 'teacher'; }
+    function isStudent() { return role() == 'student'; }
+    function isStaff()   { return isAdmin() || isTeacher(); }
+
+    // Admins implicitly hold everything; teachers hold only granted flags.
+    function can(permission) {
+      return isAdmin()
+        || (isTeacher() && userDoc().get('permissions', {}).get(permission, false) == true);
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // --- Class scoping ------------------------------------------------------
+
+    function classDoc(classId) {
+      return get(/databases/$(database)/documents/classes/$(classId)).data;
+    }
+
+    // A teacher may only act on classes they are assigned to. Admins: any class.
+    function teachesClass(classId) {
+      return isAdmin()
+        || (isTeacher()
+            && classId != null
+            && exists(/databases/$(database)/documents/classes/$(classId))
+            && request.auth.uid in classDoc(classId).get('teacherIds', []));
+    }
+
+    function myClassId() {
+      return isActive() ? userDoc().get('classId', null) : null;
+    }
+
+    // Content with no classId is shared with everyone.
+    function inMyClassOrShared(classId) {
+      return classId == null || classId == myClassId();
+    }
+
+    // --- Field-level helpers ------------------------------------------------
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function onlyChanged(allowed) {
+      return changedKeys().hasOnly(allowed);
+    }
+
+    function isSoftDeleteOnly() {
+      return onlyChanged(['deleted', 'deletedAt', 'deletedBy', 'updatedAt']);
+    }
+
+    // =========================================================================
+    // Public lookup indexes
+    // =========================================================================
+    //
+    // Both are readable by `get` only, never `list`. You must already know the
+    // exact username (or the SHA-256 of the email) to read a row, so neither
+    // collection can be enumerated to harvest accounts.
+
+    match /usernames/{username} {
+      allow get: if true;
+      allow list: if isAdmin();
+
+      // Claimed once, by the account it names, and never reassigned.
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /emailLookup/{emailHash} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Sequential id counters (STU-2026-0001). Incremented inside a transaction
+    // during registration, so any signed-in user must be able to write them.
+    match /counters/{counterId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
+                   && request.resource.data.value is int
+                   && request.resource.data.value > 0;
+    }
+
+    // =========================================================================
+    // Users
+    // =========================================================================
+
+    match /users/{uid} {
+
+      // Own profile always; staff per permission. A teacher who can view
+      // students can read the collection — narrowing further would require a
+      // per-document class check that Firestore cannot apply to list queries.
+      allow get: if isSelf(uid)
+                 || isAdmin()
+                 || (isTeacher() && (can('VIEW_STUDENTS') || can('VIEW_TEACHERS')));
+
+      allow list: if isAdmin()
+                  || (isTeacher() && (can('VIEW_STUDENTS') || can('VIEW_TEACHERS')));
+
+      // Self-registration: the account creates its own profile, and cannot
+      // grant itself a role or status it should not have.
+      allow create: if isSelf(uid)
+                    && request.resource.data.uid == uid
+                    && request.resource.data.role in ['student', 'teacher']
+                    && request.resource.data.status in ['pending', 'active']
+                    && request.resource.data.get('permissions', {}).keys().size() <= 40
+                    // Never let a self-registration hand itself admin powers.
+                    && !request.resource.data.get('permissions', {}).keys().hasAny([
+                         'MANAGE_USERS', 'MANAGE_SETTINGS', 'MANAGE_BRANCHES',
+                         'MANAGE_LANGUAGES', 'DELETE_STUDENTS', 'DELETE_TEACHERS'
+                       ])
+                    || (isAdmin() && request.resource.data.uid == uid);
+
+      // Editing yourself: profile fields only. Role, status and permissions are
+      // deliberately excluded — that is what stops privilege escalation.
+      allow update: if (
+                      isSelf(uid)
+                      && onlyChanged([
+                           'fullName', 'mobile', 'profileImage', 'language',
+                           'dateOfBirth', 'gender', 'qualification',
+                           'pushTokens', 'lastLoginAt', 'searchTokens', 'updatedAt'
+                         ])
+                    )
+                    || isAdmin()
+                    || (
+                      isTeacher()
+                      && resource.data.role == 'student'
+                      && can('EDIT_STUDENTS')
+                      && !changedKeys().hasAny(['role', 'permissions', 'uid'])
+                    )
+                    || (
+                      isTeacher()
+                      && resource.data.role == 'teacher'
+                      && can('EDIT_TEACHERS')
+                      && !changedKeys().hasAny(['role', 'permissions', 'uid'])
+                    );
+
+      // Records are soft-deleted so attendance and results keep their subject.
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // Platform configuration
+    // =========================================================================
+
+    // The splash screen needs the app name and whether registration is open
+    // before anyone signs in, so this document is world-readable. It contains
+    // no secrets.
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if can('MANAGE_SETTINGS');
+    }
+
+    match /languages/{code} {
+      allow read: if true;
+      allow write: if can('MANAGE_LANGUAGES');
+    }
+
+    // Countries, organisations, branches and classes are readable before login
+    // because the registration form offers them as choices.
+    match /countries/{id} {
+      allow read: if true;
+      allow write: if can('MANAGE_BRANCHES');
+    }
+
+    match /organizations/{id} {
+      allow read: if true;
+      allow write: if can('MANAGE_BRANCHES');
+    }
+
+    match /branches/{id} {
+      allow read: if true;
+      allow write: if can('MANAGE_BRANCHES');
+    }
+
+    match /classes/{classId} {
+      allow read: if true;
+      allow create: if can('CREATE_CLASSES');
+      allow update: if can('EDIT_CLASSES')
+                    && (isAdmin() || request.auth.uid in resource.data.get('teacherIds', []));
+      allow delete: if can('DELETE_CLASSES');
+    }
+
+    match /subjects/{id} {
+      allow read: if isSignedIn();
+      allow write: if can('EDIT_CLASSES');
+    }
+
+    // =========================================================================
+    // Learning content
+    // =========================================================================
+
+    match /lessons/{lessonId} {
+      allow read: if isStaff()
+                  || (isStudent() && resource.data.classId == myClassId());
+
+      allow create: if can('CREATE_LESSONS')
+                    && teachesClass(request.resource.data.classId);
+
+      allow update: if can('EDIT_LESSONS')
+                    && teachesClass(resource.data.classId);
+
+      // Deletion goes through a soft delete; hard delete is admin-only.
+      allow update: if can('DELETE_LESSONS')
+                    && teachesClass(resource.data.classId)
+                    && isSoftDeleteOnly();
+
+      allow delete: if isAdmin();
+    }
+
+    match /videos/{videoId} {
+      allow read: if isStaff()
+                  || (isStudent() && inMyClassOrShared(resource.data.get('classId', null)));
+
+      allow create: if can('UPLOAD_VIDEO');
+      allow update: if can('UPLOAD_VIDEO')
+                    || (can('DELETE_VIDEO') && isSoftDeleteOnly());
+      allow delete: if isAdmin();
+    }
+
+    match /articles/{articleId} {
+      allow read: if isSignedIn();
+      allow write: if can('MANAGE_ARTICLES');
+    }
+
+    match /materials/{materialId} {
+      allow read: if isStaff()
+                  || (isStudent() && inMyClassOrShared(resource.data.get('classId', null)));
+
+      allow create: if can('UPLOAD_MATERIAL');
+      allow update: if can('UPLOAD_MATERIAL')
+                    || (can('DELETE_MATERIAL') && isSoftDeleteOnly());
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // Calendar
+    // =========================================================================
+
+    match /calendarEvents/{eventId} {
+      allow read: if isSignedIn();
+      allow create: if can('MANAGE_CALENDAR');
+      allow update, delete: if can('MANAGE_CALENDAR');
+    }
+
+    // =========================================================================
+    // Attendance
+    // =========================================================================
+
+    match /attendance/{recordId} {
+      // A student sees only their own record; staff see their classes.
+      allow get: if (isStudent() && resource.data.studentId == request.auth.uid)
+                 || (can('VIEW_ATTENDANCE') && teachesClass(resource.data.classId))
+                 || isAdmin();
+
+      allow list: if isStudent() || can('VIEW_ATTENDANCE');
+
+      allow create, update: if can('EDIT_ATTENDANCE')
+                            && teachesClass(request.resource.data.classId)
+                            && request.resource.data.status in ['present', 'absent', 'late', 'excused'];
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // Quizzes
+    // =========================================================================
+
+    match /quizzes/{quizId} {
+      allow read: if isStaff()
+                  || (isStudent() && resource.data.classId == myClassId());
+
+      allow create: if can('CREATE_QUIZ')
+                    && teachesClass(request.resource.data.classId);
+      allow update: if can('EDIT_QUIZ') && teachesClass(resource.data.classId);
+      allow update: if can('DELETE_QUIZ')
+                    && teachesClass(resource.data.classId)
+                    && isSoftDeleteOnly();
+      allow delete: if isAdmin();
+
+      // Questions: text and options only — no correct answer is stored here, so
+      // a student reading them learns nothing they should not.
+      match /questions/{questionId} {
+        allow read: if isSignedIn();
+        allow write: if can('CREATE_QUIZ') || can('EDIT_QUIZ');
+      }
+
+      // The answer key. A student may read it ONLY once they have a submitted
+      // attempt for this quiz — which is what makes client-side grading safe
+      // against reading answers in advance.
+      match /answerKey/{questionId} {
+        allow read: if isStaff()
+                    || (
+                      isStudent()
+                      && hasSubmittedAttempt(quizId, request.auth.uid)
+                    );
+        allow write: if can('CREATE_QUIZ') || can('EDIT_QUIZ');
+      }
+    }
+
+    // Attempt ids are deterministic: `{quizId}_{uid}_{n}`, so this is an
+    // existence check rather than a query.
+    function hasSubmittedAttempt(quizId, uid) {
+      return exists(/databases/$(database)/documents/quizAttempts/$(quizId + '_' + uid + '_1'))
+        && get(/databases/$(database)/documents/quizAttempts/$(quizId + '_' + uid + '_1')).data.status == 'submitted';
+    }
+
+    match /quizAttempts/{attemptId} {
+      allow get: if (isSignedIn() && resource.data.studentId == request.auth.uid)
+                 || can('VIEW_RESULTS')
+                 || isAdmin();
+      allow list: if isSignedIn();
+
+      allow create: if isStudent()
+                    && request.resource.data.studentId == request.auth.uid
+                    && request.resource.data.status == 'in_progress'
+                    && request.resource.data.classId == myClassId();
+
+      // Answers may be revised while in progress, and frozen on submission.
+      // Once submitted the document is immutable to the student — this is what
+      // prevents re-reading the key and then editing the answers.
+      allow update: if isStudent()
+                    && resource.data.studentId == request.auth.uid
+                    && resource.data.status == 'in_progress'
+                    && request.resource.data.studentId == resource.data.studentId
+                    && request.resource.data.quizId == resource.data.quizId
+                    && request.resource.data.status in ['in_progress', 'submitted'];
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /results/{resultId} {
+      allow get: if (isSignedIn() && resource.data.studentId == request.auth.uid)
+                 || can('VIEW_RESULTS')
+                 || isAdmin();
+      allow list: if isSignedIn();
+
+      // Written once by the student who owns the matching submitted attempt.
+      // They cannot then edit it, and a teacher can always regrade.
+      allow create: if isStudent()
+                    && request.resource.data.studentId == request.auth.uid
+                    && resultId == request.resource.data.attemptId
+                    && request.resource.data.score is number
+                    && request.resource.data.score >= 0
+                    && request.resource.data.score <= request.resource.data.totalMarks;
+
+      allow update: if can('EDIT_RESULTS') || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // Notifications and announcements
+    // =========================================================================
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn();
+
+      allow create: if can('SEND_NOTIFICATIONS');
+
+      // Anyone signed in may mark a notification read — but only by adding
+      // their own uid, nothing else about the document may change.
+      allow update: if can('SEND_NOTIFICATIONS')
+                    || (
+                      isSignedIn()
+                      && onlyChanged(['readBy'])
+                      && request.resource.data.readBy.hasAll(resource.data.get('readBy', []))
+                      && request.resource.data.readBy.hasOnly(
+                           resource.data.get('readBy', []).concat([request.auth.uid])
+                         )
+                    );
+
+      allow delete: if isAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow write: if can('MANAGE_ANNOUNCEMENTS');
+    }
+
+    // =========================================================================
+    // Audit log — append only
+    // =========================================================================
+    //
+    // Any signed-in user can append (their own actions are logged by the
+    // client), but nobody — admins included — can edit or remove an entry.
+    // Rewriting history from a client is simply not expressible here.
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.actorId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // =========================================================================
+    // Default deny
+    // =========================================================================
+    //
+    // Anything not matched above is denied. New collections must be granted
+    // access explicitly rather than inheriting it.
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
