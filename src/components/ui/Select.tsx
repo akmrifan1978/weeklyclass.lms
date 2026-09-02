@@ -190,7 +190,7 @@ export function Select<T extends string>({
 
             <FlatList
               data={visible}
-              keyExtractor={(item) => item.value}
+              keyExtractor={(item, index) => item.value || `option-${index}`}
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
                 <Text style={styles.empty}>{t('common.noResults')}</Text>
@@ -200,7 +200,12 @@ export function Select<T extends string>({
                 return (
                   <Pressable
                     onPress={() => {
-                      onChange(item.value);
+                      // Guard against a malformed option (e.g. a hand-created
+                      // Firestore row with no `code`). Passing undefined up
+                      // would set the form field to undefined, and the caller's
+                      // schema would then surface a raw validator message
+                      // instead of a translated one.
+                      onChange((item.value ?? '') as T);
                       setTerm('');
                       setOpen(false);
                     }}

@@ -72,9 +72,13 @@ async function main() {
     process.exit(0);
   }
 
-  let admin;
+  // firebase-admin v13+ dropped the legacy `admin.credential` / `admin.auth()`
+  // namespace, so these scripts use the modular entrypoints.
+  let initializeApp, cert, getAuth, getFirestore, FieldValue;
   try {
-    admin = require('firebase-admin');
+    ({ initializeApp, cert } = require('firebase-admin/app'));
+    ({ getAuth } = require('firebase-admin/auth'));
+    ({ getFirestore, FieldValue } = require('firebase-admin/firestore'));
   } catch {
     fail('firebase-admin is not installed. Run:  npm install --no-save firebase-admin');
   }
@@ -84,17 +88,17 @@ async function main() {
     fail('Pass --key <serviceAccount.json> or set GOOGLE_APPLICATION_CREDENTIALS.');
   }
 
-  let credential;
+  let serviceAccount;
   try {
     // eslint-disable-next-line import/no-dynamic-require, global-require
-    credential = require(path.resolve(process.cwd(), keyPath));
+    serviceAccount = require(path.resolve(process.cwd(), keyPath));
   } catch {
     fail(`Could not read the service account key at: ${keyPath}`);
   }
 
-  admin.initializeApp({ credential: admin.credential.cert(credential) });
-  const auth = admin.auth();
-  const db = admin.firestore();
+  initializeApp({ credential: cert(serviceAccount) });
+  const auth = getAuth();
+  const db = getFirestore();
 
   if (args['sync-all']) {
     const snapshot = await db.collection('users').get();
@@ -143,7 +147,7 @@ async function main() {
       role,
       status: 'active',
       deleted: false,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
@@ -158,8 +162,8 @@ async function main() {
     summary: `Role set to ${role} for ${args.email} via set-claims.js`,
     changes: { role: { from: null, to: role } },
     deleted: false,
-    at: admin.firestore.FieldValue.serverTimestamp(),
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    at: FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   });
 
   console.log(`\n  ✓ ${args.email} is now ${role} (uid ${user.uid}).`);

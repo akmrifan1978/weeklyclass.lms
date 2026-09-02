@@ -23,12 +23,26 @@ import * as audit from './auditService';
 
 // --- Countries -------------------------------------------------------------
 
-export function listCountries(): Promise<Country[]> {
-  return listAll<Country>(COLLECTIONS.countries, {
+export async function listCountries(): Promise<Country[]> {
+  // Deliberately does NOT filter on `deleted == false` in the query. Countries
+  // are often created by hand in the Firebase console during first-time setup,
+  // and a hand-made document usually lacks that field — a server-side filter
+  // would silently hide it and leave registration unusable with no clue why.
+  // The list is tiny and public, so excluding removed rows client-side is both
+  // cheap and far more forgiving.
+  const rows = await listAll<Country>(COLLECTIONS.countries, {
+    excludeDeleted: false,
     orderByField: 'name',
     direction: 'asc',
     pageSize: 300,
   });
+
+  return rows
+    .filter((row) => row.deleted !== true && Boolean(row.name))
+    // The document id IS the ISO code by convention (countries/SA, /LK, /IN),
+    // so fall back to it when a hand-created row has no `code` field. Without
+    // this the option's value is undefined, which silently poisons the form.
+    .map((row) => ({ ...row, code: row.code || row.id }));
 }
 
 export async function createCountry(

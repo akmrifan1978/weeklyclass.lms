@@ -69,11 +69,17 @@ function parseArgs(argv) {
 async function main() {
   const args = parseArgs(process.argv);
 
-  let admin;
+  // firebase-admin v13+ dropped the legacy `admin.credential` /
+  // `admin.firestore()` namespace, so this script uses the modular entrypoints.
+  let initializeApp, cert, getFirestore, FieldValue;
   try {
-    admin = require('firebase-admin');
+    ({ initializeApp, cert } = require('firebase-admin/app'));
+    ({ getFirestore, FieldValue } = require('firebase-admin/firestore'));
   } catch {
-    console.error('\n  ✗ firebase-admin is not installed. Run:  npm install --no-save firebase-admin\n');
+    console.error(
+      '\n  Missing dependency: firebase-admin.' +
+        '\n  Run:  npm install --no-save firebase-admin\n'
+    );
     process.exit(1);
   }
 
@@ -84,11 +90,11 @@ async function main() {
   }
 
   // eslint-disable-next-line import/no-dynamic-require, global-require
-  const credential = require(path.resolve(process.cwd(), keyPath));
-  admin.initializeApp({ credential: admin.credential.cert(credential) });
+  const serviceAccount = require(path.resolve(process.cwd(), keyPath));
+  initializeApp({ credential: cert(serviceAccount) });
 
-  const db = admin.firestore();
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const db = getFirestore();
+  const now = FieldValue.serverTimestamp();
   const base = { deleted: false, createdAt: now, updatedAt: now };
 
   let batch = db.batch();
