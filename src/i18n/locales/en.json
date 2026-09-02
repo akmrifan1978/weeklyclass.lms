@@ -111,6 +111,7 @@
     "accountPending": "Your account is awaiting approval from an administrator.",
     "accountSuspended": "Your account has been suspended. Please contact support.",
     "accountInactive": "Your account is not active. Please contact your administrator.",
+    "profileMissing": "Signed in, but this account has no profile record yet. Ask your administrator to finish setting it up.",
     "registrationClosed": "Registration is currently closed. Please contact your administrator.",
     "registrationSubmitted": "Registration received",
     "registrationPendingApproval": "Your account has been created and is waiting for administrator approval. You will be notified once it is activated.",

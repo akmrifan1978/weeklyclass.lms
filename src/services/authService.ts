@@ -73,8 +73,18 @@ export async function login(identifier: string, password: string): Promise<Login
   const profile = await fetchProfile(credential.user.uid);
 
   if (!profile) {
+    // Authentication succeeded but users/{uid} is absent. This is the classic
+    // first-time-setup mismatch: an account made in the Firebase console
+    // without the matching profile document, or one created under a different
+    // uid. Log the uid, because that is exactly what someone needs in order to
+    // create the document with the right id.
+    console.error(
+      `[WeeklyClass] Signed in as ${credential.user.email} (uid ${credential.user.uid}) ` +
+        `but users/${credential.user.uid} does not exist. Create that document ` +
+        `with the document ID set to this uid.`
+    );
     await fbSignOut(auth);
-    throw new AppError('errors.generic', 'auth/profile-missing');
+    throw new AppError('auth.profileMissing', 'auth/profile-missing');
   }
 
   if (profile.status !== 'active') {
