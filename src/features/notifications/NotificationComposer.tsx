@@ -395,8 +395,13 @@ export function NotificationComposer() {
               value={form.scheduleDate}
               onChange={(v) => set('scheduleDate', v)}
               minimumDate={new Date()}
+              containerStyle={{ flex: 1 }}
             />
-            <TimeField value={form.scheduleTime} onChange={(v) => set('scheduleTime', v)} />
+            <TimeField
+              value={form.scheduleTime}
+              onChange={(v) => set('scheduleTime', v)}
+              containerStyle={{ flex: 1 }}
+            />
           </View>
           {form.scheduleDate && form.scheduleTime ? (
             <View style={styles.scheduleNote}>

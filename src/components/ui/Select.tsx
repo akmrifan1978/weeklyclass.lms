@@ -92,41 +92,57 @@ export function Select<T extends string>({
         </Text>
       ) : null}
 
-      <Pressable
-        onPress={() => !disabled && setOpen(true)}
-        disabled={disabled}
-        accessibilityRole="button"
-        accessibilityLabel={label ?? placeholder ?? t('common.select')}
-        accessibilityValue={{ text: selected?.label ?? t('common.none') }}
-        accessibilityState={{ disabled, expanded: open }}
-        style={({ pressed }) => [
-          styles.trigger,
-          errorText ? styles.triggerError : null,
-          { opacity: disabled ? 0.55 : pressed ? 0.85 : 1 },
-        ]}
-      >
-        {selected?.icon ? (
-          <Ionicons name={selected.icon} size={18} color={colors.primary} style={styles.leadIcon} />
-        ) : null}
-        <Text
-          numberOfLines={1}
-          style={[styles.triggerText, !selected ? styles.placeholder : null]}
+      {/*
+        Trigger and clear are SIBLINGS, not nested. Putting the clear control
+        inside the trigger would render a button inside a button — invalid HTML,
+        and a tap on the "x" would bubble up and reopen the dropdown it just
+        cleared. The row wrapper keeps them looking like one field.
+      */}
+      <View style={[styles.triggerRow, errorText ? styles.triggerError : null]}>
+        <Pressable
+          onPress={() => !disabled && setOpen(true)}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={label ?? placeholder ?? t('common.select')}
+          accessibilityValue={{ text: selected?.label ?? t('common.none') }}
+          accessibilityState={{ disabled, expanded: open }}
+          style={({ pressed }) => [
+            styles.trigger,
+            { opacity: disabled ? 0.55 : pressed ? 0.85 : 1 },
+          ]}
         >
-          {selected?.label ?? placeholder ?? t('common.select')}
-        </Text>
+          {selected?.icon ? (
+            <Ionicons
+              name={selected.icon}
+              size={18}
+              color={colors.primary}
+              style={styles.leadIcon}
+            />
+          ) : null}
+          <Text
+            numberOfLines={1}
+            style={[styles.triggerText, !selected ? styles.placeholder : null]}
+          >
+            {selected?.label ?? placeholder ?? t('common.select')}
+          </Text>
+          {allowClear && selected ? null : (
+            <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+          )}
+        </Pressable>
+
         {allowClear && selected ? (
           <Pressable
             hitSlop={8}
+            disabled={disabled}
             accessibilityRole="button"
-            accessibilityLabel={t('common.clear')}
+            accessibilityLabel={`${t('common.clear')} ${label ?? ''}`.trim()}
             onPress={() => onChange('' as T)}
+            style={styles.clearButton}
           >
             <Ionicons name="close-circle" size={18} color={colors.textMuted} />
           </Pressable>
-        ) : (
-          <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
-        )}
-      </Pressable>
+        ) : null}
+      </View>
 
       {errorText ? <Text style={styles.error}>{errorText}</Text> : null}
 
@@ -136,8 +152,23 @@ export function Select<T extends string>({
         animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
         onRequestClose={() => setOpen(false)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityRole="button" accessibilityLabel={t('common.close')}>
-          <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+        {/*
+          Tapping the backdrop dismisses the sheet, but it is deliberately NOT
+          announced as a button: it wraps the sheet's own Close button, and a
+          button inside a button is invalid HTML (React flags it as a hydration
+          error on web). Assistive tech uses the explicit Close control below;
+          the backdrop stays a pointer-only convenience.
+        */}
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => setOpen(false)}
+          accessible={false}
+        >
+          <Pressable
+            style={styles.sheet}
+            accessible={false}
+            onPress={(event) => event.stopPropagation()}
+          >
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle} accessibilityRole="header">
@@ -265,16 +296,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   required: { color: colors.danger },
-  trigger: {
+  triggerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
     minHeight: TOUCH_TARGET + 4,
     backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radius.md,
+    paddingRight: spacing.sm,
+  },
+  trigger: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: TOUCH_TARGET,
     paddingHorizontal: spacing.md,
+  },
+  clearButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   triggerError: { borderColor: colors.danger, backgroundColor: colors.dangerSoft },
   triggerText: { flex: 1, fontSize: fontSize.md, color: colors.text },

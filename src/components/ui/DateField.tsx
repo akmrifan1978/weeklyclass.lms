@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -28,6 +37,7 @@ export function DateField({
   required,
   minimumDate,
   hint,
+  containerStyle,
 }: {
   label?: string;
   /** ISO `YYYY-MM-DD`, or empty. */
@@ -37,6 +47,7 @@ export function DateField({
   required?: boolean;
   minimumDate?: Date;
   hint?: string;
+  containerStyle?: StyleProp<ViewStyle>;
 }) {
   const [open, setOpen] = useState(false);
   const webProps = useWebInputProps('date');
@@ -47,7 +58,7 @@ export function DateField({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {label ? (
         <Text style={styles.label}>
           {label}
@@ -109,6 +120,7 @@ export function TimeField({
   onChange,
   error,
   required,
+  containerStyle,
 }: {
   label?: string;
   /** `HH:mm` 24-hour, or empty. */
@@ -116,6 +128,7 @@ export function TimeField({
   onChange: (value: string) => void;
   error?: string | null;
   required?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 }) {
   const [open, setOpen] = useState(false);
   const webProps = useWebInputProps('time');
@@ -137,7 +150,7 @@ export function TimeField({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {label ? (
         <Text style={styles.label}>
           {label}
@@ -194,7 +207,10 @@ export function TimeField({
 }
 
 const styles = StyleSheet.create({
-  container: { marginBottom: spacing.lg, flex: 1 },
+  // No `flex` here on purpose: these fields normally stack in a form, and a
+  // flexing container overlaps the next label. Callers that place a date and a
+  // time side by side pass containerStyle={{ flex: 1 }}.
+  container: { marginBottom: spacing.lg },
   label: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
