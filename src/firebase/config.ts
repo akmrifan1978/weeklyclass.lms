@@ -107,6 +107,12 @@ function createFirestore(): Firestore {
         : memoryLocalCache(),
       // React Native networking does not always support gRPC streaming.
       experimentalAutoDetectLongPolling: !isWeb,
+      // Firestore rejects `undefined` outright, which turns one optional field
+      // that happens to be absent into a failed write and an opaque "something
+      // went wrong". Skipping undefined is the forgiving, and far more
+      // debuggable, default. `null` is still written normally, so "explicitly
+      // empty" and "not provided" stay distinguishable.
+      ignoreUndefinedProperties: true,
     });
   } catch {
     return getFirestore(app);

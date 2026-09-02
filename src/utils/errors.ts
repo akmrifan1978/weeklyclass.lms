@@ -71,10 +71,20 @@ export function errorKey(error: unknown): string {
  * @param translate usually the `t` function from `useTranslation()`.
  */
 export function friendlyMessage(error: unknown, translate: (key: string) => string): string {
+  const key = errorKey(error);
+
+  // An unrecognised failure becomes the generic "something went wrong", which
+  // is right for the user and useless for whoever has to fix it. Log the real
+  // error so it is never invisible — a mismapped code should cost one glance at
+  // the console, not a debugging session.
+  if (key === 'errors.generic' && error) {
+    console.error('[WeeklyClass] unmapped error surfaced to the user:', error);
+  }
+
   if (error instanceof AppError && !error.userMessage.includes('.')) {
     return error.userMessage;
   }
-  return translate(errorKey(error));
+  return translate(key);
 }
 
 export function isPermissionDenied(error: unknown): boolean {

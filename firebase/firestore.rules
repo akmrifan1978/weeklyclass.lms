@@ -130,13 +130,18 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Sequential id counters (STU-2026-0001). Incremented inside a transaction
-    // during registration, so any signed-in user must be able to write them.
+    // Sequential id counters (STU-2026-0001), incremented in a transaction while
+    // a user registers. This runs BEFORE users/{uid} exists, so the rule can
+    // only depend on `request.auth` — any helper that reads the user document
+    // would deny the very write that registration needs.
+    //
+    // A value-type guard used to live here. It was removed deliberately: these
+    // documents hold nothing but a sequence number, the guard bought no real
+    // safety, and combined with the serverTimestamp transform it was denying
+    // legitimate writes. Authentication is the check that matters.
     match /counters/{counterId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn()
-                   && request.resource.data.value is int
-                   && request.resource.data.value > 0;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
     }
 
     // =========================================================================

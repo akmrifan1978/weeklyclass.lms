@@ -174,7 +174,9 @@ export async function register(
       profileImage: null,
       branchId: input.branchId ?? null,
       classId: role === 'student' ? (input.classId ?? null) : null,
-      classIds: role === 'teacher' ? [] : undefined,
+      // Only teachers carry a class list; omit the key entirely for students
+      // rather than writing undefined.
+      ...(role === 'teacher' ? { classIds: [] as string[] } : {}),
       permissions: role === 'teacher' ? { ...DEFAULT_TEACHER_PERMISSIONS } : {},
       ...(role === 'student'
         ? {
