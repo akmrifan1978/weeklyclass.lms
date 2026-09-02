@@ -146,10 +146,18 @@ export async function register(
   role: Extract<UserRole, 'student' | 'teacher'>,
   input: RegistrationInput
 ): Promise<RegistrationResult> {
-  const settings = await getSettings();
-  if (!settings.registrationEnabled) {
+  // One more round-trip before anything happens. getSettings already falls back
+  // to safe defaults, so cap the wait rather than let a slow network stall the
+  // form before it has even started.
+  const settings = await Promise.race([
+    getSettings(),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000)),
+  ]);
+
+  if (settings && !settings.registrationEnabled) {
     throw new AppError('auth.registrationClosed', 'failed-precondition');
   }
+  const requireApproval = settings?.requireApproval ?? true;
 
   const username = normaliseUsername(input.username);
   const email = input.email.trim().toLowerCase();
@@ -158,7 +166,7 @@ export async function register(
   const uid = credential.user.uid;
 
   try {
-    const status: UserStatus = settings.requireApproval ? 'pending' : 'active';
+    const status: UserStatus = requireApproval ? 'pending' : 'active';
     const generatedId = await nextSequentialId(role === 'student' ? 'STU' : 'TCH');
 
     const profile: Omit<AppUser, 'id'> = {
@@ -201,9 +209,14 @@ export async function register(
 
     await claimIdentity({ username, email, uid, role });
 
-    await sendEmailVerification(credential.user).catch(() => undefined);
+    // Everything above is essential and is awaited. These two are not: the
+    // account already exists and is usable. Awaiting them added two more
+    // network round-trips to a flow that already needs five, which is painfully
+    // slow on a weak connection — and worse, a failure in either would trigger
+    // the rollback below and destroy a perfectly good account.
+    void sendEmailVerification(credential.user).catch(() => undefined);
 
-    await audit.log({
+    void audit.log({
       actor: { uid, fullName: profile.fullName, role },
       action: 'CREATE',
       collection: COLLECTIONS.users,
