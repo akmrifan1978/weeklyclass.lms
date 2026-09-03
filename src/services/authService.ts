@@ -44,6 +44,30 @@ const LOGIN_BLOCKED: Record<Exclude<UserStatus, 'active'>, string> = {
   inactive: 'auth.accountInactive',
 };
 
+/**
+ * Waits until Firestore will actually send the signed-in user's token.
+ *
+ * `signInWithEmailAndPassword` and `createUserWithEmailAndPassword` resolve as
+ * soon as Firebase Auth has the credential, but the Firestore client picks the
+ * token up separately, through its own auth-state listener. A request issued in
+ * the gap goes out unauthenticated, so `request.auth` is null in the rules and
+ * even "read your own document" is refused — a permission error that looks like
+ * a broken rule and is not one.
+ *
+ * Forcing the ID token resolves only once that token exists, which is the
+ * signal Firestore's provider is waiting on. `authStateReady` closes the same
+ * gap on the SDK side where it is available.
+ */
+async function waitForAuthToken(user: FirebaseUser): Promise<void> {
+  try {
+    const ready = (auth as unknown as { authStateReady?: () => Promise<void> }).authStateReady;
+    if (typeof ready === 'function') await ready.call(auth);
+    await user.getIdToken();
+  } catch (error) {
+    console.warn('[WeeklyClass] could not confirm the auth token before querying:', error);
+  }
+}
+
 export async function fetchProfile(uid: string): Promise<AppUser | null> {
   try {
     const snap = await getDoc(doc(db, COLLECTIONS.users, uid));
@@ -173,6 +197,10 @@ export async function login(identifier: string, password: string): Promise<Login
   }
 
   const credential = await signInWithEmailAndPassword(auth, email, password);
+
+  // Every Firestore call below depends on request.auth being populated.
+  await waitForAuthToken(credential.user);
+
   let profile = await fetchProfile(credential.user.uid);
 
   // On an unconfigured platform the first successful sign-in becomes the
@@ -345,6 +373,12 @@ export async function register(
   const credential = await createUserWithEmailAndPassword(auth, email, input.password);
   const uid = credential.user.uid;
   step('2/6 auth account created', uid);
+
+  // The counter allocation immediately below is the first authenticated write,
+  // and it fails with "insufficient permissions" if Firestore has not yet
+  // picked up the new user's token.
+  await waitForAuthToken(credential.user);
+  step('2/6 auth token ready');
 
   try {
     const status: UserStatus = requireApproval ? 'pending' : 'active';
