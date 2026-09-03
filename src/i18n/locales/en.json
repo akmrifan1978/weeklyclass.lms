@@ -179,13 +179,14 @@
     "cancelled": "The operation was cancelled.",
     "uploadFailed": "File upload failed. Please try again.",
     "uploadCancelled": "Upload cancelled.",
-    "fileTooLarge": "That file is too large. Maximum size is {{size}}.",
+    "fileTooLarge": "That file is too large. The limit is {{detail}}.",
     "operationNotAllowed": "This sign-in method is not enabled.",
     "loadFailed": "We could not load this content.",
     "storageNotSetUp": "File storage is not enabled on this project yet. Paste an image link instead, or ask an administrator to turn on Cloud Storage.",
     "uploadTimedOut": "The upload is taking too long and was stopped. Check your connection, or paste an image link instead.",
     "countryInUse": "Branches still use this country. Move or remove them first.",
-    "organizationInUse": "Branches still belong to this organisation. Move or remove them first."
+    "organizationInUse": "Branches still belong to this organisation. Move or remove them first.",
+    "permissionDeniedAt": "You do not have permission to do that. (Refused: {{detail}})"
   },
   "nav": {
     "home": "Home",

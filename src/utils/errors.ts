@@ -50,7 +50,12 @@ const FIREBASE_ERROR_KEYS: Record<string, string> = {
   'storage/object-not-found': 'errors.notFound',
 };
 
-/** Returns the i18n key that best describes `error`. */
+/**
+ * Returns the i18n key that best describes `error`.
+ *
+ * A key may carry a detail after a pipe — `errors.fileTooLarge|2 MB` — which
+ * `friendlyMessage` splits out and interpolates as {{detail}}.
+ */
 export function errorKey(error: unknown): string {
   if (error instanceof AppError) return error.userMessage;
   if (error instanceof FirebaseError) {
@@ -70,8 +75,18 @@ export function errorKey(error: unknown): string {
  * Resolves an error to a display string.
  * @param translate usually the `t` function from `useTranslation()`.
  */
-export function friendlyMessage(error: unknown, translate: (key: string) => string): string {
-  const key = errorKey(error);
+export function friendlyMessage(
+  error: unknown,
+  translate: (key: string, options?: Record<string, unknown>) => string
+): string {
+  const raw = errorKey(error);
+
+  // Keys may carry a detail after a pipe. Splitting it out here is what makes
+  // "the file is too large (2 MB)" and "denied: countries/LK" possible without
+  // every call site having to know about interpolation.
+  const separator = raw.indexOf('|');
+  const key = separator === -1 ? raw : raw.slice(0, separator);
+  const detail = separator === -1 ? undefined : raw.slice(separator + 1);
 
   // An unrecognised failure becomes the generic "something went wrong", which
   // is right for the user and useless for whoever has to fix it. Log the real
@@ -81,10 +96,38 @@ export function friendlyMessage(error: unknown, translate: (key: string) => stri
     console.error('[WeeklyClass] unmapped error surfaced to the user:', error);
   }
 
-  if (error instanceof AppError && !error.userMessage.includes('.')) {
+  if (error instanceof AppError && !key.includes('.')) {
     return error.userMessage;
   }
-  return translate(key);
+  return translate(key, detail ? { detail } : undefined);
+}
+
+/**
+ * Wraps a Firestore call so a refusal says WHICH document was refused.
+ *
+ * Firestore reports every denial as the same bare "Missing or insufficient
+ * permissions", with no path attached. That single opaque sentence is the
+ * hardest thing to debug in this whole app: it is indistinguishable whether the
+ * rules are wrong, the caller's profile is missing, its role is misspelt, or the
+ * auth token had not arrived yet. Naming the collection and document turns it
+ * into a question with one answer.
+ */
+export async function denialContext<T>(
+  operation: string,
+  target: string,
+  run: () => Promise<T>
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if ((error as { code?: string })?.code !== 'permission-denied') throw error;
+    console.error(`[WeeklyClass] DENIED: ${operation} ${target}`, error);
+    throw new AppError(
+      `errors.permissionDeniedAt|${operation} ${target}`,
+      'permission-denied',
+      error instanceof Error ? error : undefined
+    );
+  }
 }
 
 export function isPermissionDenied(error: unknown): boolean {

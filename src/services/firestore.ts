@@ -26,6 +26,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '@/firebase/config';
+import { denialContext } from '@/utils/errors';
 import { PAGE_SIZE } from '@/constants/app';
 import type { BaseDoc } from '@/types';
 
@@ -152,13 +153,15 @@ export async function createDoc<T extends object>(
   data: T,
   meta: WriteMeta = {}
 ): Promise<string> {
-  const ref = await addDoc(collection(db, path), {
-    ...stripUndefined(data),
-    deleted: false,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    createdBy: meta.actorId ?? null,
-  });
+  const ref = await denialContext('create', path, () =>
+    addDoc(collection(db, path), {
+      ...stripUndefined(data),
+      deleted: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      createdBy: meta.actorId ?? null,
+    })
+  );
   return ref.id;
 }
 
@@ -170,15 +173,17 @@ export async function setDocById<T extends object>(
   meta: WriteMeta = {},
   merge = true
 ): Promise<void> {
-  await setDoc(
-    doc(db, path, id),
-    {
-      ...stripUndefined(data),
-      deleted: false,
-      updatedAt: serverTimestamp(),
-      ...(merge ? {} : { createdAt: serverTimestamp(), createdBy: meta.actorId ?? null }),
-    },
-    { merge }
+  await denialContext('write', `${path}/${id}`, () =>
+    setDoc(
+      doc(db, path, id),
+      {
+        ...stripUndefined(data),
+        deleted: false,
+        updatedAt: serverTimestamp(),
+        ...(merge ? {} : { createdAt: serverTimestamp(), createdBy: meta.actorId ?? null }),
+      },
+      { merge }
+    )
   );
 }
 
@@ -187,10 +192,12 @@ export async function updateDocById<T extends object>(
   id: string,
   data: Partial<T>
 ): Promise<void> {
-  await updateDoc(doc(db, path, id), {
-    ...stripUndefined(data),
-    updatedAt: serverTimestamp(),
-  });
+  await denialContext('update', `${path}/${id}`, () =>
+    updateDoc(doc(db, path, id), {
+      ...stripUndefined(data),
+      updatedAt: serverTimestamp(),
+    })
+  );
 }
 
 /**
@@ -198,12 +205,14 @@ export async function updateDocById<T extends object>(
  * queryable by admins and keeps referential integrity for results/attendance.
  */
 export async function softDelete(path: string, id: string, actorId?: string): Promise<void> {
-  await updateDoc(doc(db, path, id), {
-    deleted: true,
-    deletedAt: serverTimestamp(),
-    deletedBy: actorId ?? null,
-    updatedAt: serverTimestamp(),
-  });
+  await denialContext('delete', `${path}/${id}`, () =>
+    updateDoc(doc(db, path, id), {
+      deleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: actorId ?? null,
+      updatedAt: serverTimestamp(),
+    })
+  );
 }
 
 export async function restore(path: string, id: string): Promise<void> {
@@ -217,7 +226,7 @@ export async function restore(path: string, id: string): Promise<void> {
 
 /** Permanent removal. Reserved for admin "purge" actions and cleanup jobs. */
 export async function hardDelete(path: string, id: string): Promise<void> {
-  await deleteDoc(doc(db, path, id));
+  await denialContext('delete', `${path}/${id}`, () => deleteDoc(doc(db, path, id)));
 }
 
 /** Server-side count — one billed read per 1,000 documents, not per document. */

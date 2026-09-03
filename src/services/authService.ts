@@ -8,6 +8,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   onAuthStateChanged,
+  onIdTokenChanged,
   type User as FirebaseUser,
 } from 'firebase/auth';
 import {
@@ -21,7 +22,7 @@ import {
 
 import { auth, db } from '@/firebase/config';
 import { COLLECTIONS, DEFAULT_LANGUAGE } from '@/constants/app';
-import { AppError } from '@/utils/errors';
+import { AppError, denialContext } from '@/utils/errors';
 import { searchTokens } from '@/utils/format';
 import { isEmail } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS } from '@/types/permissions';
@@ -79,9 +80,64 @@ async function waitForAuthToken(user: FirebaseUser): Promise<void> {
   try {
     const ready = (auth as unknown as { authStateReady?: () => Promise<void> }).authStateReady;
     if (typeof ready === 'function') await ready.call(auth);
+
+    // Firestore's credentials provider subscribes to onIdTokenChanged. Waiting
+    // for that listener to fire for THIS user is the closest thing to a signal
+    // that the token has actually reached it — `getIdToken()` alone only proves
+    // Auth has one, which it does well before Firestore is told.
+    await new Promise<void>((resolve) => {
+      const stop = onIdTokenChanged(auth, (current) => {
+        if (current?.uid !== user.uid) return;
+        stop();
+        clearTimeout(timer);
+        resolve();
+      });
+      // Never hang on this. If the event has already fired we would otherwise
+      // wait forever for one that is not coming again.
+      const timer = setTimeout(() => {
+        stop();
+        resolve();
+      }, 2500);
+    });
+
     await user.getIdToken();
   } catch (error) {
     console.warn('[WeeklyClass] could not confirm the auth token before querying:', error);
+  }
+}
+
+/**
+ * Retries a write that was refused for lack of a token.
+ *
+ * Even after the wait above, the first authenticated write immediately after
+ * creating an account is sometimes still refused: the request goes out before
+ * Firestore has attached the credential, so the rules see `request.auth == null`
+ * and refuse what is in fact a perfectly authorised write. It looks exactly like
+ * a broken security rule, and no amount of rule-editing fixes it.
+ *
+ * A denial that is really a race disappears on a retry with a fresh token; a
+ * denial that is real survives all three attempts and is then reported as it
+ * always was. Costing a genuine refusal a second of delay is well worth not
+ * failing a legitimate registration.
+ */
+async function withTokenRetry<T>(
+  label: string,
+  user: FirebaseUser,
+  run: () => Promise<T>
+): Promise<T> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      const denied = (error as { code?: string })?.code === 'permission-denied';
+      if (!denied || attempt >= 3) throw error;
+      console.warn(
+        `[WeeklyClass] ${label} was refused on attempt ${attempt} — ` +
+          'refreshing the auth token and retrying'
+      );
+      await user.getIdToken(true).catch(() => undefined);
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+    }
   }
 }
 
@@ -495,7 +551,9 @@ export async function register(
   try {
     const status: UserStatus = requireApproval ? 'pending' : 'active';
     step('3/6 allocating sequential id');
-    const generatedId = await nextSequentialId(role === 'student' ? 'STU' : 'TCH');
+    const generatedId = await withTokenRetry('counter allocation', credential.user, () =>
+      nextSequentialId(role === 'student' ? 'STU' : 'TCH')
+    );
     step('3/6 id allocated', generatedId);
 
     const profile: Omit<AppUser, 'id'> = {
@@ -543,16 +601,22 @@ export async function register(
       throw new AppError('auth.profileAlreadyExists', 'already-exists');
     }
 
-    await setDoc(doc(db, COLLECTIONS.users, uid), {
-      ...profile,
-      searchTokens: searchTokens(profile.fullName, username, email, generatedId),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      createdBy: uid,
-    });
+    await withTokenRetry('profile write', credential.user, () =>
+      denialContext('create', `${COLLECTIONS.users}/${uid}`, () =>
+        setDoc(doc(db, COLLECTIONS.users, uid), {
+          ...profile,
+          searchTokens: searchTokens(profile.fullName, username, email, generatedId),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          createdBy: uid,
+        })
+      )
+    );
 
     step('5/6 claiming username index', username);
-    await claimIdentity({ username, email, authEmail, uid, role, mobile: input.mobile });
+    await withTokenRetry('identity claim', credential.user, () =>
+      claimIdentity({ username, email, authEmail, uid, role, mobile: input.mobile })
+    );
     step('5/6 username index claimed');
 
     // Everything above is essential and is awaited. These two are not: the

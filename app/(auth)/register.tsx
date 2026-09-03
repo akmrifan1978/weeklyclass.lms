@@ -232,9 +232,15 @@ export default function RegisterScreen() {
       // identity, and the username defaults to the same digits — so registering
       // a number twice fails both checks, and reporting "username taken" would
       // send someone off editing the wrong field.
+      //
+      // Both default to "free" if the lookup itself fails. These are a courtesy
+      // that puts the message on the right field; the transaction inside
+      // claimIdentity is the actual guarantee. Letting a failed *check* block
+      // registration would be the worst of both worlds — it stops nothing and
+      // refuses someone who has done nothing wrong.
       const [mobileFree, usernameFree] = await Promise.all([
-        isMobileAvailable(result.data.mobile),
-        isUsernameAvailable(result.data.username),
+        isMobileAvailable(result.data.mobile).catch(() => true),
+        isUsernameAvailable(result.data.username).catch(() => true),
       ]);
       if (!mobileFree) {
         setErrors({ mobile: 'validation.mobileTaken' });

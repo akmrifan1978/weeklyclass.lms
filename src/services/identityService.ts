@@ -3,7 +3,7 @@ import { doc, getDoc, runTransaction, serverTimestamp, setDoc } from 'firebase/f
 
 import { db } from '@/firebase/config';
 import { COLLECTIONS } from '@/constants/app';
-import { AppError } from '@/utils/errors';
+import { AppError, denialContext } from '@/utils/errors';
 import type { UserRole } from '@/types';
 
 /**
@@ -160,7 +160,8 @@ export async function claimIdentity(params: {
   const authEmail = (params.authEmail ?? email).trim().toLowerCase();
   const mobileKey = params.mobile ? normaliseMobile(params.mobile) : '';
 
-  await runTransaction(db, async (tx) => {
+  await denialContext('claim', `usernames/${username} + mobiles/${mobileKey}`, () =>
+   runTransaction(db, async (tx) => {
     const usernameRef = doc(db, COLLECTIONS.usernames, username);
     const existing = await tx.get(usernameRef);
     if (existing.exists() && existing.data().uid !== params.uid) {
@@ -193,7 +194,8 @@ export async function claimIdentity(params: {
         createdAt: serverTimestamp(),
       });
     }
-  });
+   })
+  );
 
   // The email index is now BEST EFFORT, and is written outside the transaction
   // on purpose. Several accounts may share one address, and only the first can
@@ -231,13 +233,15 @@ export async function nextSequentialId(prefix: 'STU' | 'TCH'): Promise<string> {
   const counterId = `${prefix}-${year}`;
   const ref = doc(db, COLLECTIONS.counters, counterId);
 
-  const next = await runTransaction(db, async (tx) => {
+  const next = await denialContext('allocate id', `counters/${counterId}`, () =>
+   runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const current = snap.exists() ? ((snap.data().value as number) ?? 0) : 0;
     const value = current + 1;
     tx.set(ref, { value, prefix, year, updatedAt: serverTimestamp() }, { merge: true });
     return value;
-  });
+   })
+  );
 
   return `${prefix}-${year}-${String(next).padStart(4, '0')}`;
 }
