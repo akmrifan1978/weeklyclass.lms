@@ -170,7 +170,14 @@ export interface Lesson extends BaseDoc {
   status: ContentStatus;
 }
 
-export type VideoKind = 'video' | 'recording';
+/**
+ * `noor` is the Noor ʿalā al-Darb series — a curated set of scholarly Q&A
+ * episodes. It shares the videos collection rather than getting its own,
+ * because it is the same shape of record (a title, a speaker, a link, a date)
+ * and a second collection would need its own rules, indexes and admin screen to
+ * say exactly the same things.
+ */
+export type VideoKind = 'video' | 'recording' | 'noor';
 
 export interface VideoItem extends BaseDoc {
   title: string;
@@ -205,6 +212,14 @@ export interface VideoItem extends BaseDoc {
    */
   isLive?: boolean;
   kind: VideoKind;
+  /**
+   * Per-language title and summary, written by a person.
+   *
+   * Machine translation is deliberately not used here: these are scholarly
+   * rulings, and a translation that is merely plausible is worse than none.
+   * A language with no entry falls back to the original fields.
+   */
+  translations?: Partial<Record<LanguageCode, { title?: string; summary?: string }>>;
   status: ContentStatus;
 }
 
@@ -592,7 +607,8 @@ export type IslamicFeature =
   | 'readingPlan'
   | 'tajweed'
   | 'zakat'
-  | 'hadith';
+  | 'hadith'
+  | 'noor';
 
 export interface DashboardStats {
   totalStudents: number;

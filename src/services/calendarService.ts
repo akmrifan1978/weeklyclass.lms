@@ -12,6 +12,7 @@ import {
   type Page,
 } from './firestore';
 import * as audit from './auditService';
+import { cached } from './offlineCache';
 
 /**
  * Calendar.
@@ -232,8 +233,11 @@ export function isOnlineClass(event: CalendarEvent): boolean {
 }
 
 export async function listOnlineClasses(options: EventQuery = {}): Promise<CalendarEvent[]> {
-  const page = await listUpcoming({ ...options, pageSize: options.pageSize ?? 50 });
-  return page.items.filter(isOnlineClass);
+  const result = await cached(`onlineClasses/${options.classId ?? 'all'}`, async () => {
+    const page = await listUpcoming({ ...options, pageSize: options.pageSize ?? 50 });
+    return page.items.filter(isOnlineClass);
+  });
+  return result.data;
 }
 
 /**

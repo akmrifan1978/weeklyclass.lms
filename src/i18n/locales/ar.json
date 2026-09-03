@@ -869,5 +869,21 @@
     "pagesOf": "قرأت {{read}} من {{total}} صفحة",
     "noPlan": "لا خطة قراءة بعد",
     "noPlanHelp": "ابدأ خطة قراءة يومية للقرآن وسيظهر تقدّمك هنا."
+  },
+  "offline": {
+    "banner": "أنت غير متصل — يُعرض المحتوى المحفوظ"
+  },
+  "noor": {
+    "title": "نور على الدرب",
+    "subtitle": "أجوبة العلماء",
+    "search": "ابحث في الحلقات",
+    "listen": "استمع",
+    "none": "لا حلقات بعد",
+    "noneHelp": "تظهر الحلقات هنا بعد أن يضيفها المسؤول.",
+    "noTranslation": "لم تُضف ترجمة لهذه اللغة بعد.",
+    "addEpisode": "إضافة حلقة",
+    "translationFor": "الترجمة ({{language}})",
+    "translatedTitle": "العنوان بـ{{language}}",
+    "translatedSummary": "الملخص بـ{{language}}"
   }
 }

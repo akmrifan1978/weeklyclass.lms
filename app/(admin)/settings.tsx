@@ -40,6 +40,7 @@ const ISLAMIC_FEATURE_LABELS: Record<IslamicFeature, string> = {
   tajweed: 'nav.tajweed',
   zakat: 'nav.zakat',
   hadith: 'nav.hadith',
+  noor: 'noor.title',
 };
 
 function SettingsScreen() {

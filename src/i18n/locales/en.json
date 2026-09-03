@@ -869,5 +869,21 @@
     "pagesOf": "{{read}} of {{total}} pages read",
     "noPlan": "No reading plan yet",
     "noPlanHelp": "Start a daily Qur'an reading plan and your progress will show here."
+  },
+  "offline": {
+    "banner": "You are offline — showing saved content"
+  },
+  "noor": {
+    "title": "Noor ala al-Darb",
+    "subtitle": "Scholarly answers",
+    "search": "Search episodes",
+    "listen": "Listen",
+    "none": "No episodes yet",
+    "noneHelp": "Episodes appear here once an administrator adds them.",
+    "noTranslation": "No translation has been added for this language yet.",
+    "addEpisode": "Add episode",
+    "translationFor": "Translation ({{language}})",
+    "translatedTitle": "Title in {{language}}",
+    "translatedSummary": "Summary in {{language}}"
   }
 }

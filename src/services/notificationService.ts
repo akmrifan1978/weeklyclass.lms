@@ -23,6 +23,7 @@ import {
 } from './firestore';
 import { sendExpoPush, type PushSendReport } from './pushService';
 import * as audit from './auditService';
+import { cached } from './offlineCache';
 
 /**
  * Notifications and announcements.
@@ -309,7 +310,17 @@ export function listAnnouncements(options: {
 }
 
 /** Announcements aimed at this user, newest and highest priority first. */
-export async function announcementsFor(user: AppUser, pageSize = 10): Promise<Announcement[]> {
+export async function announcementsFor(
+  user: AppUser,
+  pageSize = 10
+): Promise<Announcement[]> {
+  const result = await cached(`announcements/${user.uid}`, () =>
+    fetchAnnouncementsFor(user, pageSize)
+  );
+  return result.data;
+}
+
+async function fetchAnnouncementsFor(user: AppUser, pageSize = 10): Promise<Announcement[]> {
   const all = await listAnnouncements({ pageSize: 40 });
   const audience = user.role === 'teacher' ? 'teachers' : 'students';
   const now = Date.now();

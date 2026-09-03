@@ -869,5 +869,21 @@
     "pagesOf": "{{read}} of {{total}} pages read",
     "noPlan": "No reading plan yet",
     "noPlanHelp": "Start a daily Qur'an reading plan and your progress will show here."
+  },
+  "offline": {
+    "banner": "நீங்கள் இணையத்தில் இல்லை — சேமித்த உள்ளடக்கம் காட்டப்படுகிறது"
+  },
+  "noor": {
+    "title": "நூர் அலா அத்-தர்ப்",
+    "subtitle": "அறிஞர்களின் பதில்கள்",
+    "search": "அத்தியாயங்களைத் தேடு",
+    "listen": "கேள்",
+    "none": "இன்னும் அத்தியாயங்கள் இல்லை",
+    "noneHelp": "நிர்வாகி சேர்த்ததும் அத்தியாயங்கள் இங்கே தோன்றும்.",
+    "noTranslation": "இந்த மொழிக்கான மொழிபெயர்ப்பு இன்னும் சேர்க்கப்படவில்லை.",
+    "addEpisode": "அத்தியாயத்தைச் சேர்",
+    "translationFor": "மொழிபெயர்ப்பு ({{language}})",
+    "translatedTitle": "{{language}} இல் தலைப்பு",
+    "translatedSummary": "{{language}} இல் சுருக்கம்"
   }
 }

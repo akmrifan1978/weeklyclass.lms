@@ -61,6 +61,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     tajweed: true,
     zakat: true,
     hadith: true,
+    noor: true,
   },
 };
 
@@ -72,6 +73,7 @@ export const ISLAMIC_FEATURES = [
   'tajweed',
   'zakat',
   'hadith',
+  'noor',
 ] as const;
 
 export interface LanguageOption {

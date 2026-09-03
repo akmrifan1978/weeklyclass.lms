@@ -72,6 +72,13 @@ const TILES: Tile[] = [
     path: '/hadith',
     tint: brand.navy,
   },
+  {
+    feature: 'noor',
+    icon: 'radio-outline',
+    labelKey: 'noor.title',
+    path: '/noor',
+    tint: brand.orange,
+  },
 ];
 
 export function IslamicTiles({

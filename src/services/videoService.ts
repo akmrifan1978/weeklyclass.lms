@@ -14,6 +14,7 @@ import {
   type Page,
 } from './firestore';
 import * as audit from './auditService';
+import { cached } from './offlineCache';
 import { announce } from './announceService';
 
 /**
@@ -56,6 +57,17 @@ export function listVideos(options: VideoQuery = {}): Promise<Page<VideoItem>> {
  * two small reads merged client-side.
  */
 export async function listVideosForStudent(
+  classId: string | null | undefined,
+  kind: VideoKind = 'video',
+  pageSize = 20
+): Promise<VideoItem[]> {
+  const result = await cached(`videos/${kind}/${classId ?? 'shared'}`, () =>
+    fetchVideosForStudent(classId, kind, pageSize)
+  );
+  return result.data;
+}
+
+async function fetchVideosForStudent(
   classId: string | null | undefined,
   kind: VideoKind = 'video',
   pageSize = 20

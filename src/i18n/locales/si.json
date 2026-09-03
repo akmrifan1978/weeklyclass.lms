@@ -869,5 +869,21 @@
     "pagesOf": "{{read}} of {{total}} pages read",
     "noPlan": "No reading plan yet",
     "noPlanHelp": "Start a daily Qur'an reading plan and your progress will show here."
+  },
+  "offline": {
+    "banner": "ඔබ නොබැඳිය — සුරකින ලද අන්තර්ගතය පෙන්වයි"
+  },
+  "noor": {
+    "title": "නූර් අලා අද්-දර්බ්",
+    "subtitle": "විද්වතුන්ගේ පිළිතුරු",
+    "search": "කථාංග සොයන්න",
+    "listen": "අසන්න",
+    "none": "තවම කථාංග නැත",
+    "noneHelp": "පරිපාලක එකතු කළ පසු කථාංග මෙහි පෙන්වයි.",
+    "noTranslation": "මෙම භාෂාව සඳහා පරිවර්තනයක් තවම එකතු කර නැත.",
+    "addEpisode": "කථාංගයක් එක් කරන්න",
+    "translationFor": "පරිවර්තනය ({{language}})",
+    "translatedTitle": "{{language}} බසින් මාතෘකාව",
+    "translatedSummary": "{{language}} බසින් සාරාංශය"
   }
 }

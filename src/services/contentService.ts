@@ -11,6 +11,7 @@ import {
   type Page,
 } from './firestore';
 import * as audit from './auditService';
+import { cached } from './offlineCache';
 import { announce } from './announceService';
 
 /** Lessons, articles and study materials. */
@@ -42,7 +43,22 @@ export function listLessons(options: LessonQuery = {}): Promise<Page<Lesson>> {
 }
 
 /** Published lessons for the student's own class only. */
-export function lessonsForStudent(classId: string, pageSize = 20): Promise<Page<Lesson>> {
+/**
+ * Cache-backed so a student on a train opens yesterday's lessons rather than an
+ * error. The cache key includes the class, or two students sharing a device
+ * would see each other's list.
+ */
+export async function lessonsForStudent(
+  classId: string,
+  pageSize = 20
+): Promise<Page<Lesson>> {
+  const result = await cached(`lessons/${classId}`, () =>
+    listLessonsFromServer(classId, pageSize)
+  );
+  return result.data;
+}
+
+function listLessonsFromServer(classId: string, pageSize = 20): Promise<Page<Lesson>> {
   return listPage<Lesson>(COLLECTIONS.lessons, {
     filters: [
       ['classId', '==', classId],

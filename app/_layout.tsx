@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import '@/i18n';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
+import { OfflineBanner } from '@/components/shared/OfflineBanner';
 import { scopeForSegments, type ScopeLanguages } from '@/i18n/scopes';
 import { applyLanguage } from '@/i18n';
 import { ToastProvider } from '@/contexts/ToastContext';
@@ -120,6 +121,9 @@ function RootNavigator() {
   return (
     <RoleGate>
       <ScopeLanguageSync />
+      {/* Above the navigator so it cannot be present on one screen and missing
+          on the next. */}
+      <OfflineBanner />
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
