@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -96,6 +104,7 @@ export default function RegisterScreen() {
   // Until someone edits the username themselves, it mirrors their mobile
   // number — that is what most people here expect to sign in with.
   const [usernameEdited, setUsernameEdited] = useState(false);
+  const [declarationAccepted, setDeclarationAccepted] = useState(false);
 
   const [countries, setCountries] = useState<Country[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -178,6 +187,11 @@ export default function RegisterScreen() {
 
   const handleSubmit = async () => {
     setFormError(null);
+
+    if (!declarationAccepted) {
+      setErrors({ declaration: 'validation.declarationRequired' });
+      return;
+    }
 
     const payload = {
       fullName: form.fullName,
@@ -492,10 +506,43 @@ export default function RegisterScreen() {
               </View>
             ) : null}
 
+            <Pressable
+              onPress={() => {
+                setDeclarationAccepted((v) => !v);
+                setErrors((previous) => {
+                  const next = { ...previous };
+                  delete next.declaration;
+                  return next;
+                });
+              }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: declarationAccepted }}
+              accessibilityLabel={t('auth.declaration')}
+              style={styles.declarationRow}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  declarationAccepted ? styles.checkboxOn : null,
+                  errors.declaration ? styles.checkboxError : null,
+                ]}
+              >
+                {declarationAccepted ? (
+                  <Ionicons name="checkmark" size={15} color={colors.textInverse} />
+                ) : null}
+              </View>
+              <Text style={styles.declarationText}>{t('auth.declaration')}</Text>
+            </Pressable>
+
+            {errors.declaration ? (
+              <Text style={styles.declarationError}>{t(errors.declaration)}</Text>
+            ) : null}
+
             <Button
               label={t('auth.createAccount')}
               onPress={handleSubmit}
               loading={submitting}
+              disabled={!declarationAccepted}
               fullWidth
               size="lg"
               icon="person-add-outline"
@@ -556,6 +603,36 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   formErrorText: { flex: 1, color: colors.danger, fontSize: fontSize.sm },
+  declarationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.sm,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  checkboxError: { borderColor: colors.danger },
+  declarationText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  declarationError: {
+    fontSize: fontSize.xs,
+    color: colors.danger,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   footer: { alignItems: 'center', marginTop: spacing.lg },
   footerHint: { color: colors.textMuted, fontSize: fontSize.sm },
   successWrap: {

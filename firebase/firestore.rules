@@ -145,6 +145,17 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // One phone number, one account. Same shape as `usernames`: readable by
+    // `get` so registration can check availability, never listable, and each row
+    // may only be created by the account it names.
+    match /mobiles/{mobileKey} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
     // Sequential id counters (STU-2026-0001), incremented in a transaction while
     // a user registers. This runs BEFORE users/{uid} exists, so the rule can
     // only depend on `request.auth` — any helper that reads the user document

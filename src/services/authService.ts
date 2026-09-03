@@ -87,6 +87,22 @@ export async function login(identifier: string, password: string): Promise<Login
     throw new AppError('auth.profileMissing', 'auth/profile-missing');
   }
 
+  // The exact shape of this document decides what the security rules allow, and
+  // a mismatch between what it looks like in the console and what the rules see
+  // is the hardest first-run problem to diagnose. Log the fields that matter.
+  console.info('[WeeklyClass] profile loaded:', {
+    docId: profile.id,
+    uid: profile.uid,
+    uidMatchesDocId: profile.uid === profile.id,
+    uidMatchesAuth: profile.uid === credential.user.uid,
+    role: profile.role,
+    roleType: typeof profile.role,
+    status: profile.status,
+    statusType: typeof profile.status,
+    deleted: profile.deleted,
+    deletedType: typeof profile.deleted,
+  });
+
   if (profile.status !== 'active') {
     await fbSignOut(auth);
     throw new AppError(LOGIN_BLOCKED[profile.status], 'auth/user-disabled');
@@ -237,9 +253,20 @@ export async function register(
             qualification: input.qualification ?? '',
           }),
       deleted: false,
+      // Recorded so there is proof of what was agreed, and when.
+      declarationAcceptedAt: new Date(),
     };
 
     step('4/6 writing profile document', `users/${uid}`);
+    // A profile may already exist if this uid was set up by hand in the Firebase
+    // console. The security rules treat an overwrite as an UPDATE, and the
+    // update rule forbids touching `role`, so the write would fail with a bare
+    // "insufficient permissions". Say what actually happened instead.
+    const existingProfile = await getDoc(doc(db, COLLECTIONS.users, uid));
+    if (existingProfile.exists()) {
+      throw new AppError('auth.profileAlreadyExists', 'already-exists');
+    }
+
     await setDoc(doc(db, COLLECTIONS.users, uid), {
       ...profile,
       searchTokens: searchTokens(profile.fullName, username, email, generatedId),
@@ -249,7 +276,7 @@ export async function register(
     });
 
     step('5/6 claiming username index', username);
-    await claimIdentity({ username, email, uid, role });
+    await claimIdentity({ username, email, uid, role, mobile: input.mobile });
     step('5/6 username index claimed');
 
     // Everything above is essential and is awaited. These two are not: the

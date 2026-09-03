@@ -53,6 +53,9 @@ export interface AppUser extends BaseDoc {
 
   /** Expo / FCM push tokens, keyed by device id. */
   pushTokens?: Record<string, string>;
+
+  /** When the registration declaration was accepted. */
+  declarationAcceptedAt?: FireDate;
 }
 
 /** `usernames/{usernameLower}` — enforces global username uniqueness. */

@@ -121,7 +121,9 @@
     "resendVerification": "Resend verification email",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "passwordHint": "At least 8 characters, including a letter and a number."
+    "passwordHint": "At least 8 characters, including a letter and a number.",
+    "declaration": "I declare that the information provided is accurate to the best of my knowledge, and I authorize its use for registration processing on JDC-LMS for educational purposes.",
+    "profileAlreadyExists": "A profile already exists for this account. Sign in instead, or ask an administrator."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
@@ -148,7 +150,9 @@
     "invalidUrl": "Enter a valid URL",
     "minOneQuestion": "Add at least one question",
     "needTwoOptions": "Add at least two answer options",
-    "selectCorrectAnswer": "Mark the correct answer"
+    "selectCorrectAnswer": "Mark the correct answer",
+    "declarationRequired": "Please accept the declaration to continue.",
+    "mobileTaken": "An account already uses this mobile number."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

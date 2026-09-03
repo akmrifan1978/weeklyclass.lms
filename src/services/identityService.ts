@@ -37,6 +37,27 @@ export function normaliseUsername(username: string): string {
   return username.trim().toLowerCase();
 }
 
+/**
+ * Reduces a typed mobile number to a comparable key: digits only, with any
+ * leading zeros or country code stripped to the last 9 digits. "+94 77 123 4567",
+ * "0771234567" and "771234567" all collapse to the same key, so the same phone
+ * cannot register twice just by being typed differently.
+ */
+export function normaliseMobile(mobile: string): string {
+  const digits = mobile.replace(/[^0-9]/g, '');
+  return digits.length > 9 ? digits.slice(-9) : digits;
+}
+
+export const MOBILES = 'mobiles';
+
+/** True when no account has claimed this phone number yet. */
+export async function isMobileAvailable(mobile: string): Promise<boolean> {
+  const key = normaliseMobile(mobile);
+  if (!key) return true;
+  const snap = await getDoc(doc(db, MOBILES, key));
+  return !snap.exists();
+}
+
 /** Resolves a username to the email address used for Firebase Auth. */
 export async function emailForUsername(username: string): Promise<string | null> {
   const snap = await getDoc(doc(db, COLLECTIONS.usernames, normaliseUsername(username)));
@@ -63,10 +84,12 @@ export async function claimIdentity(params: {
   email: string;
   uid: string;
   role: UserRole;
+  mobile?: string;
 }): Promise<void> {
   const username = normaliseUsername(params.username);
   const email = params.email.trim().toLowerCase();
   const emailHash = await hashEmail(email);
+  const mobileKey = params.mobile ? normaliseMobile(params.mobile) : '';
 
   await runTransaction(db, async (tx) => {
     const usernameRef = doc(db, COLLECTIONS.usernames, username);
@@ -85,6 +108,21 @@ export async function claimIdentity(params: {
       uid: params.uid,
       createdAt: serverTimestamp(),
     });
+
+    // One phone number, one account. Claimed in the same transaction as the
+    // username so a race cannot let two people take the same number.
+    if (mobileKey) {
+      const mobileRef = doc(db, MOBILES, mobileKey);
+      const existingMobile = await tx.get(mobileRef);
+      if (existingMobile.exists() && existingMobile.data().uid !== params.uid) {
+        throw new AppError('validation.mobileTaken', 'already-exists');
+      }
+      tx.set(mobileRef, {
+        uid: params.uid,
+        username,
+        createdAt: serverTimestamp(),
+      });
+    }
   });
 }
 
