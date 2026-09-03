@@ -50,7 +50,25 @@ export const DEFAULT_SETTINGS: AppSettings = {
   availableLanguages: ['en', 'ta', 'si', 'ar'],
   registrationEnabled: true,
   requireApproval: true,
+  // All on by default. An admin switching one off is a deliberate act; a fresh
+  // install finding them all hidden would just look broken.
+  islamicFeatures: {
+    prayer: true,
+    quran: true,
+    readingPlan: true,
+    tajweed: true,
+    zakat: true,
+  },
 };
+
+/** Every Islamic section, in the order they appear on a dashboard. */
+export const ISLAMIC_FEATURES = [
+  'prayer',
+  'quran',
+  'readingPlan',
+  'tajweed',
+  'zakat',
+] as const;
 
 export interface LanguageOption {
   code: LanguageCode;

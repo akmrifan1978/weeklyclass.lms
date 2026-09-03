@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { DEFAULT_SETTINGS } from '@/constants/app';
+import { DEFAULT_SETTINGS, ISLAMIC_FEATURES } from '@/constants/app';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
 import { getSettings, updateSettings } from '@/services/settingsService';
 import { PermissionGuard } from '@/components/shared/RoleGuard';
 import { ImageField } from '@/components/shared/ImageField';
-import type { AppSettings, LanguageCode } from '@/types';
+import type { AppSettings, IslamicFeature, LanguageCode } from '@/types';
 import {
   AsyncBoundary,
   Button,
@@ -32,6 +32,15 @@ import {
  * The values here drive the splash screen, registration flow and contact
  * details, so admins can rebrand and open/close signups without a release.
  */
+/** Toggle labels reuse the same keys the dashboards use for the tiles. */
+const ISLAMIC_FEATURE_LABELS: Record<IslamicFeature, string> = {
+  prayer: 'nav.prayer',
+  quran: 'nav.quran',
+  readingPlan: 'quran.dailyReading',
+  tajweed: 'nav.tajweed',
+  zakat: 'nav.zakat',
+};
+
 function SettingsScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -262,6 +271,33 @@ function SettingsScreen() {
 
         <Spacer />
 
+        {/*
+          One switch per section, platform-wide. These are offered to students,
+          teachers and admins alike — they are for the person, not tools tied to
+          a role — so there is nothing per-role to configure here.
+        */}
+        <SectionHeader title={t('settings.islamicSections')} icon="moon-outline" />
+        <Card>
+          <Text style={styles.sectionHint}>{t('settings.islamicSectionsHint')}</Text>
+          {ISLAMIC_FEATURES.map((feature, index) => (
+            <React.Fragment key={feature}>
+              {index > 0 ? <Divider /> : null}
+              <ToggleRow
+                label={t(ISLAMIC_FEATURE_LABELS[feature])}
+                value={form.islamicFeatures?.[feature] !== false}
+                onValueChange={(value) =>
+                  set('islamicFeatures', {
+                    ...(form.islamicFeatures ?? {}),
+                    [feature]: value,
+                  })
+                }
+              />
+            </React.Fragment>
+          ))}
+        </Card>
+
+        <Spacer />
+
         <Button
           label={t('common.save')}
           icon="save-outline"
@@ -287,6 +323,12 @@ export default function AdminSettings() {
 }
 
 const styles = StyleSheet.create({
+  sectionHint: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginBottom: spacing.md,
+  },
   title: {
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,

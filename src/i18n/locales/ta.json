@@ -217,7 +217,10 @@
     "myClasses": "எனது வகுப்புகள்",
     "myStudents": "எனது மாணவர்கள்",
     "prayer": "தொழுகை நேரங்கள்",
-    "quran": "குர்ஆன்"
+    "quran": "குர்ஆன்",
+    "islamic": "இஸ்லாமிய",
+    "tajweed": "தஜ்வீத் விதிகள்",
+    "zakat": "ஸகாத் கணக்கிடு"
   },
   "dashboard": {
     "quickAccess": "விரைவு அணுகல்",
@@ -553,7 +556,9 @@
     "brandingNote": "இவற்றை ஒருமுறை அமைக்கவும். புதிய பதிவுகள், வீடியோக்கள் மற்றும் வகுப்புகள் இவற்றிலிருந்து தொடங்கி, தங்கள் சொந்த நகலை வைத்திருக்கும் — எனவே இயல்புநிலையை மாற்றுவது ஏற்கனவே வெளியிடப்பட்டதை மாற்றாது.",
     "colours": "நிறங்கள்",
     "languageScopeHint": "இந்தத் தேர்வு இந்தப் பலகைக்கு மட்டுமே பொருந்தும், மீண்டும் வரும்போது நினைவில் வைக்கப்படும்.",
-    "language": "மொழி"
+    "language": "மொழி",
+    "islamicSections": "இஸ்லாமிய பகுதிகள்",
+    "islamicSectionsHint": "Switch these on or off for everyone. They appear the same way on the student, teacher and admin dashboards."
   },
   "confirm": {
     "deleteTitle": "இந்தப் பதிவை நீக்கவா?",
@@ -682,5 +687,58 @@
     "streak_one": "{{count}} நாள்",
     "streak_other": "{{count}} நாட்கள்",
     "resumesAt": "பக்கம் {{page}} இலிருந்து தொடரும்"
+  },
+  "tajweed": {
+    "searchRule": "விதியைத் தேடு",
+    "letters": "எழுத்துகள்",
+    "readingNote": "These describe the recitation of Hafs an Asim, the reading in most printed mushafs. Other authentic readings differ in some durations and details.",
+    "categoryNoonSakinah": "Noon sakinah and tanween",
+    "categoryMeemSakinah": "Meem sakinah",
+    "categoryMadd": "மத்து - நீட்டல்",
+    "categoryOther": "பிற விதிகள்",
+    "izhar": "The noon is pronounced clearly, with no nasalisation, when one of the six throat letters follows.",
+    "idgham": "The noon merges into the following letter. With ya, noon, meem and waw it is merged with nasalisation; with lam and ra, without.",
+    "iqlab": "The noon becomes a meem before ba, pronounced with nasalisation and the lips together.",
+    "ikhfa": "The noon is hidden - neither clear nor fully merged - and held with nasalisation for about two counts.",
+    "idghamShafawi": "A meem sakinah followed by another meem merges into it, held with nasalisation.",
+    "ikhfaShafawi": "A meem sakinah before ba is hidden at the lips and held with nasalisation.",
+    "izharShafawi": "A meem sakinah before any letter other than meem or ba is pronounced clearly.",
+    "maddAsli": "The natural lengthening of alif, waw and ya - held for two counts, with nothing extending it further.",
+    "maddMuttasil": "A madd letter followed by a hamza in the same word. Held four or five counts, and obligatory.",
+    "maddMunfasil": "A madd letter at the end of a word followed by a hamza at the start of the next. Held four or five counts.",
+    "maddLazim": "A madd letter followed by a sukoon or a doubled letter. Held six counts.",
+    "qalqalah": "An echoing bounce on these five letters when they carry a sukoon. Strongest at the end of a verse.",
+    "ghunnah": "A nasal sound held for about two counts on a doubled noon or meem.",
+    "lamShamsiyyah": "The lam of \"al-\" is not pronounced; the following letter is doubled instead.",
+    "lamQamariyyah": "The lam of \"al-\" is pronounced clearly before the fourteen moon letters."
+  },
+  "zakat": {
+    "disclaimer": "A calculation aid, not a religious ruling. The rate and thresholds here are the classical ones, but how some assets are treated differs between scholars - ask someone qualified about your own situation.",
+    "metalPrices": "உலோக விலைகள்",
+    "pricesHint": "Enter the current local price per gram, in your own currency. Every figure below uses the same currency.",
+    "goldPrice": "Gold price per gram",
+    "silverPrice": "Silver price per gram",
+    "nisabBasis": "Nisab basis",
+    "basisSilver": "Silver (595 g)",
+    "basisGold": "Gold (85 g)",
+    "basisHint": "Silver gives the lower threshold, so it makes more people liable. Many scholars recommend it for that reason; gold is also widely used.",
+    "assets": "ச்ரிம்",
+    "cash": "Cash, bank and savings",
+    "goldGrams": "Gold held (grams)",
+    "silverGrams": "Silver held (grams)",
+    "businessAssets": "Stock held for sale",
+    "receivables": "Money owed to you",
+    "investments": "Shares and invested savings",
+    "deductions": "கழிவுகள்",
+    "liabilities": "Debts due now",
+    "liabilitiesHint": "Bills and debts payable now, not the whole of a long-term loan.",
+    "result": "முடிவு",
+    "needPrice": "Enter the price per gram for your chosen basis to see the threshold.",
+    "totalAssets": "Total assets",
+    "netWealth": "Net wealth",
+    "nisab": "நிஸாப்",
+    "zakatDue": "Zakat due",
+    "rateNote": "2.5% of net wealth, held for a full lunar year.",
+    "belowNisab": "Below the threshold, so no zakat is due. You are {{amount}} short of the nisab."
   }
 }

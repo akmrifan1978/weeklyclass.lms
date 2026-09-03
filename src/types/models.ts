@@ -518,9 +518,21 @@ export interface AppSettings {
   registrationEnabled: boolean;
   /** New student/teacher signups land in `pending` until an admin approves. */
   requireApproval: boolean;
+  /**
+   * Which Islamic sections are switched on, platform-wide.
+   *
+   * The same set is offered to students, teachers and admins alike — these are
+   * for the person, not tools tied to a role — so the admin decides once here
+   * rather than per role. Absent means on: a platform that upgrades into this
+   * release should not silently lose sections it was already showing.
+   */
+  islamicFeatures?: Partial<Record<IslamicFeature, boolean>>;
   updatedAt?: FireDate;
   updatedBy?: string;
 }
+
+/** The optional Islamic sections an admin can switch on or off. */
+export type IslamicFeature = 'prayer' | 'quran' | 'readingPlan' | 'tajweed' | 'zakat';
 
 export interface DashboardStats {
   totalStudents: number;

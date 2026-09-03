@@ -15,7 +15,15 @@ import type { LanguageCode } from '@/types';
  * defaulting to English, so nobody has to set five preferences before the app
  * reads the way they want.
  */
-export const LANGUAGE_SCOPES = ['admin', 'teacher', 'student', 'prayer', 'quran'] as const;
+export const LANGUAGE_SCOPES = [
+  'admin',
+  'teacher',
+  'student',
+  'prayer',
+  'quran',
+  'tajweed',
+  'zakat',
+] as const;
 
 export type LanguageScope = (typeof LANGUAGE_SCOPES)[number];
 
@@ -88,6 +96,8 @@ export function mergeScopeLanguages(
 export function scopeForSegments(segments: string[]): LanguageScope | null {
   if (segments.includes('quran')) return 'quran';
   if (segments.includes('prayer')) return 'prayer';
+  if (segments.includes('tajweed')) return 'tajweed';
+  if (segments.includes('zakat')) return 'zakat';
   if (segments.includes('(admin)')) return 'admin';
   if (segments.includes('(teacher)')) return 'teacher';
   if (segments.includes('(student)')) return 'student';

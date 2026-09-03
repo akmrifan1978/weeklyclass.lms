@@ -25,6 +25,7 @@ import {
   UpcomingEventCard,
   VideoRow,
 } from '@/components/shared/ContentCards';
+import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
   Avatar,
@@ -215,25 +216,9 @@ export default function StudentHome() {
               tint={brand.orange}
               onPress={() => router.push('/(student)/results')}
             />
-            <QuickAccessTile
-              icon="time-outline"
-              label={t('nav.prayer')}
-              tint={brand.navy}
-              onPress={() => router.push('/(student)/prayer')}
-            />
-            <QuickAccessTile
-              icon="book"
-              label={t('nav.quran')}
-              tint={brand.sand}
-              onPress={() => router.push('/(student)/quran')}
-            />
-            <QuickAccessTile
-              icon="bookmarks"
-              label={t('quran.dailyReading')}
-              tint={brand.orange}
-              onPress={() => router.push('/(student)/quran/plan')}
-            />
           </Grid>
+
+          <IslamicTiles basePath="/(student)" />
 
           {data?.lessons.length ? (
             <>

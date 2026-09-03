@@ -19,6 +19,7 @@ import {
   QuickAccessTile,
   UpcomingEventCard,
 } from '@/components/shared/ContentCards';
+import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
   Avatar,
@@ -168,25 +169,9 @@ export default function TeacherHome() {
                 onPress={() => router.push(tile.route as never)}
               />
             ))}
-            <QuickAccessTile
-              icon="time-outline"
-              label={t('nav.prayer')}
-              tint={brand.navy}
-              onPress={() => router.push('/(teacher)/prayer')}
-            />
-            <QuickAccessTile
-              icon="book"
-              label={t('nav.quran')}
-              tint={brand.sand}
-              onPress={() => router.push('/(teacher)/quran')}
-            />
-            <QuickAccessTile
-              icon="bookmarks"
-              label={t('quran.dailyReading')}
-              tint={brand.orange}
-              onPress={() => router.push('/(teacher)/quran/plan')}
-            />
           </Grid>
+
+          <IslamicTiles basePath="/(teacher)" />
 
           {visibleTiles.length ? null : (
             <>
