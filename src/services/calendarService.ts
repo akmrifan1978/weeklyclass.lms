@@ -1,6 +1,6 @@
 import { COLLECTIONS } from '@/constants/app';
 import { combineDateTime, toISODate } from '@/utils/date';
-import type { AppUser, CalendarEvent } from '@/types';
+import type { AppUser, CalendarEvent, MeetingProvider } from '@/types';
 import {
   createDoc,
   getById,
@@ -107,6 +107,41 @@ export async function nextEventFor(user: {
     const b = event.startsAt && 'seconds' in event.startsAt ? event.startsAt.seconds : 0;
     return b < a ? event : earliest;
   });
+}
+
+/**
+ * Recognises the platform from a pasted meeting link.
+ *
+ * The provider is only ever a label on the join button — opening the link is
+ * what actually happens — so guessing it saves the admin a field and is
+ * harmless when it guesses "other".
+ */
+export function detectMeetingProvider(url: string): MeetingProvider {
+  const value = url.toLowerCase();
+  if (value.includes('zoom.us') || value.includes('zoom.com')) return 'zoom';
+  if (value.includes('meet.google.com')) return 'meet';
+  return 'other';
+}
+
+/**
+ * Events sharing a start time, grouped so parallel sessions read as parallel
+ * rather than as an ambiguous list. Several classes running at once is normal
+ * here — different languages or levels at the same hour — so the UI has to make
+ * that obvious instead of hiding it in ordering.
+ */
+export function groupByTimeSlot(
+  events: CalendarEvent[]
+): { startTime: string; events: CalendarEvent[] }[] {
+  const slots = new Map<string, CalendarEvent[]>();
+  for (const event of events) {
+    const key = event.startTime || '00:00';
+    const bucket = slots.get(key) ?? [];
+    bucket.push(event);
+    slots.set(key, bucket);
+  }
+  return Array.from(slots.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([startTime, list]) => ({ startTime, events: list }));
 }
 
 export function getEvent(id: string): Promise<CalendarEvent | null> {

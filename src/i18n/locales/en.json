@@ -263,7 +263,20 @@
     "tomorrow": "Tomorrow",
     "noEvents": "No events to show",
     "eventCancelled": "Cancelled",
-    "eventCompleted": "Completed"
+    "eventCompleted": "Completed",
+    "meetingProvider": "Meeting platform",
+    "zoom": "Zoom",
+    "googleMeet": "Google Meet",
+    "otherPlatform": "Other platform",
+    "meetingId": "Meeting ID",
+    "meetingPasscode": "Passcode",
+    "joinZoom": "Join on Zoom",
+    "joinMeet": "Join on Google Meet",
+    "parallelSessions": "{{count}} classes at this time",
+    "onlineClass": "Online class",
+    "logo": "Logo",
+    "banner": "Banner",
+    "brandingHint": "Shown with this class. Published classes keep the logo and banner they were created with."
   },
   "video": {
     "title": "Videos",

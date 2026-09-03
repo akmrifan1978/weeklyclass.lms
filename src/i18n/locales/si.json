@@ -263,7 +263,20 @@
     "tomorrow": "හෙට",
     "noEvents": "පෙන්වීමට වැඩසටහන් නැත",
     "eventCancelled": "අවලංගුයි",
-    "eventCompleted": "අවසන්"
+    "eventCompleted": "අවසන්",
+    "meetingProvider": "රැස්වීම් වේදිකාව",
+    "zoom": "Zoom",
+    "googleMeet": "Google Meet",
+    "otherPlatform": "වෙනත් වේදිකාවක්",
+    "meetingId": "රැස්වීම් ID",
+    "meetingPasscode": "මුරකේතය",
+    "joinZoom": "Zoom හරහා සම්බන්ධ වන්න",
+    "joinMeet": "Google Meet හරහා සම්බන්ධ වන්න",
+    "parallelSessions": "මෙම වේලාවේ පන්ති {{count}}ක්",
+    "onlineClass": "මාර්ගගත පන්තිය",
+    "logo": "ලාංඡනය",
+    "banner": "බැනරය",
+    "brandingHint": "මෙම පන්තිය සමඟ පෙන්වයි. ප්‍රකාශිත පන්ති ඒවා සෑදූ ලාංඡනය හා බැනරය තබා ගනී."
   },
   "video": {
     "title": "වීඩියෝ",

@@ -209,6 +209,13 @@ export interface Material extends BaseDoc {
 
 export type AudienceRole = 'all' | 'students' | 'teachers';
 
+/**
+ * Where an online class is hosted. Nothing is integrated with these services —
+ * the app stores and opens a link, which is what keeps online classes free and
+ * lets a branch use whichever platform it already has.
+ */
+export type MeetingProvider = 'zoom' | 'meet' | 'other';
+
 export interface CalendarEvent extends BaseDoc {
   title: string;
   description?: string;
@@ -220,7 +227,21 @@ export interface CalendarEvent extends BaseDoc {
   venue?: string;
   speaker?: string;
   teacherId?: string | null;
+
+  /**
+   * Online meeting. `provider` only decides the label and icon on the join
+   * button — the link is what actually matters, and any provider works.
+   */
+  meetingProvider?: MeetingProvider;
   meetingUrl?: string | null;
+  /** Meeting ID / passcode, shown for people who join from the app manually. */
+  meetingId?: string | null;
+  meetingPasscode?: string | null;
+
+  // Branding is copied onto the event, exactly as it is for recordings, so a
+  // published session keeps the identity it was announced with.
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
   branchId?: string | null;
   classId?: string | null;
   targetAudience: AudienceRole;

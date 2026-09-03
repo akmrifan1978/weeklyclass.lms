@@ -263,7 +263,20 @@
     "tomorrow": "غداً",
     "noEvents": "لا توجد فعاليات",
     "eventCancelled": "ملغاة",
-    "eventCompleted": "منتهية"
+    "eventCompleted": "منتهية",
+    "meetingProvider": "منصة الاجتماع",
+    "zoom": "Zoom",
+    "googleMeet": "Google Meet",
+    "otherPlatform": "منصة أخرى",
+    "meetingId": "معرّف الاجتماع",
+    "meetingPasscode": "رمز الدخول",
+    "joinZoom": "انضم عبر Zoom",
+    "joinMeet": "انضم عبر Google Meet",
+    "parallelSessions": "{{count}} فصول في هذا الوقت",
+    "onlineClass": "فصل عبر الإنترنت",
+    "logo": "الشعار",
+    "banner": "اللافتة",
+    "brandingHint": "يظهر مع هذا الفصل. تحتفظ الفصول المنشورة بالشعار واللافتة اللذين أُنشئت بهما."
   },
   "video": {
     "title": "الفيديوهات",

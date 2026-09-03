@@ -353,10 +353,15 @@ export function EventRow({
   locale?: string;
   trailing?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const date = toDate(event.date) ?? new Date(`${event.date}T00:00:00`);
 
   return (
     <Card onPress={onPress} accessibilityLabel={event.title}>
+      {event.bannerUrl ? (
+        <Image source={{ uri: event.bannerUrl }} style={styles.eventBanner} resizeMode="cover" />
+      ) : null}
+
       <View style={styles.row}>
         <View style={styles.dateChip}>
           <Text style={styles.dateChipDay}>{date.getDate()}</Text>
@@ -365,9 +370,14 @@ export function EventRow({
           </Text>
         </View>
         <View style={styles.rowBody}>
-          <Text style={styles.rowTitle} numberOfLines={2}>
-            {event.title}
-          </Text>
+          <View style={styles.titleWithLogo}>
+            {event.logoUrl ? (
+              <Image source={{ uri: event.logoUrl }} style={styles.rowLogo} resizeMode="contain" />
+            ) : null}
+            <Text style={[styles.rowTitle, styles.titleFlex]} numberOfLines={2}>
+              {event.title}
+            </Text>
+          </View>
           <Text style={styles.meta}>
             {formatTimeRange(event.startTime, event.endTime, locale)}
           </Text>
@@ -375,6 +385,20 @@ export function EventRow({
             <Text style={styles.meta} numberOfLines={1}>
               {event.venue}
             </Text>
+          ) : null}
+          {event.meetingUrl ? (
+            <View style={styles.metaRow}>
+              <Ionicons name="videocam" size={12} color={colors.accent} />
+              <Text style={[styles.meta, { color: colors.accent }]}>
+                {t(
+                  event.meetingProvider === 'zoom'
+                    ? 'calendar.zoom'
+                    : event.meetingProvider === 'meet'
+                      ? 'calendar.googleMeet'
+                      : 'calendar.onlineClass'
+                )}
+              </Text>
+            </View>
           ) : null}
         </View>
         {trailing}
@@ -750,6 +774,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.infoSoft,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  eventBanner: {
+    width: '100%',
+    height: 80,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    backgroundColor: colors.surfaceMuted,
   },
   dateChip: {
     width: 48,

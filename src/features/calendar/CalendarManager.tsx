@@ -5,13 +5,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAsync } from '@/hooks/useAsync';
 import { formatShortDate, formatTimeRange, toISODate } from '@/utils/date';
 import { matchesSearch } from '@/utils/format';
-import { deleteEvent, listPast, listUpcoming, saveEvent } from '@/services/calendarService';
+import {
+  deleteEvent,
+  detectMeetingProvider,
+  listPast,
+  listUpcoming,
+  saveEvent,
+} from '@/services/calendarService';
 import { listBranches, listClasses } from '@/services/orgService';
-import type { AudienceRole, CalendarEvent } from '@/types';
+import type { AudienceRole, CalendarEvent, MeetingProvider } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
 import { AdminRow } from '@/features/AdminRow';
 import { ChipGroup, DateField, Select, TextField, TimeField, type Option } from '@/components/ui';
+import { ImageField } from '@/components/shared/ImageField';
 
 interface EventForm {
   title: string;
@@ -21,7 +28,12 @@ interface EventForm {
   endTime: string;
   venue: string;
   speaker: string;
+  meetingProvider: MeetingProvider;
   meetingUrl: string;
+  meetingId: string;
+  meetingPasscode: string;
+  logoUrl: string;
+  bannerUrl: string;
   branchId: string;
   classId: string;
   targetAudience: AudienceRole;
@@ -36,7 +48,12 @@ const EMPTY: EventForm = {
   endTime: '22:00',
   venue: '',
   speaker: '',
+  meetingProvider: 'other',
   meetingUrl: '',
+  meetingId: '',
+  meetingPasscode: '',
+  logoUrl: '',
+  bannerUrl: '',
   branchId: '',
   classId: '',
   targetAudience: 'all',
@@ -119,7 +136,12 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
         endTime: event.endTime,
         venue: event.venue ?? '',
         speaker: event.speaker ?? '',
+        meetingProvider: event.meetingProvider ?? 'other',
         meetingUrl: event.meetingUrl ?? '',
+        meetingId: event.meetingId ?? '',
+        meetingPasscode: event.meetingPasscode ?? '',
+        logoUrl: event.logoUrl ?? '',
+        bannerUrl: event.bannerUrl ?? '',
         branchId: event.branchId ?? '',
         classId: event.classId ?? '',
         targetAudience: event.targetAudience,
@@ -145,6 +167,13 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
             venue: form.venue.trim(),
             speaker: form.speaker.trim(),
             meetingUrl: form.meetingUrl.trim() || null,
+            meetingProvider: form.meetingProvider,
+            meetingId: form.meetingId.trim() || null,
+            meetingPasscode: form.meetingPasscode.trim() || null,
+            // Copied onto the event, so a published class keeps the identity it
+            // was announced with even if the defaults change later.
+            logoUrl: form.logoUrl.trim() || null,
+            bannerUrl: form.bannerUrl.trim() || null,
             branchId: form.branchId || null,
             classId: form.classId || null,
             targetAudience: form.targetAudience,
@@ -227,9 +256,59 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
           <TextField
             label={t('calendar.meetingUrl')}
             value={form.meetingUrl}
-            onChangeText={(v) => set('meetingUrl', v)}
+            onChangeText={(v) => {
+              set('meetingUrl', v);
+              // Recognise the platform from the link so it is one less field to
+              // fill in; still overridable below.
+              if (v.trim()) set('meetingProvider', detectMeetingProvider(v));
+            }}
             icon="videocam-outline"
             autoCapitalize="none"
+            hint="Paste a Zoom or Google Meet link"
+          />
+
+          {form.meetingUrl.trim() ? (
+            <>
+              <Select<MeetingProvider>
+                label={t('calendar.meetingProvider')}
+                value={form.meetingProvider}
+                options={[
+                  { value: 'zoom', label: t('calendar.zoom'), icon: 'videocam-outline' },
+                  { value: 'meet', label: t('calendar.googleMeet'), icon: 'videocam-outline' },
+                  { value: 'other', label: t('calendar.otherPlatform'), icon: 'link-outline' },
+                ]}
+                onChange={(v) => set('meetingProvider', v)}
+              />
+              <TextField
+                label={t('calendar.meetingId')}
+                value={form.meetingId}
+                onChangeText={(v) => set('meetingId', v)}
+                icon="key-outline"
+                autoCapitalize="none"
+              />
+              <TextField
+                label={t('calendar.meetingPasscode')}
+                value={form.meetingPasscode}
+                onChangeText={(v) => set('meetingPasscode', v)}
+                icon="lock-closed-outline"
+                autoCapitalize="none"
+              />
+            </>
+          ) : null}
+
+          <ImageField
+            label={t('calendar.logo')}
+            value={form.logoUrl}
+            onChange={(url) => set('logoUrl', url)}
+            hint={t('calendar.brandingHint')}
+            aspectRatio={1}
+          />
+
+          <ImageField
+            label={t('calendar.banner')}
+            value={form.bannerUrl}
+            onChange={(url) => set('bannerUrl', url)}
+            aspectRatio={3}
           />
           <Select
             label={t('auth.branch')}
