@@ -3,7 +3,7 @@
  * Seeds the minimum data a fresh project needs to be usable:
  *   settings/app        so the splash screen has a name and registration state
  *   languages/*         the four bundled languages
- *   countries/*         a starter set (admins add more from the dashboard)
+ *   countries/*         the full ISO 3166-1 list (admins can edit or remove any)
  *   organizations/*     one default organisation
  *
  * It creates NO users. The first admin comes from scripts/set-claims.js or the
@@ -30,24 +30,10 @@ const LANGUAGES = [
   { code: 'ar', name: 'Arabic', nativeName: 'العربية', rtl: true, order: 3 },
 ];
 
-// A starting point only — the app hard-codes no geography, and admins add,
-// rename or remove countries from the Branches screen.
-const COUNTRIES = [
-  { code: 'SA', name: 'Saudi Arabia', dialCode: '+966' },
-  { code: 'AE', name: 'United Arab Emirates', dialCode: '+971' },
-  { code: 'QA', name: 'Qatar', dialCode: '+974' },
-  { code: 'KW', name: 'Kuwait', dialCode: '+965' },
-  { code: 'BH', name: 'Bahrain', dialCode: '+973' },
-  { code: 'OM', name: 'Oman', dialCode: '+968' },
-  { code: 'LK', name: 'Sri Lanka', dialCode: '+94' },
-  { code: 'IN', name: 'India', dialCode: '+91' },
-  { code: 'MY', name: 'Malaysia', dialCode: '+60' },
-  { code: 'SG', name: 'Singapore', dialCode: '+65' },
-  { code: 'GB', name: 'United Kingdom', dialCode: '+44' },
-  { code: 'US', name: 'United States', dialCode: '+1' },
-  { code: 'CA', name: 'Canada', dialCode: '+1' },
-  { code: 'AU', name: 'Australia', dialCode: '+61' },
-];
+// The full ISO 3166-1 list, kept in its own module and shared with the Cloud
+// Shell setup script. Seeded rather than hard-coded so an admin can rename,
+// disable or remove any row without a release.
+const { COUNTRIES } = require('./countries');
 
 function parseArgs(argv) {
   const args = {};
@@ -106,6 +92,9 @@ async function main() {
   };
 
   for (const country of COUNTRIES) {
+    // The ISO code is the document id, so re-running merges rather than
+    // duplicating — the earlier auto-id version could create a second row for
+    // the same country on every run.
     queue(db.collection('countries').doc(country.code), {
       ...base,
       ...country,
