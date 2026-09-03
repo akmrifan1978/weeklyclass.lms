@@ -45,9 +45,19 @@ const LOGIN_BLOCKED: Record<Exclude<UserStatus, 'active'>, string> = {
 };
 
 export async function fetchProfile(uid: string): Promise<AppUser | null> {
-  const snap = await getDoc(doc(db, COLLECTIONS.users, uid));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...(snap.data() as object) } as AppUser;
+  try {
+    const snap = await getDoc(doc(db, COLLECTIONS.users, uid));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...(snap.data() as object) } as AppUser;
+  } catch (error) {
+    // A denied read and a missing document mean the same thing to every caller:
+    // there is no profile to work with. Letting the denial propagate aborted
+    // sign-in outright, which prevented the first-run bootstrap from ever
+    // running — the one thing that could have fixed the situation. Report it
+    // and return null so recovery can proceed.
+    console.error(`[WeeklyClass] could not read users/${uid}:`, error);
+    return null;
+  }
 }
 
 /**
@@ -97,14 +107,19 @@ async function tryBootstrapFirstAdmin(user: FirebaseUser): Promise<AppUser | nul
     createdBy: user.uid,
   };
 
-  await setDoc(doc(db, COLLECTIONS.users, user.uid), profile);
+  // `merge` so this also repairs a partial profile left by a failed attempt,
+  // rather than being refused as a duplicate create.
+  await setDoc(doc(db, COLLECTIONS.users, user.uid), profile, { merge: true });
 
   // Close the window. Written after the profile, so a failure part-way through
   // leaves the bootstrap still open rather than locking everyone out forever.
+  // Failing here must not undo a profile that was written successfully.
   await setDoc(doc(db, COLLECTIONS.settings, 'bootstrap'), {
     completedAt: serverTimestamp(),
     firstAdminUid: user.uid,
     firstAdminEmail: email,
+  }).catch((error) => {
+    console.warn('[WeeklyClass] admin profile created, but the marker failed:', error);
   });
 
   console.info('[WeeklyClass] first admin created; bootstrap now closed permanently');
