@@ -10,7 +10,8 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import * as calendar from '@/services/calendarService';
 import { listClasses } from '@/services/orgService';
-import type { CalendarEvent, ClassRoom } from '@/types';
+import { listUsers } from '@/services/userService';
+import type { AppUser, CalendarEvent, ClassRoom } from '@/types';
 import {
   AppHeader,
   Button,
@@ -41,13 +42,16 @@ export function OnlineClassesScreen({
   const { user } = useAuth();
 
   const load = useCallback(async () => {
-    const [sessions, classes] = await Promise.all([
+    const [sessions, classes, teachers] = await Promise.all([
       calendar.listOnlineClasses(classId ? { classId } : {}),
       listClasses({ pageSize: 100 })
         .then((page) => page.items)
         .catch(() => [] as ClassRoom[]),
+      listUsers({ role: 'teacher', status: 'active', pageSize: 200 })
+        .then((page) => page.items)
+        .catch(() => [] as AppUser[]),
     ]);
-    return { sessions, classes };
+    return { sessions, classes, teachers };
   }, [classId]);
 
   const { data, loading, refreshing, error, reload, refresh } = useAsync(load, [load]);
@@ -57,6 +61,12 @@ export function OnlineClassesScreen({
     for (const room of data?.classes ?? []) map[room.id] = room.name;
     return map;
   }, [data?.classes]);
+
+  const teacherNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const teacher of data?.teachers ?? []) map[teacher.uid] = teacher.fullName;
+    return map;
+  }, [data?.teachers]);
 
   const byDate = useMemo(
     () => calendar.groupByDate(data?.sessions ?? []),
@@ -101,6 +111,10 @@ export function OnlineClassesScreen({
                   key={event.id}
                   event={event}
                   className={event.classId ? classNames[event.classId] : undefined}
+                  teachers={calendar
+                    .teachersFor(event)
+                    .map((id) => teacherNames[id])
+                    .filter(Boolean)}
                   onJoin={() => join(event)}
                 />
               ))}
@@ -115,10 +129,13 @@ export function OnlineClassesScreen({
 function SessionCard({
   event,
   className,
+  teachers,
   onJoin,
 }: {
   event: CalendarEvent;
   className?: string;
+  /** Everyone conducting the session, resolved to names. */
+  teachers: string[];
   onJoin: () => void;
 }) {
   const { t } = useTranslation();
@@ -161,9 +178,15 @@ function SessionCard({
         ) : null}
       </View>
 
-      {event.speaker ? (
+      {/* Every teacher conducting it, not just the first. Two names is the
+          normal case here, and showing one would misrepresent the session. */}
+      {teachers.length || event.speaker ? (
         <Text style={styles.meta}>
-          <Ionicons name="person-outline" size={12} /> {event.speaker}
+          <Ionicons
+            name={teachers.length > 1 ? 'people-outline' : 'person-outline'}
+            size={12}
+          />{' '}
+          {teachers.length ? teachers.join(' · ') : event.speaker}
         </Text>
       ) : null}
 

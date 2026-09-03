@@ -10,6 +10,8 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import { relativeTime } from '@/utils/date';
 import * as support from '@/services/supportService';
+import { AyahAudio } from '@/features/islamic/AyahAudio';
+import { VoiceRecorder } from './VoiceRecorder';
 import type { QaQuestion } from '@/types';
 import {
   AppHeader,
@@ -42,8 +44,12 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   const isStaff = user?.role === 'admin' || user?.role === 'teacher';
 
   const [question, setQuestion] = useState('');
+  const [voice, setVoice] = useState<{ url: string; seconds: number } | null>(null);
   const [answering, setAnswering] = useState<QaQuestion | null>(null);
   const [answerText, setAnswerText] = useState('');
+  const [answerVoice, setAnswerVoice] = useState<{ url: string; seconds: number } | null>(
+    null
+  );
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(
@@ -63,14 +69,26 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   });
 
   const ask = async () => {
+    // A short label is required even with a recording. A list of unlabelled
+    // play buttons cannot be scanned or searched, and the teacher working
+    // through it needs to see what each one is about.
     if (!user || question.trim().length < 5) {
       toast.error(t('qa.questionTooShort'));
       return;
     }
     setBusy(true);
     try {
-      await support.askQuestion({ question, eventId: eventId ?? null }, user);
+      await support.askQuestion(
+        {
+          question,
+          audioUrl: voice?.url ?? null,
+          audioSeconds: voice?.seconds ?? null,
+          eventId: eventId ?? null,
+        },
+        user
+      );
       setQuestion('');
+      setVoice(null);
       toast.success(t('qa.asked'));
       void reload();
     } catch (err) {
@@ -84,10 +102,14 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
     if (!answering || !user || answerText.trim().length < 2) return;
     setBusy(true);
     try {
-      await support.answerQuestion(answering.id, answerText, answering, user);
+      await support.answerQuestion(answering.id, answerText, answering, user, {
+        url: answerVoice?.url ?? null,
+        seconds: answerVoice?.seconds ?? null,
+      });
       toast.success(t('qa.answered'));
       setAnswering(null);
       setAnswerText('');
+      setAnswerVoice(null);
       void reload();
     } catch (err) {
       toast.error(friendlyMessage(err, t));
@@ -119,6 +141,31 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
             placeholder={t('qa.placeholder')}
             multiline
           />
+
+          <View style={styles.voiceRow}>
+            {user ? (
+              <VoiceRecorder
+                ownerId={user.uid}
+                onRecorded={(url, seconds) => setVoice({ url, seconds })}
+              />
+            ) : null}
+            {voice ? (
+              <View style={styles.attached}>
+                <AyahAudio url={voice.url} size={28} />
+                <Text style={styles.attachedText}>
+                  {t('qa.voiceAttached', { seconds: voice.seconds })}
+                </Text>
+                <IconButton
+                  icon="close"
+                  label={t('common.clear')}
+                  size={28}
+                  color={colors.danger}
+                  onPress={() => setVoice(null)}
+                />
+              </View>
+            ) : null}
+          </View>
+
           <Button
             label={t('qa.ask')}
             icon="help-circle-outline"
@@ -150,6 +197,15 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
               </View>
               <Text style={styles.question}>{item.question}</Text>
 
+              {item.audioUrl ? (
+                <View style={styles.playRow}>
+                  <AyahAudio url={item.audioUrl} size={30} />
+                  <Text style={styles.playLabel}>
+                    {t('qa.spokenQuestion', { seconds: item.audioSeconds ?? 0 })}
+                  </Text>
+                </View>
+              ) : null}
+
               {item.answer ? (
                 <View style={styles.answer}>
                   <View style={styles.answerHeader}>
@@ -159,6 +215,14 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                     </Text>
                   </View>
                   <Text style={styles.answerText}>{item.answer}</Text>
+                  {item.answerAudioUrl ? (
+                    <View style={styles.playRow}>
+                      <AyahAudio url={item.answerAudioUrl} size={30} />
+                      <Text style={styles.playLabel}>
+                        {t('qa.spokenAnswer', { seconds: item.answerAudioSeconds ?? 0 })}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               ) : (
                 <Text style={styles.pending}>{t('qa.awaitingAnswer')}</Text>
@@ -205,6 +269,26 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           multiline
           required
         />
+        <View style={styles.voiceRow}>
+          {user ? (
+            <VoiceRecorder
+              ownerId={user.uid}
+              onRecorded={(url, seconds) => setAnswerVoice({ url, seconds })}
+            />
+          ) : null}
+          {answerVoice ? (
+            <View style={styles.attached}>
+              <AyahAudio url={answerVoice.url} size={28} />
+              <IconButton
+                icon="close"
+                label={t('common.clear')}
+                size={28}
+                color={colors.danger}
+                onPress={() => setAnswerVoice(null)}
+              />
+            </View>
+          ) : null}
+        </View>
       </FormSheet>
     </>
   );
@@ -240,6 +324,22 @@ const styles = StyleSheet.create({
   answerBy: { fontSize: fontSize.xs, color: colors.success, fontWeight: fontWeight.bold },
   answerText: { fontSize: fontSize.sm, color: colors.text, lineHeight: 20, marginTop: 2 },
   pending: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.md },
+  voiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  attached: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  attachedText: { fontSize: fontSize.xs, color: colors.textSecondary },
+  playRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  playLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md },
   originalLabel: {
     fontSize: fontSize.xs,

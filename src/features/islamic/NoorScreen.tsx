@@ -54,6 +54,9 @@ export function NoorScreen({ headerTint }: { headerTint?: string }) {
           search,
           episode.title,
           episode.speaker,
+          // The imported archive files each fatwa under an Arabic topic, kept
+          // on `venue`. Searching it is how you find "everything about wudu".
+          episode.venue,
           translationFor(episode, language).title,
           translationFor(episode, language).summary
         )
@@ -162,6 +165,13 @@ function EpisodeCard({
               .filter(Boolean)
               .join(' · ')}
           </Text>
+          {episode.venue ? (
+            <View style={styles.topicChip}>
+              <Text style={styles.topicText} numberOfLines={1}>
+                {episode.venue}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <Ionicons
@@ -233,6 +243,16 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   meta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  topicChip: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    maxWidth: '100%',
+  },
+  topicText: { fontSize: fontSize.xs, color: colors.textSecondary },
   body: {
     marginTop: spacing.md,
     paddingTop: spacing.md,

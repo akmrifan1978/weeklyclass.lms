@@ -191,13 +191,21 @@ export async function listQuestions(options: QaQuery = {}): Promise<QaQuestion[]
 }
 
 export async function askQuestion(
-  input: { question: string; classId?: string | null; eventId?: string | null },
+  input: {
+    question: string;
+    audioUrl?: string | null;
+    audioSeconds?: number | null;
+    classId?: string | null;
+    eventId?: string | null;
+  },
   user: AppUser
 ): Promise<string> {
   return createDoc(
     COLLECTIONS.qaQuestions,
     {
       question: input.question.trim(),
+      audioUrl: input.audioUrl ?? null,
+      audioSeconds: input.audioSeconds ?? null,
       askedBy: user.uid,
       askedByName: user.fullName,
       classId: input.classId ?? user.classId ?? null,
@@ -223,10 +231,13 @@ export async function answerQuestion(
   questionId: string,
   answer: string,
   question: QaQuestion,
-  actor: AppUser
+  actor: AppUser,
+  audio?: { url: string | null; seconds: number | null }
 ): Promise<void> {
   await updateDocById<QaQuestion>(COLLECTIONS.qaQuestions, questionId, {
     answer: answer.trim(),
+    answerAudioUrl: audio?.url ?? null,
+    answerAudioSeconds: audio?.seconds ?? null,
     answeredBy: actor.uid,
     answeredByName: actor.fullName,
     answeredAt: new Date(),

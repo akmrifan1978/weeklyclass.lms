@@ -284,7 +284,17 @@ export interface CalendarEvent extends BaseDoc {
   endTime: string;
   venue?: string;
   speaker?: string;
+  /** Kept for events created before sessions could have several teachers. */
   teacherId?: string | null;
+  /**
+   * Everyone conducting this session.
+   *
+   * A class here is often taught by more than one person at once — a lead and a
+   * second for the girls' side, or two teachers splitting a long session — so
+   * this is a list, not a single id. `teacherId` above remains the first entry
+   * for anything created before this existed.
+   */
+  teacherIds?: string[];
 
   /**
    * Online meeting. `provider` only decides the label and icon on the join
@@ -348,12 +358,25 @@ export interface SupportRequest extends BaseDoc {
  */
 export interface QaQuestion extends BaseDoc {
   question: string;
+  /**
+   * A spoken question, uploaded alongside (or instead of) the text.
+   *
+   * Typing Tamil or Arabic on a phone is slow, and someone who reads more
+   * easily than they write should still be able to ask. The text field stays
+   * required as a short label so the list is scannable and searchable —
+   * a wall of unlabelled play buttons is not a question list.
+   */
+  audioUrl?: string | null;
+  audioSeconds?: number | null;
   askedBy: string;
   askedByName: string;
   classId?: string | null;
   /** Optionally tied to the online class it was asked during. */
   eventId?: string | null;
   answer?: string | null;
+  /** A spoken answer. Teachers benefit from this at least as much as students. */
+  answerAudioUrl?: string | null;
+  answerAudioSeconds?: number | null;
   answeredBy?: string | null;
   answeredByName?: string | null;
   answeredAt?: FireDate | null;

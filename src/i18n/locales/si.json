@@ -781,7 +781,10 @@
     "timeFormat": "පැය 24 ආකෘතිය භාවිත කරන්න, උදා. 18:00",
     "endBeforeStart": "අවසන් වේලාව ආරම්භක වේලාවෙන් පසු විය යුතුය",
     "linkRequired": "රැස්වීම් සබැඳියක් අවශ්‍යයි",
-    "couldNotOpen": "රැස්වීම් සබැඳිය විවෘත කළ නොහැකි විය."
+    "couldNotOpen": "රැස්වීම් සබැඳිය විවෘත කළ නොහැකි විය.",
+    "conductedBy": "මෙහෙයවන්නේ",
+    "conductedByHint": "මෙම සැසිය මෙහෙයවන සියලු දෙනා තෝරන්න. එකකට වඩා තෝරිය හැක.",
+    "noTeachers": "තවම ක්‍රියාකාරී ගුරුවරු නැත."
   },
   "notify": {
     "lessonAdded": "නව සතිපතා පාඩම",
@@ -832,7 +835,7 @@
   },
   "qa": {
     "askTitle": "ප්‍රශ්නයක් අසන්න",
-    "askHint": "පිළිතුරු ඔබේ මුළු පන්තියටම බෙදා ගැනේ, එබැවින් සැමට ප්‍රයෝජනවත් වේ.",
+    "askHint": "ඔබේ ප්‍රශ්නය ටයිප් කරන්න, පටිගත කරන්න, හෝ දෙකම. පිළිතුරු ඔබේ මුළු පන්තියටම බෙදා ගැනේ.",
     "ask": "අසන්න",
     "none": "තවම ප්‍රශ්න නැත",
     "awaitingAnswer": "තවම පිළිතුරු දී නැත",
@@ -845,7 +848,15 @@
     "answered": "Answer posted",
     "yourAnswer": "Your answer",
     "theQuestion": "The question",
-    "hide": "Hide"
+    "hide": "Hide",
+    "recordVoice": "හඬ ප්‍රශ්නයක් පටිගත කරන්න",
+    "stopRecording": "නවත්වන්න",
+    "uploadingVoice": "උඩුගත කරමින්…",
+    "voiceReady": "හඬ පණිවිඩය අමුණා ඇත",
+    "voiceAttached": "තත්පර {{seconds}} අමුණා ඇත",
+    "spokenQuestion": "හඬ ප්‍රශ්නය · තත්පර {{seconds}}",
+    "spokenAnswer": "හඬ පිළිතුර · තත්පර {{seconds}}",
+    "microphoneDenied": "මයික්‍රොෆෝන අවසරය ලබා දී නැත."
   },
   "hadith": {
     "sahihCollections": "සහීහ් දෙක",

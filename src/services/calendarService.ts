@@ -259,3 +259,15 @@ export function joinWindow(
   if (now.getTime() > end) return 'ended';
   return 'live';
 }
+
+/**
+ * Everyone conducting a session, from whichever shape the record uses.
+ *
+ * Sessions saved before a class could have several teachers carry a single
+ * `teacherId`; newer ones carry `teacherIds`. Reading both here means no
+ * migration and no screen that has to know which era a record came from.
+ */
+export function teachersFor(event: CalendarEvent): string[] {
+  if (event.teacherIds?.length) return event.teacherIds;
+  return event.teacherId ? [event.teacherId] : [];
+}

@@ -781,7 +781,10 @@
     "timeFormat": "Use 24-hour time, like 18:00",
     "endBeforeStart": "The end time must be after the start time",
     "linkRequired": "A meeting link is required",
-    "couldNotOpen": "Could not open the meeting link."
+    "couldNotOpen": "Could not open the meeting link.",
+    "conductedBy": "Conducted by",
+    "conductedByHint": "Pick everyone teaching this session. More than one is fine.",
+    "noTeachers": "No active teachers yet."
   },
   "notify": {
     "lessonAdded": "New weekly lesson",
@@ -832,7 +835,7 @@
   },
   "qa": {
     "askTitle": "Ask a question",
-    "askHint": "Answers are shared with your whole class, so everyone learns from them.",
+    "askHint": "Type your question, record it, or both. Answers are shared with your whole class.",
     "placeholder": "What would you like to ask?",
     "ask": "Ask",
     "asked": "Your question has been posted.",
@@ -845,7 +848,15 @@
     "answered": "Answer posted",
     "yourAnswer": "Your answer",
     "theQuestion": "The question",
-    "hide": "Hide"
+    "hide": "Hide",
+    "recordVoice": "Record a voice question",
+    "stopRecording": "Stop",
+    "uploadingVoice": "Uploading…",
+    "voiceReady": "Voice message attached",
+    "voiceAttached": "{{seconds}}s attached",
+    "spokenQuestion": "Spoken question · {{seconds}}s",
+    "spokenAnswer": "Spoken answer · {{seconds}}s",
+    "microphoneDenied": "Microphone access was not granted."
   },
   "hadith": {
     "authenticityNote": "Sahih al-Bukhari and Sahih Muslim are the two collections whose authenticity is least disputed. Within the other books individual narrations carry different gradings, which are not shown here — each one lists its book and number so you can check it.",

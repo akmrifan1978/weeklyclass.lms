@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -10,10 +10,11 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import * as calendar from '@/services/calendarService';
 import { listClasses } from '@/services/orgService';
+import { listUsers } from '@/services/userService';
 import { getSettings } from '@/services/settingsService';
 import { announce } from '@/services/announceService';
 import { ImageField } from '@/components/shared/ImageField';
-import type { CalendarEvent, ClassRoom } from '@/types';
+import type { AppUser, CalendarEvent, ClassRoom } from '@/types';
 import {
   AppHeader,
   Button,
@@ -61,6 +62,7 @@ export function ScheduleOnlineClassScreen() {
     endTime: '',
     classId: '',
     speaker: '',
+    teacherIds: [] as string[],
     meetingUrl: '',
     meetingId: '',
     meetingPasscode: '',
@@ -71,14 +73,17 @@ export function ScheduleOnlineClassScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
-    const [sessions, classes, settings] = await Promise.all([
+    const [sessions, classes, settings, teachers] = await Promise.all([
       calendar.listOnlineClasses(),
       listClasses({ pageSize: 100 })
         .then((page) => page.items)
         .catch(() => [] as ClassRoom[]),
       getSettings(),
+      listUsers({ role: 'teacher', status: 'active', pageSize: 200 })
+        .then((page) => page.items)
+        .catch(() => [] as AppUser[]),
     ]);
-    return { sessions, classes, settings };
+    return { sessions, classes, settings, teachers };
   }, []);
 
   const { data, loading, refreshing, error, reload, refresh } = useAsync(load, [load]);
@@ -113,6 +118,7 @@ export function ScheduleOnlineClassScreen() {
             endTime: event.endTime,
             classId: event.classId ?? '',
             speaker: event.speaker ?? '',
+            teacherIds: calendar.teachersFor(event),
             meetingUrl: event.meetingUrl ?? '',
             meetingId: event.meetingId ?? '',
             meetingPasscode: event.meetingPasscode ?? '',
@@ -162,6 +168,10 @@ export function ScheduleOnlineClassScreen() {
           endTime: form.endTime,
           classId: form.classId || null,
           speaker: form.speaker.trim(),
+          teacherIds: form.teacherIds,
+          // Kept in step so anything still reading the single field — an older
+          // screen, an export — sees the lead teacher rather than nothing.
+          teacherId: form.teacherIds[0] ?? null,
           meetingUrl: url,
           meetingProvider: calendar.detectMeetingProvider(url),
           meetingId: form.meetingId.trim() || null,
@@ -311,6 +321,52 @@ export function ScheduleOnlineClassScreen() {
           allowClear
         />
 
+        {/*
+          Several teachers, not one. A session here is often led by two people
+          at once, and forcing a single choice would mean the second one is
+          simply not recorded anywhere.
+        */}
+        <Text style={styles.fieldLabel}>{t('onlineClass.conductedBy')}</Text>
+        <Text style={styles.fieldHint}>{t('onlineClass.conductedByHint')}</Text>
+        <View style={styles.teacherWrap}>
+          {(data?.teachers ?? []).length === 0 ? (
+            <Text style={styles.noTeachers}>{t('onlineClass.noTeachers')}</Text>
+          ) : (
+            (data?.teachers ?? []).map((teacher) => {
+              const selected = form.teacherIds.includes(teacher.uid);
+              return (
+                <Pressable
+                  key={teacher.uid}
+                  onPress={() =>
+                    setForm((p) => ({
+                      ...p,
+                      teacherIds: selected
+                        ? p.teacherIds.filter((id) => id !== teacher.uid)
+                        : [...p.teacherIds, teacher.uid],
+                    }))
+                  }
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected }}
+                  accessibilityLabel={teacher.fullName}
+                  style={[styles.teacherChip, selected ? styles.teacherChipOn : null]}
+                >
+                  <Ionicons
+                    name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={15}
+                    color={selected ? brand.orange : colors.textMuted}
+                  />
+                  <Text
+                    style={[styles.teacherName, selected ? styles.teacherNameOn : null]}
+                    numberOfLines={1}
+                  >
+                    {teacher.fullName}
+                  </Text>
+                </Pressable>
+              );
+            })
+          )}
+        </View>
+
         <DateField
           label={t('calendar.date')}
           value={form.date}
@@ -422,4 +478,37 @@ const styles = StyleSheet.create({
   rowMeta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 1 },
   rowUrl: { fontSize: fontSize.xs, color: brand.orange, marginTop: 1 },
   timeRow: { flexDirection: 'row', gap: spacing.md },
+  fieldLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  fieldHint: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+    marginBottom: spacing.sm,
+    lineHeight: 16,
+  },
+  teacherWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  teacherChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    maxWidth: '100%',
+  },
+  teacherChipOn: { borderColor: brand.orange, backgroundColor: colors.accentSoft },
+  teacherName: { fontSize: fontSize.xs, color: colors.textSecondary },
+  teacherNameOn: { color: colors.text, fontWeight: fontWeight.semibold },
+  noTeachers: { fontSize: fontSize.xs, color: colors.textMuted },
 });
