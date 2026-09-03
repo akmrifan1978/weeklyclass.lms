@@ -51,6 +51,92 @@ export async function fetchProfile(uid: string): Promise<AppUser | null> {
 }
 
 /**
+ * First-run bootstrap.
+ *
+ * A new project has no admin, and the security rules refuse to let anyone
+ * self-register as one, so something has to break that circle. While
+ * `settings/bootstrap` does not exist the platform is unconfigured, and the
+ * first account to sign in successfully claims the admin role and closes the
+ * window permanently.
+ *
+ * This replaces asking someone to hand-build a Firestore document. That proved
+ * error-prone in ways that are near-impossible to diagnose afterwards: a field
+ * saved as text rather than a boolean, or a document id that does not quite
+ * match the uid, both surface only as an unexplained "permission denied".
+ */
+async function tryBootstrapFirstAdmin(user: FirebaseUser): Promise<AppUser | null> {
+  const marker = await getDoc(doc(db, COLLECTIONS.settings, 'bootstrap')).catch(() => null);
+  if (!marker || marker.exists()) return null;
+
+  const email = (user.email ?? '').toLowerCase();
+  const fullName = user.displayName || email.split('@')[0] || 'Administrator';
+
+  console.info('[WeeklyClass] no admin exists yet — claiming first-admin for', email);
+
+  const profile = {
+    uid: user.uid,
+    fullName,
+    username: email.split('@')[0] ?? user.uid,
+    email,
+    mobile: '',
+    role: 'admin' as const,
+    status: 'active' as const,
+    country: '',
+    language: DEFAULT_LANGUAGE,
+    profileImage: null,
+    branchId: null,
+    classId: null,
+    permissions: {},
+    deleted: false,
+    searchTokens: searchTokens(fullName, email),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    createdBy: user.uid,
+  };
+
+  await setDoc(doc(db, COLLECTIONS.users, user.uid), profile);
+
+  // Close the window. Written after the profile, so a failure part-way through
+  // leaves the bootstrap still open rather than locking everyone out forever.
+  await setDoc(doc(db, COLLECTIONS.settings, 'bootstrap'), {
+    completedAt: serverTimestamp(),
+    firstAdminUid: user.uid,
+    firstAdminEmail: email,
+  });
+
+  console.info('[WeeklyClass] first admin created; bootstrap now closed permanently');
+  return { id: user.uid, ...profile } as unknown as AppUser;
+}
+
+/**
+ * The same bootstrap, for an account that already has a profile — typically a
+ * half-finished registration that left a pending student behind. With no admin
+ * in existence there is nobody who could approve or promote it, so the first
+ * sign-in claims the role and closes the window.
+ */
+async function promoteToFirstAdmin(profile: AppUser): Promise<AppUser | null> {
+  const marker = await getDoc(doc(db, COLLECTIONS.settings, 'bootstrap')).catch(() => null);
+  if (!marker || marker.exists()) return null;
+
+  console.info('[WeeklyClass] no admin exists yet — promoting', profile.email);
+
+  await updateDoc(doc(db, COLLECTIONS.users, profile.uid), {
+    role: 'admin',
+    status: 'active',
+    updatedAt: serverTimestamp(),
+  });
+
+  await setDoc(doc(db, COLLECTIONS.settings, 'bootstrap'), {
+    completedAt: serverTimestamp(),
+    firstAdminUid: profile.uid,
+    firstAdminEmail: profile.email,
+  });
+
+  console.info('[WeeklyClass] promoted to admin; bootstrap now closed permanently');
+  return { ...profile, role: 'admin', status: 'active' };
+}
+
+/**
  * Signs in with either an email address or a username.
  *
  * A username is resolved to its email through the public `usernames` index
@@ -70,7 +156,23 @@ export async function login(identifier: string, password: string): Promise<Login
   }
 
   const credential = await signInWithEmailAndPassword(auth, email, password);
-  const profile = await fetchProfile(credential.user.uid);
+  let profile = await fetchProfile(credential.user.uid);
+
+  // On an unconfigured platform the first successful sign-in becomes the
+  // administrator, whether or not a partial profile already exists. A half
+  // finished registration leaves a pending student behind, and with no admin
+  // in existence there would be nobody able to approve or promote it.
+  if (!profile) {
+    profile = await tryBootstrapFirstAdmin(credential.user).catch((error) => {
+      console.error('[WeeklyClass] first-admin bootstrap failed:', error);
+      return null;
+    });
+  } else if (profile.role !== 'admin') {
+    profile = (await promoteToFirstAdmin(profile).catch((error) => {
+      console.error('[WeeklyClass] first-admin promotion failed:', error);
+      return null;
+    })) ?? profile;
+  }
 
   if (!profile) {
     // Authentication succeeded but users/{uid} is absent. This is the classic

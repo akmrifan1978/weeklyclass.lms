@@ -31,8 +31,15 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Returns an empty map rather than erroring when the caller has no profile
+    // document. A rules expression that throws is treated as a denial, and a
+    // missing profile is a completely normal state during first-run setup — it
+    // should not turn every unrelated check into an unexplained "permission
+    // denied".
     function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userExists()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
+        : {};
     }
 
     function userExists() {
@@ -145,6 +152,32 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // =========================================================================
+    // First-run bootstrap
+    // =========================================================================
+    //
+    // A brand-new project has no admin, and the rules below deliberately refuse
+    // to let anyone self-register as one. Something has to break that circle.
+    //
+    // While `settings/bootstrap` does NOT exist, the platform is unconfigured,
+    // and the first signed-in account may create its own profile with the admin
+    // role. Creating that profile also creates this marker, after which the
+    // allowance is gone permanently - the condition can never be true again.
+    //
+    // The window is only open on a database with no marker, which in practice
+    // means the minute between deploying rules and the owner signing in. It
+    // replaces a hand-built Firestore document, which proved far more dangerous
+    // in practice: it is very easy to fumble and leaves no audit trail.
+    function bootstrapOpen() {
+      return !exists(/databases/$(database)/documents/settings/bootstrap);
+    }
+
+    match /settings/bootstrap {
+      allow read: if true;
+      allow create: if isSignedIn() && bootstrapOpen();
+      allow update, delete: if isAdmin();
+    }
+
     // One phone number, one account. Same shape as `usernames`: readable by
     // `get` so registration can check availability, never listable, and each row
     // may only be created by the account it names.
@@ -198,7 +231,15 @@ service cloud.firestore {
                          'MANAGE_USERS', 'MANAGE_SETTINGS', 'MANAGE_BRANCHES',
                          'MANAGE_LANGUAGES', 'DELETE_STUDENTS', 'DELETE_TEACHERS'
                        ])
-                    || (isAdmin() && request.resource.data.uid == uid);
+                    || (isAdmin() && request.resource.data.uid == uid)
+                    // First-run only: see the bootstrap block above. Closes for
+                    // good the moment settings/bootstrap exists.
+                    || (
+                      isSelf(uid)
+                      && bootstrapOpen()
+                      && request.resource.data.uid == uid
+                      && request.resource.data.role == 'admin'
+                    );
 
       // Editing yourself: profile fields only. Role, status and permissions are
       // deliberately excluded — that is what stops privilege escalation.
@@ -209,6 +250,16 @@ service cloud.firestore {
                            'dateOfBirth', 'gender', 'qualification',
                            'pushTokens', 'lastLoginAt', 'searchTokens', 'updatedAt'
                          ])
+                    )
+                    // First-run only: an account that registered before any
+                    // admin existed may promote itself, which closes the
+                    // bootstrap window in the same flow. Impossible once
+                    // settings/bootstrap exists.
+                    || (
+                      isSelf(uid)
+                      && bootstrapOpen()
+                      && request.resource.data.role == 'admin'
+                      && request.resource.data.status == 'active'
                     )
                     || isAdmin()
                     || (
