@@ -148,9 +148,18 @@ export interface VideoItem extends BaseDoc {
   title: string;
   description?: string;
   speaker?: string;
+  /** Where the programme was held, e.g. "Jeddah Dawah Center — Tamil Section". */
+  venue?: string;
   /** Event/recording date, distinct from createdAt. */
   date?: FireDate;
   thumbnail?: string | null;
+
+  // Branding is COPIED onto each recording rather than read from settings at
+  // display time. Changing the organisation logo must not silently restyle
+  // everything ever published — each recording keeps the identity it went out
+  // with. New recordings pick up the current default when they are created.
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
   videoUrl: string;
   /** Minutes. */
   duration?: number;

@@ -280,7 +280,13 @@
     "watch": "Watch video",
     "openExternally": "Open in browser",
     "recordings": "Class recordings",
-    "noRecordings": "No recordings available yet"
+    "noRecordings": "No recordings available yet",
+    "venue": "Venue",
+    "venueHint": "Where the programme was held, e.g. Jeddah Dawah Center – Tamil Section",
+    "logo": "Logo",
+    "banner": "Banner",
+    "brandingHint": "Shown with this recording. Published recordings keep the logo and banner they were created with, so changing these only affects new ones.",
+    "useDefaultBranding": "Use the default logo and banner"
   },
   "article": {
     "title": "Articles",

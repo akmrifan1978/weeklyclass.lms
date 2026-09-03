@@ -1,10 +1,10 @@
 import React, { useCallback } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '@/contexts/LanguageContext';
-import { colors, fontSize, fontWeight, spacing } from '@/constants/theme';
+import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
 import { formatDate, formatDuration } from '@/utils/date';
 import { getVideo } from '@/services/videoService';
@@ -55,11 +55,33 @@ export default function VideoDetail() {
         >
           {video ? (
             <>
+              {video.bannerUrl ? (
+                <>
+                  <Image
+                    source={{ uri: video.bannerUrl }}
+                    style={styles.banner}
+                    resizeMode="cover"
+                    accessibilityLabel={t('video.banner')}
+                  />
+                  <Spacer size={spacing.md} />
+                </>
+              ) : null}
+
               <VideoPlayer url={video.videoUrl} title={video.title} />
               <Spacer />
 
               <Card>
-                <Text style={styles.title}>{video.title}</Text>
+                <View style={styles.titleRow}>
+                  {video.logoUrl ? (
+                    <Image
+                      source={{ uri: video.logoUrl }}
+                      style={styles.logo}
+                      resizeMode="contain"
+                      accessibilityLabel={t('video.logo')}
+                    />
+                  ) : null}
+                  <Text style={[styles.title, styles.titleFlex]}>{video.title}</Text>
+                </View>
                 {video.description ? (
                   <Text style={styles.description}>{video.description}</Text>
                 ) : null}
@@ -74,6 +96,16 @@ export default function VideoDetail() {
                       label={t('video.speaker')}
                       value={video.speaker}
                       icon="mic-outline"
+                    />
+                    <Divider />
+                  </>
+                ) : null}
+                {video.venue ? (
+                  <>
+                    <DetailRow
+                      label={t('video.venue')}
+                      value={video.venue}
+                      icon="location-outline"
                     />
                     <Divider />
                   </>
@@ -120,6 +152,15 @@ export default function VideoDetail() {
 
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  titleFlex: { flex: 1 },
+  banner: {
+    width: '100%',
+    height: 130,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceMuted,
+  },
+  logo: { width: 48, height: 48, borderRadius: radius.sm, backgroundColor: colors.surfaceMuted },
   description: {
     fontSize: fontSize.md,
     color: colors.textSecondary,

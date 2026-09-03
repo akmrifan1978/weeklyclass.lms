@@ -132,14 +132,37 @@ export function FeaturedVideoCard({
         ) : null}
       </View>
 
+      {video.bannerUrl ? (
+        <Image source={{ uri: video.bannerUrl }} style={styles.banner} resizeMode="cover" />
+      ) : null}
+
       <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {video.title}
-        </Text>
+        <View style={styles.titleWithLogo}>
+          {video.logoUrl ? (
+            <Image
+              source={{ uri: video.logoUrl }}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel={t('video.logo')}
+            />
+          ) : null}
+          <Text style={[styles.cardTitle, styles.titleFlex]} numberOfLines={2}>
+            {video.title}
+          </Text>
+        </View>
+
         {video.speaker ? (
           <View style={styles.metaRow}>
             <Ionicons name="person-outline" size={13} color={colors.textMuted} />
             <Text style={styles.meta}>{video.speaker}</Text>
+          </View>
+        ) : null}
+        {video.venue ? (
+          <View style={styles.metaRow}>
+            <Ionicons name="location-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.meta} numberOfLines={2}>
+              {video.venue}
+            </Text>
           </View>
         ) : null}
         <View style={styles.metaRow}>
@@ -181,7 +204,15 @@ export function VideoRow({
               .filter(Boolean)
               .join(' · ')}
           </Text>
+          {video.venue ? (
+            <Text style={styles.meta} numberOfLines={1}>
+              {video.venue}
+            </Text>
+          ) : null}
         </View>
+        {video.logoUrl ? (
+          <Image source={{ uri: video.logoUrl }} style={styles.rowLogo} resizeMode="contain" />
+        ) : null}
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </View>
     </Card>
@@ -629,6 +660,21 @@ const styles = StyleSheet.create({
   },
   durationText: { fontSize: fontSize.xs, color: colors.textInverse, fontWeight: fontWeight.medium },
   cardBody: { padding: spacing.lg },
+  banner: { width: '100%', height: 96, backgroundColor: colors.surfaceMuted },
+  titleWithLogo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  titleFlex: { flex: 1, marginBottom: 0 },
+  logo: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceMuted,
+  },
+  rowLogo: { width: 28, height: 28, borderRadius: radius.sm },
   eyebrow: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,

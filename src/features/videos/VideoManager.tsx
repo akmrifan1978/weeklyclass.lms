@@ -16,18 +16,23 @@ import {
   setFeatured,
 } from '@/services/videoService';
 import { listClasses } from '@/services/orgService';
+import { getSettings } from '@/services/settingsService';
 import type { ContentStatus, LanguageCode, VideoItem, VideoKind } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
 import { AdminRow } from '@/features/AdminRow';
 import { DateField, IconButton, Select, TextField, type Option } from '@/components/ui';
+import { ImageField } from '@/components/shared/ImageField';
 
 interface VideoForm {
   title: string;
   description: string;
   speaker: string;
+  venue: string;
   videoUrl: string;
   thumbnail: string;
+  logoUrl: string;
+  bannerUrl: string;
   duration: string;
   date: string;
   classId: string;
@@ -40,8 +45,11 @@ const EMPTY: VideoForm = {
   title: '',
   description: '',
   speaker: '',
+  venue: '',
   videoUrl: '',
   thumbnail: '',
+  logoUrl: '',
+  bannerUrl: '',
   duration: '',
   date: '',
   classId: '',
@@ -73,6 +81,19 @@ export function VideoManager({
 
   const { data: classes } = useAsync(loadClasses, [classScope?.join(',')]);
 
+  // New recordings start from the organisation's current branding so it does not
+  // have to be re-entered each time. It is then COPIED onto the record, so
+  // changing these defaults later never alters anything already published.
+  const loadBrandingDefaults = useCallback(async () => {
+    const settings = await getSettings().catch(() => null);
+    return {
+      logoUrl: settings?.logoUrl ?? '',
+      bannerUrl: settings?.bannerUrl ?? '',
+    };
+  }, []);
+
+  const { data: branding } = useAsync(loadBrandingDefaults, []);
+
   const classOptions = useMemo<Option[]>(
     () => (classes ?? []).map((c) => ({ value: c.id, label: c.name })),
     [classes]
@@ -87,7 +108,7 @@ export function VideoManager({
       return {
         ...page,
         items: search
-          ? scoped.filter((v) => matchesSearch(search, v.title, v.speaker, v.description))
+          ? scoped.filter((v) => matchesSearch(search, v.title, v.speaker, v.venue, v.description))
           : scoped,
       };
     },
@@ -116,13 +137,20 @@ export function VideoManager({
       canDelete={can('DELETE_VIDEO')}
       deps={[kind, classScope?.join(',')]}
       fetchPage={fetchPage}
-      emptyForm={EMPTY}
+      emptyForm={{
+        ...EMPTY,
+        logoUrl: branding?.logoUrl ?? '',
+        bannerUrl: branding?.bannerUrl ?? '',
+      }}
       toForm={(video) => ({
         title: video.title,
         description: video.description ?? '',
         speaker: video.speaker ?? '',
+        venue: video.venue ?? '',
         videoUrl: video.videoUrl,
         thumbnail: video.thumbnail ?? '',
+        logoUrl: video.logoUrl ?? '',
+        bannerUrl: video.bannerUrl ?? '',
         duration: video.duration ? String(video.duration) : '',
         date: '',
         classId: video.classId ?? '',
@@ -143,8 +171,13 @@ export function VideoManager({
             title: form.title.trim(),
             description: form.description.trim(),
             speaker: form.speaker.trim(),
+            venue: form.venue.trim(),
             videoUrl: form.videoUrl.trim(),
             thumbnail: form.thumbnail.trim() || null,
+            // Copied onto the record, not referenced. Editing the defaults later
+            // must not restyle recordings that are already published.
+            logoUrl: form.logoUrl.trim() || null,
+            bannerUrl: form.bannerUrl.trim() || null,
             duration: form.duration ? Number(form.duration) : undefined,
             date: form.date ? new Date(form.date) : new Date(),
             classId: form.classId || null,
@@ -167,7 +200,9 @@ export function VideoManager({
           iconTint={video.isFeatured ? colors.accent : colors.primary}
           title={video.title}
           subtitle={video.speaker || undefined}
-          meta={formatShortDate(video.date ?? video.createdAt)}
+          meta={[video.venue, formatShortDate(video.date ?? video.createdAt)]
+            .filter(Boolean)
+            .join(' · ')}
           badges={[
             { label: t(`common.${video.status}`), tone: video.status },
             ...(video.isFeatured ? [{ label: t('video.featured'), tone: 'active' }] : []),
@@ -221,12 +256,34 @@ export function VideoManager({
             icon="mic-outline"
           />
           <TextField
+            label={t('video.venue')}
+            value={form.venue}
+            onChangeText={(v) => set('venue', v)}
+            hint={t('video.venueHint')}
+            icon="location-outline"
+          />
+          <TextField
             label={t('video.thumbnail')}
             value={form.thumbnail}
             onChangeText={(v) => set('thumbnail', v)}
             hint="YouTube thumbnails are detected automatically."
             icon="image-outline"
             autoCapitalize="none"
+          />
+
+          <ImageField
+            label={t('video.logo')}
+            value={form.logoUrl}
+            onChange={(url) => set('logoUrl', url)}
+            hint={t('video.brandingHint')}
+            aspectRatio={1}
+          />
+
+          <ImageField
+            label={t('video.banner')}
+            value={form.bannerUrl}
+            onChange={(url) => set('bannerUrl', url)}
+            aspectRatio={3}
           />
           <TextField
             label={t('video.duration')}
