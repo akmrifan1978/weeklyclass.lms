@@ -10,7 +10,14 @@ import {
   onAuthStateChanged,
   type User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  getDocFromServer,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 
 import { auth, db } from '@/firebase/config';
 import { COLLECTIONS, DEFAULT_LANGUAGE } from '@/constants/app';
@@ -70,7 +77,17 @@ async function waitForAuthToken(user: FirebaseUser): Promise<void> {
 
 export async function fetchProfile(uid: string): Promise<AppUser | null> {
   try {
-    const snap = await getDoc(doc(db, COLLECTIONS.users, uid));
+    // Read from the server, not the offline cache. The cache happily remembers
+    // that this document did NOT exist — so a profile created after that point
+    // (by an admin, a script, or the first-run bootstrap) stays invisible until
+    // the cache expires, and sign-in keeps insisting there is no profile.
+    // Falling back to the cached read keeps this working offline.
+    let snap;
+    try {
+      snap = await getDocFromServer(doc(db, COLLECTIONS.users, uid));
+    } catch {
+      snap = await getDoc(doc(db, COLLECTIONS.users, uid));
+    }
     if (!snap.exists()) return null;
     return { id: snap.id, ...(snap.data() as object) } as AppUser;
   } catch (error) {
