@@ -99,26 +99,32 @@ export function ImageField({
         </View>
       ) : null}
 
-      <Button
-        label={uploading ? t('material.uploading', { percent: progress }) : t('material.upload')}
-        icon="image-outline"
-        variant="outline"
-        size="sm"
-        loading={uploading}
-        onPress={pick}
-      />
-
-      <Text style={styles.or}>{t('material.orPasteLink')}</Text>
-
+      {/*
+        The link box comes FIRST, deliberately. Firebase now requires a billing
+        account before Cloud Storage can be enabled at all, so on a free project
+        uploading is simply unavailable — offering it as the primary action
+        would lead most people straight into a failure. Pasting a link always
+        works, costs nothing, and keeps images off the Storage quota entirely.
+      */}
       <TextField
         value={value}
         onChangeText={onChange}
         placeholder="https://…"
         autoCapitalize="none"
         icon="link-outline"
-        hint={hint}
-        containerStyle={{ marginBottom: 0 }}
+        hint={hint ?? t('common.imageLinkHint')}
+        containerStyle={{ marginBottom: spacing.md }}
       />
+
+      <Button
+        label={uploading ? t('material.uploading', { percent: progress }) : t('material.upload')}
+        icon="cloud-upload-outline"
+        variant="ghost"
+        size="sm"
+        loading={uploading}
+        onPress={pick}
+      />
+      <Text style={styles.uploadNote}>{t('common.uploadNeedsStorage')}</Text>
     </View>
   );
 }
@@ -145,10 +151,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
   },
-  or: {
+  uploadNote: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
     textAlign: 'center',
-    marginVertical: spacing.sm,
+    marginTop: spacing.xs,
   },
 });

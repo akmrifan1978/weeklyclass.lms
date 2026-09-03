@@ -24,7 +24,11 @@ In the console's left-hand sidebar:
 this repo replace the defaults in step 5) → pick the region closest to your
 users. *The region cannot be changed later.*
 
-**Storage** → Get started → Production mode → same region.
+**Storage** → *(optional, and no longer free)* — Firebase now requires the Blaze
+plan before Cloud Storage can be enabled on a new project. The app is built to
+work entirely without it: every image field takes a **link** as well as an
+upload, and links are the primary path. Skip this step unless you have billing
+enabled and specifically want in-app uploads.
 
 ## 3. Register a web app and copy the config
 
@@ -84,7 +88,7 @@ That deploys all three files:
 |---|---|
 | `firebase/firestore.rules` | The real access control. Default-deny; every permission the UI checks is re-checked here. |
 | `firebase/firestore.indexes.json` | 61 composite indexes — one for each multi-field query the app issues. |
-| `firebase/storage.rules` | Path ownership, MIME type and size caps. |
+| `firebase/storage.rules` | Path ownership, MIME type and size caps. **Only deployable once Storage is enabled**, which needs the Blaze plan — so `npm run firebase:deploy` deliberately leaves it out. Deploy it with `firebase deploy --only storage:rules` if you ever enable Storage. |
 
 Index builds take a few minutes on a new project. Until they finish, some
 screens will show an error containing a "create index" link — the indexes here
@@ -181,8 +185,9 @@ to test a rule edit.
 ## Staying inside the free quota
 
 The Spark plan gives **50,000 document reads, 20,000 writes and 20,000 deletes
-per day**, 1 GiB stored, 5 GB in Cloud Storage and 1 GB/day of Storage
-downloads. For a few hundred active students that is comfortable, and the app is
+per day** and 1 GiB stored in Firestore. Cloud Storage is **not** included —
+Firebase requires the Blaze plan to enable it on new projects, which is why
+every image in this app can be given as a link instead. For a few hundred active students that is comfortable, and the app is
 built to keep it that way:
 
 - Every list is cursor-paginated; nothing fetches a whole collection.

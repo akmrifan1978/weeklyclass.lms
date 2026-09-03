@@ -54,9 +54,9 @@
     "typecheck": "tsc --noEmit",
     "seed": "node scripts/seed.js",
     "set-claims": "node scripts/set-claims.js",
-    "firebase:rules": "firebase deploy --only firestore:rules,storage:rules",
+    "firebase:rules": "firebase deploy --only firestore:rules",
     "firebase:indexes": "firebase deploy --only firestore:indexes",
-    "firebase:deploy": "firebase deploy --only firestore:rules,firestore:indexes,storage:rules",
+    "firebase:deploy": "firebase deploy --only firestore:rules,firestore:indexes",
     "emulators": "firebase emulators:start"
   },
   "private": true

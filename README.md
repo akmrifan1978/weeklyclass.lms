@@ -128,11 +128,12 @@ appearing to work and quietly failing.
 
 | Area | Works free | The honest limitation |
 |---|---|---|
-| Auth, Firestore, Storage, Hosting | Yes | 50k reads/day, 5 GB storage, 1 GB/day downloads |
+| Auth, Firestore, Hosting | Yes | 50k reads/day, 1 GiB stored, 10 GB/month hosting |
+| **Cloud Storage (file uploads)** | **No** | Firebase now requires the Blaze plan to enable Storage at all on new projects. Every image field therefore accepts a **link** as well as an upload, and the link path is the primary one — it costs nothing and works today. |
 | Push to devices, sent now | Yes | Via the Expo Push Service, which needs no secret key |
 | Push to devices, **scheduled** | Partly | The record is stored and appears in-app at the chosen time. Firing a *device* push at that moment needs a server job (Cloud Functions → Blaze). The compose screen says this on the form. |
 | Web push | No | Sending to FCM web tokens requires a server key, which must never ship in client code. Web users get in-app notifications. |
-| Video hosting | Yes | Only URLs are stored. Uploading media would exhaust the quota immediately, so the app plays from YouTube/Vimeo/any direct link. |
+| Video hosting | Yes | Only URLs are stored — the app plays from YouTube, Vimeo or any direct link. This was already the design, and it is now doubly true: with Storage behind a paywall, URL-based media is the only free option. |
 | Creating users as an admin | Yes | Uses a throwaway secondary Firebase app so the admin is not signed out. The Admin SDK would be cleaner but needs a server. |
 | Quiz grading | Yes | Graded on the client, with the answer key read-gated until the attempt is submitted and the result write-once. The residual gap and its fix are in [docs/SECURITY.md](docs/SECURITY.md). |
 | Role checks in Storage rules | Partly | Storage rules cannot read Firestore. Run `npm run set-claims` to mirror roles into custom claims and tighten them. Explained at the top of `firebase/storage.rules`. |
