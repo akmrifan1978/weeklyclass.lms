@@ -23,6 +23,37 @@ import { formatBytes } from '@/utils/format';
 
 export type UploadKind = 'avatar' | 'material' | 'thumbnail' | 'article' | 'branding';
 
+/**
+ * How long an upload may run before it is treated as stuck. Generous enough for
+ * a large PDF on a weak connection, short enough that a misconfigured project
+ * reports the problem instead of appearing to work forever.
+ */
+const UPLOAD_TIMEOUT_MS = 90_000;
+
+/**
+ * Turns a Storage failure into something that says what to do about it. The
+ * bucket-missing case matters most: it means Cloud Storage was never enabled on
+ * the Firebase project, which is a one-click fix in the console but produces a
+ * completely opaque failure until someone knows that.
+ */
+function describeUploadError(error: unknown): AppError {
+  const code = (error as { code?: string })?.code ?? '';
+
+  if (code === 'storage/unknown' || code === 'storage/bucket-not-found') {
+    return new AppError('errors.storageNotSetUp', code);
+  }
+  if (code === 'storage/unauthorized') {
+    return new AppError('errors.permissionDenied', code);
+  }
+  if (code === 'storage/quota-exceeded') {
+    return new AppError('errors.quotaExceeded', code);
+  }
+  if (code === 'storage/canceled') {
+    return new AppError('errors.uploadCancelled', code);
+  }
+  return new AppError('errors.uploadFailed', code || 'storage/unknown');
+}
+
 const LIMITS: Record<UploadKind, number> = {
   avatar: UPLOAD_LIMITS.imageBytes,
   thumbnail: UPLOAD_LIMITS.imageBytes,
@@ -100,6 +131,24 @@ export async function upload(params: {
   const task = uploadBytesResumable(objectRef, blob, { contentType });
 
   await new Promise<void>((resolve, reject) => {
+    // Without a deadline this can spin indefinitely. The common cause is that
+    // Cloud Storage was never enabled on the project: the SDK keeps retrying a
+    // bucket that does not exist, reports steady 0% progress, and never fails —
+    // which looks exactly like a slow upload and is not one.
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+
+    const deadline = setTimeout(() => {
+      finish(() => {
+        task.cancel();
+        reject(new AppError('errors.uploadTimedOut', 'storage/retry-limit-exceeded'));
+      });
+    }, UPLOAD_TIMEOUT_MS);
+
     task.on(
       'state_changed',
       (snapshot) => {
@@ -109,8 +158,14 @@ export async function upload(params: {
           );
         }
       },
-      reject,
-      () => resolve()
+      (error) => {
+        clearTimeout(deadline);
+        finish(() => reject(describeUploadError(error)));
+      },
+      () => {
+        clearTimeout(deadline);
+        finish(resolve);
+      }
     );
   });
 
