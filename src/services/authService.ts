@@ -179,8 +179,11 @@ export async function login(identifier: string, password: string): Promise<Login
   // administrator, whether or not a partial profile already exists. A half
   // finished registration leaves a pending student behind, and with no admin
   // in existence there would be nobody able to approve or promote it.
+  let bootstrapError: unknown = null;
+
   if (!profile) {
     profile = await tryBootstrapFirstAdmin(credential.user).catch((error) => {
+      bootstrapError = error;
       console.error('[WeeklyClass] first-admin bootstrap failed:', error);
       return null;
     });
@@ -197,10 +200,15 @@ export async function login(identifier: string, password: string): Promise<Login
     // without the matching profile document, or one created under a different
     // uid. Log the uid, because that is exactly what someone needs in order to
     // create the document with the right id.
+    const reason =
+      bootstrapError instanceof Error
+        ? `${(bootstrapError as { code?: string }).code ?? ''} ${bootstrapError.message}`.trim()
+        : String(bootstrapError ?? 'no error reported');
+
     console.error(
       `[WeeklyClass] Signed in as ${credential.user.email} (uid ${credential.user.uid}) ` +
-        `but users/${credential.user.uid} does not exist. Create that document ` +
-        `with the document ID set to this uid.`
+        `but users/${credential.user.uid} could not be created.\n` +
+        `  First-admin bootstrap outcome: ${reason}`
     );
     await fbSignOut(auth);
     throw new AppError('auth.profileMissing', 'auth/profile-missing');
