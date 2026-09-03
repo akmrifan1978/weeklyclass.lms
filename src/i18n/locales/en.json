@@ -303,7 +303,11 @@
     "logo": "Logo",
     "banner": "Banner",
     "brandingHint": "Shown with this recording. Published recordings keep the logo and banner they were created with, so changing these only affects new ones.",
-    "useDefaultBranding": "Use the default logo and banner"
+    "useDefaultBranding": "Use the default logo and banner",
+    "live": "LIVE",
+    "liveNow": "Live now",
+    "markAsLive": "Broadcasting live now",
+    "liveHint": "Shows a LIVE badge and pins this to the top of the home screen. Turn it off when the broadcast ends — the recording stays available."
   },
   "article": {
     "title": "Articles",

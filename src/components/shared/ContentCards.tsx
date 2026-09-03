@@ -122,8 +122,11 @@ export function FeaturedVideoCard({
         <View style={styles.playOverlay}>
           <Ionicons name="play" size={22} color={colors.textInverse} />
         </View>
-        <View style={styles.newBadge}>
-          <Text style={styles.newBadgeText}>{t('dashboard.newRelease')}</Text>
+        <View style={[styles.newBadge, video.isLive ? styles.liveBadge : null]}>
+          {video.isLive ? <View style={styles.liveDot} /> : null}
+          <Text style={styles.newBadgeText}>
+            {video.isLive ? t('video.live') : t('dashboard.newRelease')}
+          </Text>
         </View>
         {video.duration ? (
           <View style={styles.durationBadge}>
@@ -183,6 +186,7 @@ export function VideoRow({
   onPress: () => void;
   locale?: string;
 }) {
+  const { t } = useTranslation();
   const thumbnail = video.thumbnail ?? autoThumbnail(video.videoUrl);
 
   return (
@@ -196,9 +200,17 @@ export function VideoRow({
           </View>
         )}
         <View style={styles.rowBody}>
-          <Text style={styles.rowTitle} numberOfLines={2}>
-            {video.title}
-          </Text>
+          <View style={styles.titleWithLogo}>
+            {video.isLive ? (
+              <View style={styles.liveChip}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveChipText}>{t('video.live')}</Text>
+              </View>
+            ) : null}
+            <Text style={[styles.rowTitle, styles.titleFlex]} numberOfLines={2}>
+              {video.title}
+            </Text>
+          </View>
           <Text style={styles.meta} numberOfLines={1}>
             {[video.speaker, formatShortDate(video.date ?? video.createdAt, locale)]
               .filter(Boolean)
@@ -661,10 +673,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.md,
     left: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: brand.red,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     borderRadius: radius.sm,
+  },
+  liveBadge: { backgroundColor: '#D7263D' },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.textInverse,
   },
   newBadgeText: {
     fontSize: fontSize.xs,
@@ -699,6 +721,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   rowLogo: { width: 28, height: 28, borderRadius: radius.sm },
+  liveChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#D7263D',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  liveChipText: {
+    fontSize: 10,
+    fontWeight: fontWeight.bold,
+    color: colors.textInverse,
+    letterSpacing: 0.5,
+  },
   eyebrow: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,

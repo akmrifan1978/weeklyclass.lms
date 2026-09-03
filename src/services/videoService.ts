@@ -101,6 +101,24 @@ export function getVideo(id: string): Promise<VideoItem | null> {
   return getById<VideoItem>(COLLECTIONS.videos, id);
 }
 
+/**
+ * Anything broadcasting right now. A live class is the most time-sensitive thing
+ * on the platform — it is only relevant while it is happening — so it outranks
+ * the featured release on the home screen.
+ */
+export async function getLiveVideo(): Promise<VideoItem | null> {
+  const items = await listAll<VideoItem>(COLLECTIONS.videos, {
+    filters: [
+      ['isLive', '==', true],
+      ['status', '==', 'published'],
+    ],
+    orderByField: 'date',
+    direction: 'desc',
+    pageSize: 1,
+  });
+  return items[0] ?? null;
+}
+
 /** The single video promoted to the home screen, if any. */
 export async function getFeaturedVideo(): Promise<VideoItem | null> {
   const items = await listAll<VideoItem>(COLLECTIONS.videos, {

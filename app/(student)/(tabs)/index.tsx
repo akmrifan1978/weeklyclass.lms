@@ -10,7 +10,7 @@ import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme'
 import { useAsync } from '@/hooks/useAsync';
 import { toDate } from '@/utils/date';
 import { nextEventFor } from '@/services/calendarService';
-import { getFeaturedVideo, listVideosForStudent } from '@/services/videoService';
+import { getFeaturedVideo, getLiveVideo, listVideosForStudent } from '@/services/videoService';
 import { getLatestArticle, lessonsForStudent } from '@/services/contentService';
 import { announcementsFor } from '@/services/notificationService';
 import { scheduleEventReminders } from '@/services/pushService';
@@ -50,8 +50,10 @@ export default function StudentHome() {
 
   const load = useCallback(async () => {
     if (!user) return null;
-    const [event, featuredVideo, article, lessons, recordings, announcements] = await Promise.all([
+    const [event, liveVideo, featuredVideo, article, lessons, recordings, announcements] =
+      await Promise.all([
       nextEventFor(user).catch(() => null),
+      getLiveVideo().catch(() => null),
       getFeaturedVideo().catch(() => null),
       getLatestArticle().catch(() => null),
       user.classId
@@ -60,7 +62,7 @@ export default function StudentHome() {
       listVideosForStudent(user.classId, 'recording', 3).catch(() => []),
       announcementsFor(user, 3).catch(() => []),
     ]);
-    return { event, featuredVideo, article, lessons, recordings, announcements };
+    return { event, liveVideo, featuredVideo, article, lessons, recordings, announcements };
   }, [user]);
 
   const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, user?.classId]);
@@ -127,7 +129,19 @@ export default function StudentHome() {
             </Card>
           )}
 
-          {data?.featuredVideo ? (
+          {data?.liveVideo ? (
+            <>
+              <Spacer size={spacing.xxl} />
+              <SectionHeader title={t('video.liveNow')} icon="radio-outline" />
+              <FeaturedVideoCard
+                video={data.liveVideo}
+                locale={language}
+                onPress={() => router.push(`/(student)/video/${data.liveVideo!.id}`)}
+              />
+            </>
+          ) : null}
+
+          {data?.featuredVideo && data.featuredVideo.id !== data.liveVideo?.id ? (
             <>
               <Spacer size={spacing.xxl} />
               <SectionHeader title={t('dashboard.newRelease')} icon="play-circle-outline" />

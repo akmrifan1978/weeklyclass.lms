@@ -169,6 +169,13 @@ export interface VideoItem extends BaseDoc {
   teacherId?: string | null;
   /** Exactly one document should have this true; enforced by videoService. */
   isFeatured: boolean;
+  /**
+   * Broadcasting right now. A YouTube Live link embeds exactly like any other
+   * video, so this changes nothing technical — it drives the LIVE badge and
+   * pushes the item to the top of the student's home screen, which is the part
+   * that actually matters when something is happening at this moment.
+   */
+  isLive?: boolean;
   kind: VideoKind;
   status: ContentStatus;
 }

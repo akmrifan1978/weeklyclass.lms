@@ -39,6 +39,7 @@ interface VideoForm {
   language: LanguageCode;
   status: ContentStatus;
   isFeatured: boolean;
+  isLive: boolean;
 }
 
 const EMPTY: VideoForm = {
@@ -56,6 +57,7 @@ const EMPTY: VideoForm = {
   language: 'en',
   status: 'published',
   isFeatured: false,
+  isLive: false,
 };
 
 /**
@@ -159,6 +161,7 @@ export function VideoManager({
         language: video.language,
         status: video.status,
         isFeatured: video.isFeatured,
+        isLive: video.isLive ?? false,
       })}
       validate={(form) => {
         const errors: Record<string, string> = {};
@@ -186,6 +189,7 @@ export function VideoManager({
             language: form.language,
             status: form.status,
             isFeatured: form.isFeatured,
+            isLive: form.isLive,
             kind,
           },
           user,
@@ -206,6 +210,7 @@ export function VideoManager({
             .filter(Boolean)
             .join(' · ')}
           badges={[
+            ...(video.isLive ? [{ label: t('video.live'), tone: 'suspended' }] : []),
             { label: t(`common.${video.status}`), tone: video.status },
             ...(video.isFeatured ? [{ label: t('video.featured'), tone: 'active' }] : []),
           ]}
@@ -317,6 +322,16 @@ export function VideoManager({
             ]}
             onChange={(v) => set('status', v)}
           />
+          <Select<'yes' | 'no'>
+            label={t('video.markAsLive')}
+            value={form.isLive ? 'yes' : 'no'}
+            options={[
+              { value: 'no', label: t('common.no') },
+              { value: 'yes', label: t('common.yes'), description: t('video.liveHint') },
+            ]}
+            onChange={(v) => set('isLive', v === 'yes')}
+          />
+
           {kind === 'video' ? (
             <Select<'yes' | 'no'>
               label={t('video.setFeatured')}
