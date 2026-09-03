@@ -180,6 +180,12 @@ export default function TeacherHome() {
               tint={brand.sand}
               onPress={() => router.push('/(teacher)/quran')}
             />
+            <QuickAccessTile
+              icon="bookmarks"
+              label={t('quran.dailyReading')}
+              tint={brand.orange}
+              onPress={() => router.push('/(teacher)/quran/plan')}
+            />
           </Grid>
 
           {visibleTiles.length ? null : (

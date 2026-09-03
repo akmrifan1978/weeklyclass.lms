@@ -139,3 +139,123 @@ export async function getSurah(number: number, language: LanguageCode): Promise<
 export function hasTranslation(language: LanguageCode): boolean {
   return TRANSLATIONS[language] != null;
 }
+
+// ---------------------------------------------------------------------------
+// Pages, juz and audio — the units a reading plan is measured in
+// ---------------------------------------------------------------------------
+
+/** The mushaf everyone here counts by: 604 pages, 30 juz. */
+export const TOTAL_PAGES = 604;
+export const TOTAL_JUZ = 30;
+
+/** Recitation used for the optional audio. Alafasy is the widely known one. */
+const AUDIO_EDITION = 'ar.alafasy';
+
+export interface PageAyah extends Ayah {
+  surahNumber: number;
+  surahName: string;
+  surahEnglishName: string;
+  /** Present only when audio was requested. */
+  audio?: string | null;
+}
+
+export interface QuranPage {
+  page: number;
+  juz: number;
+  ayahs: PageAyah[];
+  /** Surahs appearing on this page, in order. */
+  surahs: { number: number; englishName: string; name: string }[];
+}
+
+interface RawPageAyah {
+  number: number;
+  numberInSurah: number;
+  text: string;
+  juz: number;
+  audio?: string;
+  surah: { number: number; name: string; englishName: string };
+}
+
+async function fetchPageEdition(page: number, edition: string): Promise<RawPageAyah[]> {
+  const data = await fetchJson<{ ayahs: RawPageAyah[] }>(`/page/${page}/${edition}`);
+  return data.ayahs ?? [];
+}
+
+/**
+ * One page of the mushaf, with the translation for `language` beside it.
+ *
+ * The page endpoint serves one edition at a time, so Arabic and the translation
+ * are fetched together and zipped by position — both editions return the same
+ * ayahs in the same order, which is what makes that safe.
+ */
+export async function getPage(
+  page: number,
+  language: LanguageCode,
+  options: { audio?: boolean } = {}
+): Promise<QuranPage> {
+  const translationEdition = TRANSLATIONS[language] ?? null;
+  const cacheKey = `${CACHE_PREFIX}page/${page}/${translationEdition ?? 'ar'}/${
+    options.audio ? 'a' : 'n'
+  }`;
+
+  const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
+  if (cached) return JSON.parse(cached) as QuranPage;
+
+  const [arabic, translated] = await Promise.all([
+    fetchPageEdition(page, options.audio ? AUDIO_EDITION : ARABIC_EDITION),
+    translationEdition ? fetchPageEdition(page, translationEdition) : Promise.resolve([]),
+  ]);
+
+  // The audio edition carries the same Uthmani text, so requesting audio does
+  // not cost a third round-trip.
+  const ayahs: PageAyah[] = arabic.map((ayah, index) => ({
+    number: ayah.numberInSurah,
+    arabic: ayah.text,
+    translation: translated[index]?.text ?? null,
+    surahNumber: ayah.surah.number,
+    surahName: ayah.surah.name,
+    surahEnglishName: ayah.surah.englishName,
+    audio: ayah.audio ?? null,
+  }));
+
+  const surahs: QuranPage['surahs'] = [];
+  for (const ayah of ayahs) {
+    if (surahs[surahs.length - 1]?.number === ayah.surahNumber) continue;
+    surahs.push({
+      number: ayah.surahNumber,
+      englishName: ayah.surahEnglishName,
+      name: ayah.surahName,
+    });
+  }
+
+  const result: QuranPage = {
+    page,
+    juz: arabic[0]?.juz ?? 1,
+    ayahs,
+    surahs,
+  };
+  void AsyncStorage.setItem(cacheKey, JSON.stringify(result)).catch(() => undefined);
+  return result;
+}
+
+/**
+ * Where an ayah sits in the mushaf.
+ *
+ * A plan is set by surah and ayah, because that is how people describe where
+ * they are, but progress is counted in pages and juz. This is the bridge.
+ */
+export async function locateAyah(
+  surah: number,
+  ayah: number
+): Promise<{ page: number; juz: number }> {
+  const cacheKey = `${CACHE_PREFIX}locate/${surah}:${ayah}`;
+  const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
+  if (cached) return JSON.parse(cached) as { page: number; juz: number };
+
+  const data = await fetchJson<{ page: number; juz: number }>(
+    `/ayah/${surah}:${ayah}/${ARABIC_EDITION}`
+  );
+  const located = { page: data.page, juz: data.juz };
+  void AsyncStorage.setItem(cacheKey, JSON.stringify(located)).catch(() => undefined);
+  return located;
+}

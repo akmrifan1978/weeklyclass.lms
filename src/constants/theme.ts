@@ -22,6 +22,29 @@ export const brand = {
   slate: '#6A7C9E',
 } as const;
 
+/**
+ * Darkens a hex colour towards black by `amount` (0-1).
+ *
+ * Used where a brand colour has to carry a small shape against its own tinted
+ * background — an icon in particular. The lighter brand tones read as washed out
+ * at 22px, and darkening the glyph while leaving the tint alone keeps the colour
+ * recognisable instead of replacing it with a different one.
+ */
+export function darken(hex: string, amount = 0.3): string {
+  const value = hex.replace('#', '');
+  const full =
+    value.length === 3
+      ? value
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : value;
+  const channel = (offset: number) =>
+    Math.max(0, Math.round(parseInt(full.slice(offset, offset + 2), 16) * (1 - amount)));
+  const toHex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${toHex(channel(0))}${toHex(channel(2))}${toHex(channel(4))}`;
+}
+
 export const colors = {
   // Brand
   primary: brand.navy,

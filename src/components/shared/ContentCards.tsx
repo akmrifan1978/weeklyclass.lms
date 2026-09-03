@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   brand,
   colors,
+  darken,
   fontSize,
   fontWeight,
   radius,
@@ -599,8 +600,14 @@ export function QuickAccessTile({
       accessibilityLabel={label}
       style={({ pressed }) => [styles.tile, { opacity: pressed ? 0.85 : 1 }]}
     >
+      {/*
+        The glyph is a darkened version of the tile's own colour, not the colour
+        itself. At 22px on a 10%-tint background the lighter brand tones read as
+        washed out; darkening keeps the colour recognisable rather than swapping
+        it for a different one.
+      */}
       <View style={[styles.tileIcon, { backgroundColor: `${tint}1A` }]}>
-        <Ionicons name={icon} size={22} color={tint} />
+        <Ionicons name={icon} size={22} color={darken(tint, 0.35)} />
       </View>
       <Text style={styles.tileLabel} numberOfLines={2}>
         {label}

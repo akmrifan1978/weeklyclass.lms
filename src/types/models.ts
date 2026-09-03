@@ -46,6 +46,11 @@ export interface AppUser extends BaseDoc {
    * The device's own stored choice wins where the two disagree.
    */
   dashboardLanguages?: Partial<Record<string, LanguageCode>>;
+  /**
+   * The daily Qur'an reading plan, mirrored from the device so it survives a
+   * new phone. The device copy is the source of truth — see quranPlanService.
+   */
+  quranPlan?: unknown;
   profileImage?: string | null;
   organizationId?: string | null;
   branchId?: string | null;

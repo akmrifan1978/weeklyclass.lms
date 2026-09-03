@@ -15,7 +15,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#041E4A"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.weeklyclass.lms",
@@ -37,7 +39,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png",
         "backgroundColor": "#041E4A"
       },
-      "permissions": ["NOTIFICATIONS", "READ_EXTERNAL_STORAGE", "CAMERA"]
+      "permissions": [
+        "NOTIFICATIONS",
+        "READ_EXTERNAL_STORAGE",
+        "CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -75,7 +81,9 @@
         {
           "photosPermission": "WeeklyClass LMS needs photo access so you can set a profile picture and upload study materials."
         }
-      ]
+      ],
+      "expo-audio",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

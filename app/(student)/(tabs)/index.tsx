@@ -227,6 +227,12 @@ export default function StudentHome() {
               tint={brand.sand}
               onPress={() => router.push('/(student)/quran')}
             />
+            <QuickAccessTile
+              icon="bookmarks"
+              label={t('quran.dailyReading')}
+              tint={brand.orange}
+              onPress={() => router.push('/(student)/quran/plan')}
+            />
           </Grid>
 
           {data?.lessons.length ? (
