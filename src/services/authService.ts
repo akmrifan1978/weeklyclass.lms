@@ -65,9 +65,12 @@ export async function fetchProfile(uid: string): Promise<AppUser | null> {
  * match the uid, both surface only as an unexplained "permission denied".
  */
 async function tryBootstrapFirstAdmin(user: FirebaseUser): Promise<AppUser | null> {
-  const marker = await getDoc(doc(db, COLLECTIONS.settings, 'bootstrap')).catch(() => null);
-  if (!marker || marker.exists()) return null;
-
+  // Deliberately NOT gated on reading the marker first. The security rule is
+  // the authority on whether the window is open, and it is checked on the write
+  // regardless. Treating a client-side read as the gate meant any hiccup — a
+  // slow connection, a cold cache — silently skipped the bootstrap and left the
+  // person stranded with no explanation. Attempt the write and let the rule
+  // decide; a closed window simply denies it, which is the correct outcome.
   const email = (user.email ?? '').toLowerCase();
   const fullName = user.displayName || email.split('@')[0] || 'Administrator';
 
@@ -115,10 +118,9 @@ async function tryBootstrapFirstAdmin(user: FirebaseUser): Promise<AppUser | nul
  * sign-in claims the role and closes the window.
  */
 async function promoteToFirstAdmin(profile: AppUser): Promise<AppUser | null> {
-  const marker = await getDoc(doc(db, COLLECTIONS.settings, 'bootstrap')).catch(() => null);
-  if (!marker || marker.exists()) return null;
-
-  console.info('[WeeklyClass] no admin exists yet — promoting', profile.email);
+  // Same reasoning as tryBootstrapFirstAdmin: the rule is the gate, not a
+  // client read that can fail for unrelated reasons.
+  console.info('[WeeklyClass] attempting first-admin promotion for', profile.email);
 
   await updateDoc(doc(db, COLLECTIONS.users, profile.uid), {
     role: 'admin',
