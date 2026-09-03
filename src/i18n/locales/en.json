@@ -84,13 +84,13 @@
     "forgotPassword": "Forgot password?",
     "forgotUsername": "Forgot username?",
     "resetPassword": "Reset password",
-    "resetPasswordHelp": "Enter the email address linked to your account and we will send you a reset link.",
+    "resetPasswordHelp": "Enter your mobile number or email address and we will send a reset link to the email on your account.",
     "resetEmailSent": "If that email is registered, a password reset link is on its way.",
     "recoverUsername": "Recover username",
-    "recoverUsernameHelp": "Enter your registered email address and we will show you the username linked to it.",
+    "recoverUsernameHelp": "Enter your mobile number and we will show you the username linked to it. Your registered email also works.",
     "usernameFound": "Your username is",
     "usernameNotFound": "No account was found for that email address.",
-    "emailOrUsername": "Email or username",
+    "emailOrUsername": "Mobile number, username or email",
     "email": "Email",
     "username": "Username",
     "usernameFromMobileHint": "Your mobile number is used unless you type a different username.",
@@ -126,7 +126,10 @@
     "hidePassword": "Hide password",
     "passwordHint": "At least 8 characters, including a letter and a number.",
     "declaration": "I declare that the information provided is accurate to the best of my knowledge, and I authorize its use for registration processing on WeeklyClass.LMS for educational purposes.",
-    "profileAlreadyExists": "A profile already exists for this account. Sign in instead, or ask an administrator."
+    "profileAlreadyExists": "A profile already exists for this account. Sign in instead, or ask an administrator.",
+    "mobileOrEmail": "Mobile number or email",
+    "resetNeedsAdmin": "This account signs in with its mobile number and has no email of its own, so a reset link cannot be sent. Ask your administrator to set a new password.",
+    "sharedEmailNote": "The same email may be used for more than one account. Your mobile number is what identifies you, so sign in with that."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",

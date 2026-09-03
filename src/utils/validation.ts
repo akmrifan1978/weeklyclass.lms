@@ -38,8 +38,18 @@ export const fullNameSchema = z
   .min(2, 'validation.nameRequired')
   .max(80, 'validation.nameTooLong');
 
+/**
+ * Account recovery takes whatever identifier someone remembers. A mobile number
+ * is the one that always works: it is the unique identity, while an address may
+ * be shared between family members.
+ */
+export const recoverySchema = z
+  .string()
+  .trim()
+  .min(3, 'validation.identifierRequired');
+
 export const loginSchema = z.object({
-  /** Accepts either an email address or a username. */
+  /** Accepts a mobile number, a username or an email address. */
   identifier: z.string().trim().min(1, 'validation.identifierRequired'),
   password: z.string().min(1, 'validation.passwordRequired'),
 });

@@ -7,23 +7,23 @@ import { useTranslation } from 'react-i18next';
 
 import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
 import { friendlyMessage } from '@/utils/errors';
-import { emailSchema, validate } from '@/utils/validation';
+import { recoverySchema, validate } from '@/utils/validation';
 import { requestPasswordReset } from '@/services/authService';
-import { Button, EmailField, IconButton } from '@/components/ui';
+import { Button, IconButton, TextField } from '@/components/ui';
 
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
 
   const handleSubmit = async () => {
-    const result = validate(emailSchema, email);
+    const result = validate(recoverySchema, identifier);
     if (!result.ok) {
-      setError(result.errors._form ?? 'validation.emailInvalid');
+      setError(result.errors._form ?? 'validation.identifierRequired');
       return;
     }
     setError(null);
@@ -86,14 +86,17 @@ export default function ForgotPasswordScreen() {
             ) : (
               <>
                 <Text style={styles.message}>{t('auth.resetPasswordHelp')}</Text>
-                <EmailField
-                  label={t('auth.email')}
-                  value={email}
+                <TextField
+                  label={t('auth.mobileOrEmail')}
+                  value={identifier}
                   onChangeText={(value) => {
-                    setEmail(value);
+                    setIdentifier(value);
                     setError(null);
                   }}
                   error={error}
+                  icon="person-outline"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   returnKeyType="send"
                   onSubmitEditing={handleSubmit}
                   containerStyle={{ marginTop: spacing.xl, width: '100%' }}

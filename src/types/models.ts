@@ -27,7 +27,15 @@ export interface AppUser extends BaseDoc {
   fullName: string;
   /** Lowercased, unique. Mirrored into `usernames/{username}` for lookup. */
   username: string;
+  /** Contact address. NOT unique — a household may share one inbox. */
   email: string;
+  /**
+   * The address the account signs in with. Equal to `email` unless that was
+   * already held by another account, in which case it is derived from the
+   * mobile number instead. Absent on accounts created before this existed.
+   */
+  authEmail?: string;
+  /** The unique identity. One mobile number, one account. */
   mobile: string;
   role: UserRole;
   status: UserStatus;
@@ -61,8 +69,18 @@ export interface AppUser extends BaseDoc {
 /** `usernames/{usernameLower}` — enforces global username uniqueness. */
 export interface UsernameIndex {
   uid: string;
+  /** Contact address, kept for display. */
   email: string;
+  /** What sign-in actually uses; falls back to `email` on older rows. */
+  authEmail?: string;
   role: UserRole;
+}
+
+/** `mobiles/{mobileKey}` — the real uniqueness constraint on an account. */
+export interface MobileIndex {
+  uid: string;
+  username: string;
+  authEmail?: string;
 }
 
 // ---------------------------------------------------------------------------

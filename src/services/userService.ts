@@ -15,7 +15,12 @@ import { DEFAULT_TEACHER_PERMISSIONS, allPermissions } from '@/types/permissions
 import type { AppUser, LanguageCode, Permission, PermissionMap, UserRole, UserStatus } from '@/types';
 
 import { getById, listPage, softDelete, updateDocById, type Cursor, type Page } from './firestore';
-import { claimIdentity, nextSequentialId, normaliseUsername } from './identityService';
+import {
+  authEmailForMobile,
+  claimIdentity,
+  nextSequentialId,
+  normaliseUsername,
+} from './identityService';
 import * as audit from './auditService';
 
 /**
@@ -226,11 +231,24 @@ export async function createUserAsAdmin(
   try {
     const email = input.email.trim().toLowerCase();
     const username = normaliseUsername(input.username);
-    const credential = await createUserWithEmailAndPassword(
-      secondaryAuth,
-      email,
-      input.password
-    );
+
+    // Same rule as self-registration: the mobile number is the unique identity,
+    // an email address may be shared. Where Firebase Auth refuses a second
+    // account on an address it already holds, the account signs in under one
+    // derived from its mobile number instead. See identityService.
+    let authEmail = email;
+    let credential;
+    try {
+      credential = await createUserWithEmailAndPassword(secondaryAuth, email, input.password);
+    } catch (error) {
+      if ((error as { code?: string })?.code !== 'auth/email-already-in-use') throw error;
+      authEmail = authEmailForMobile(input.mobile);
+      credential = await createUserWithEmailAndPassword(
+        secondaryAuth,
+        authEmail,
+        input.password
+      );
+    }
     const uid = credential.user.uid;
     const generatedId = await nextSequentialId(input.role === 'student' ? 'STU' : 'TCH');
 
@@ -239,6 +257,7 @@ export async function createUserAsAdmin(
       fullName: input.fullName.trim(),
       username,
       email,
+      authEmail,
       mobile: input.mobile.trim(),
       role: input.role,
       status: input.status ?? 'active',
@@ -269,7 +288,14 @@ export async function createUserAsAdmin(
     await import('./firestore').then((fs) =>
       fs.setDocById(COLLECTIONS.users, uid, profile, { actorId: actor.uid })
     );
-    await claimIdentity({ username, email, uid, role: input.role });
+    await claimIdentity({
+      username,
+      email,
+      authEmail,
+      uid,
+      role: input.role,
+      mobile: input.mobile,
+    });
 
     await audit.log({
       actor,

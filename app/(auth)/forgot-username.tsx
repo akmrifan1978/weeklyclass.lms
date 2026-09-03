@@ -7,36 +7,46 @@ import { useTranslation } from 'react-i18next';
 
 import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
 import { friendlyMessage } from '@/utils/errors';
-import { emailSchema, validate } from '@/utils/validation';
-import { usernameForEmail } from '@/services/identityService';
-import { Button, EmailField, IconButton } from '@/components/ui';
+import { recoverySchema, validate } from '@/utils/validation';
+import { usernameForEmail, usernameForMobile } from '@/services/identityService';
+import { Button, IconButton, TextField } from '@/components/ui';
 
 /**
- * Username recovery.
+ * Username recovery, by mobile number or email address.
  *
- * Looks the address up in `emailLookup/{sha256(email)}` — a document whose id
- * you can only compute if you already know the email. The collection cannot be
- * listed, so this cannot be used to harvest accounts.
+ * The mobile number is the reliable one: it belongs to exactly one account,
+ * whereas a household may share a single email between several. An address is
+ * still accepted, and resolves to whichever account registered with it first.
+ *
+ * Both look up a document whose id you can only compute if you already know the
+ * number or the address, and neither collection can be listed, so this cannot be
+ * used to harvest accounts.
  */
 export default function ForgotUsernameScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ username: string | null } | null>(null);
 
   const handleSubmit = async () => {
-    const parsed = validate(emailSchema, email);
+    const parsed = validate(recoverySchema, identifier);
     if (!parsed.ok) {
-      setError(parsed.errors._form ?? 'validation.emailInvalid');
+      setError(parsed.errors._form ?? 'validation.identifierRequired');
       return;
     }
     setError(null);
     setBusy(true);
     try {
-      const username = await usernameForEmail(parsed.data);
+      const typed = parsed.data;
+      // Digits mean a phone number, however it was punctuated. Try that index
+      // first — it is the one that names exactly one account — and fall back to
+      // the email index for anything else.
+      const username = /^[+0-9\s()-]+$/.test(typed)
+        ? await usernameForMobile(typed)
+        : await usernameForEmail(typed);
       setResult({ username });
     } catch (err) {
       setError(friendlyMessage(err, t));
@@ -72,11 +82,14 @@ export default function ForgotUsernameScreen() {
             </Text>
             <Text style={styles.message}>{t('auth.recoverUsernameHelp')}</Text>
 
-            <EmailField
-              label={t('auth.email')}
-              value={email}
+            <TextField
+              label={t('auth.mobileOrEmail')}
+              icon="person-outline"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={identifier}
               onChangeText={(value) => {
-                setEmail(value);
+                setIdentifier(value);
                 setError(null);
                 setResult(null);
               }}

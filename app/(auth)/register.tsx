@@ -24,7 +24,7 @@ import {
   validate,
 } from '@/utils/validation';
 import { register } from '@/services/authService';
-import { isUsernameAvailable } from '@/services/identityService';
+import { isMobileAvailable, isUsernameAvailable } from '@/services/identityService';
 import { getSettings } from '@/services/settingsService';
 import { listBranches, listClasses, listCountries } from '@/services/orgService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
@@ -224,10 +224,23 @@ export default function RegisterScreen() {
     setErrors({});
     setSubmitting(true);
     try {
-      // Checked here for a clear message; the write itself is guarded by a
-      // Firestore transaction so a race cannot create a duplicate.
-      const available = await isUsernameAvailable(result.data.username);
-      if (!available) {
+      // Both checked here so the message lands on the field that is actually
+      // wrong; the writes themselves are guarded by a Firestore transaction, so
+      // a race still cannot create a duplicate.
+      //
+      // The mobile number is checked FIRST and deliberately so. It is the unique
+      // identity, and the username defaults to the same digits — so registering
+      // a number twice fails both checks, and reporting "username taken" would
+      // send someone off editing the wrong field.
+      const [mobileFree, usernameFree] = await Promise.all([
+        isMobileAvailable(result.data.mobile),
+        isUsernameAvailable(result.data.username),
+      ]);
+      if (!mobileFree) {
+        setErrors({ mobile: 'validation.mobileTaken' });
+        return;
+      }
+      if (!usernameFree) {
         setErrors({ username: 'validation.usernameTaken' });
         return;
       }
@@ -381,6 +394,9 @@ export default function RegisterScreen() {
               value={form.email}
               onChangeText={(v) => set('email', v)}
               error={errors.email}
+              // A household shares one inbox, so the same address may appear on
+              // several accounts. The mobile number is what has to be unique.
+              hint={t('auth.sharedEmailNote')}
               required
             />
 

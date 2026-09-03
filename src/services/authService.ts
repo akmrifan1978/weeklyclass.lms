@@ -27,7 +27,17 @@ import { isEmail } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS } from '@/types/permissions';
 import type { AppUser, LanguageCode, UserRole, UserStatus } from '@/types';
 
-import { claimIdentity, emailForUsername, nextSequentialId, normaliseUsername } from './identityService';
+import {
+  authEmailForMobile,
+  claimIdentity,
+  emailForMobile,
+  emailForUsername,
+  isMobileAvailable,
+  isSyntheticAuthEmail,
+  nextSequentialId,
+  normaliseUsername,
+  usernameForEmail,
+} from './identityService';
 import { getSettings } from './settingsService';
 import * as audit from './auditService';
 
@@ -195,25 +205,77 @@ async function promoteToFirstAdmin(profile: AppUser): Promise<AppUser | null> {
 }
 
 /**
- * Signs in with either an email address or a username.
+ * Resolves whatever someone typed into the address their account signs in with.
  *
- * A username is resolved to its email through the public `usernames` index
- * before authenticating — see identityService for why that is safe.
+ * Three things are accepted, in the order they are most likely to be right:
+ *
+ *   a mobile number  — the unique identity, resolved through `mobiles`
+ *   a username       — resolved through `usernames`
+ *   an email address — used directly, since that is what most accounts sign in
+ *                      with; only if it is shared does the account sit under a
+ *                      mobile-derived address instead, and `emailLookup` finds
+ *                      the one that claimed the address first.
+ *
+ * Returns null when nothing matches, which the caller reports as bad
+ * credentials — saying "no such user" would let anyone enumerate the platform.
+ */
+async function resolveSignInEmail(identifier: string): Promise<string | null> {
+  const trimmed = identifier.trim();
+
+  if (isEmail(trimmed)) return trimmed.toLowerCase();
+
+  // Digits only: a phone number, however it was typed. Checked before the
+  // username index because the mobile number is the identifier that is
+  // guaranteed to name exactly one account.
+  if (/^[+0-9\s()-]+$/.test(trimmed)) {
+    const byMobile = await emailForMobile(trimmed).catch(() => null);
+    if (byMobile) return byMobile;
+  }
+
+  return emailForUsername(trimmed).catch(() => null);
+}
+
+/**
+ * Signs in with a mobile number, a username or an email address.
+ *
+ * All three are resolved to the account's sign-in address through the public
+ * indexes before authenticating — see identityService for why that is safe.
  */
 export async function login(identifier: string, password: string): Promise<LoginResult> {
   const trimmed = identifier.trim();
-  let email = trimmed.toLowerCase();
+  let email = await resolveSignInEmail(trimmed);
 
-  if (!isEmail(trimmed)) {
-    const resolved = await emailForUsername(trimmed);
-    if (!resolved) {
-      // Same message as a wrong password: do not reveal which usernames exist.
-      throw new AppError('errors.invalidCredentials', 'auth/invalid-credential');
-    }
-    email = resolved;
+  if (!email) {
+    // Same message as a wrong password: do not reveal which accounts exist.
+    throw new AppError('errors.invalidCredentials', 'auth/invalid-credential');
   }
 
-  const credential = await signInWithEmailAndPassword(auth, email, password);
+  let credential;
+  try {
+    credential = await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    // A shared email belongs to whoever registered with it first; everyone else
+    // on that address signs in under a mobile-derived one. If the address itself
+    // did not work, fall back to the account the email index points at before
+    // giving up — otherwise the first holder's own email would stop working the
+    // moment a relative reused it.
+    const code = (error as { code?: string })?.code ?? '';
+    const recoverable =
+      isEmail(trimmed) &&
+      (code === 'auth/invalid-credential' ||
+        code === 'auth/user-not-found' ||
+        code === 'auth/wrong-password');
+
+    const viaIndex = recoverable
+      ? await usernameForEmail(trimmed)
+          .then((name) => (name ? emailForUsername(name) : null))
+          .catch(() => null)
+      : null;
+
+    if (!viaIndex || viaIndex === email) throw error;
+    email = viaIndex;
+    credential = await signInWithEmailAndPassword(auth, email, password);
+  }
 
   // Every Firestore call below depends on request.auth being populated.
   await waitForAuthToken(credential.user);
@@ -284,17 +346,21 @@ export async function login(identifier: string, password: string): Promise<Login
     lastLoginAt: serverTimestamp(),
   }).catch(() => undefined);
 
-  // Self-heal the username index. An account created straight in the Firebase
+  // Self-heal the lookup indexes. An account created straight in the Firebase
   // console — which is how the very first admin has to be made — has a profile
-  // but no `usernames/{username}` row, so signing in by username or mobile
-  // number silently fails for it. Signing in by email once repairs that.
+  // but no `usernames/{username}` or `mobiles/{key}` row, so signing in by
+  // username or mobile number silently fails for it. Signing in by email once
+  // repairs both. `credential.user.email` is the authoritative sign-in address;
+  // the profile's own `email` is only a contact detail and may be shared.
   // Fire-and-forget: it must never delay or break a successful login.
   if (profile.username) {
     void claimIdentity({
       username: profile.username,
       email: profile.email,
+      authEmail: credential.user.email ?? profile.authEmail ?? profile.email,
       uid: profile.uid,
       role: profile.role,
+      mobile: profile.mobile,
     }).catch(() => undefined);
   }
 
@@ -386,8 +452,37 @@ export async function register(
   const username = normaliseUsername(input.username);
   const email = input.email.trim().toLowerCase();
 
+  // The mobile number is the unique identity, so check it before anything is
+  // created. The transaction in claimIdentity is still the real guard against a
+  // race; this exists to fail early with a message that says what is wrong,
+  // rather than after an auth account has already been made.
+  step('2/6 checking mobile number', input.mobile);
+  if (!(await isMobileAvailable(input.mobile).catch(() => true))) {
+    throw new AppError('validation.mobileTaken', 'already-exists');
+  }
+
+  // An email address may be shared — a household registering several children
+  // has one inbox between them. Firebase Auth will not hold the same address
+  // twice, so the second account signs in under an address derived from its own
+  // (unique) mobile number instead. Nothing about the profile changes: the real
+  // address is still stored and still shown, and they still sign in with their
+  // mobile number or username.
+  //
+  // Attempting the create and reacting to the refusal is deliberate. Asking
+  // Firebase up front whether an address is taken is exactly the account
+  // enumeration its email-enumeration protection disables, so the answer cannot
+  // be relied on — the failure itself is the only trustworthy signal.
   step('2/6 creating auth account', email);
-  const credential = await createUserWithEmailAndPassword(auth, email, input.password);
+  let authEmail = email;
+  let credential;
+  try {
+    credential = await createUserWithEmailAndPassword(auth, email, input.password);
+  } catch (error) {
+    if ((error as { code?: string })?.code !== 'auth/email-already-in-use') throw error;
+    authEmail = authEmailForMobile(input.mobile);
+    step('2/6 address already in use — signing in by mobile instead', authEmail);
+    credential = await createUserWithEmailAndPassword(auth, authEmail, input.password);
+  }
   const uid = credential.user.uid;
   step('2/6 auth account created', uid);
 
@@ -408,6 +503,9 @@ export async function register(
       fullName: input.fullName.trim(),
       username,
       email,
+      // Kept so an admin can see at a glance which account a shared address
+      // actually signs in as.
+      authEmail,
       mobile: input.mobile.trim(),
       role,
       status,
@@ -454,7 +552,7 @@ export async function register(
     });
 
     step('5/6 claiming username index', username);
-    await claimIdentity({ username, email, uid, role, mobile: input.mobile });
+    await claimIdentity({ username, email, authEmail, uid, role, mobile: input.mobile });
     step('5/6 username index claimed');
 
     // Everything above is essential and is awaited. These two are not: the
@@ -462,7 +560,9 @@ export async function register(
     // network round-trips to a flow that already needs five, which is painfully
     // slow on a weak connection — and worse, a failure in either would trigger
     // the rollback below and destroy a perfectly good account.
-    void sendEmailVerification(credential.user).catch(() => undefined);
+    // Only worth sending to a real inbox. On a synthetic mobile-derived address
+    // it would bounce, and Firebase counts it against the daily quota either way.
+    if (authEmail === email) void sendEmailVerification(credential.user).catch(() => undefined);
 
     void audit.log({
       actor: { uid, fullName: profile.fullName, role },
@@ -497,8 +597,27 @@ export async function register(
   }
 }
 
-export async function requestPasswordReset(email: string): Promise<void> {
-  await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+/**
+ * Sends a reset link, accepting a mobile number, username or email address.
+ *
+ * The link can only ever go to a real inbox. An account whose email was already
+ * taken by someone else signs in under a mobile-derived address that receives no
+ * mail, so there is nowhere to send it — that case is reported rather than
+ * quietly reporting success, which would leave someone waiting for a message
+ * that is never coming. Their administrator can set a new password for them.
+ */
+export async function requestPasswordReset(identifier: string): Promise<void> {
+  const resolved = await resolveSignInEmail(identifier);
+
+  // Nothing matched. Report success anyway — the caller shows the same message
+  // either way, so confirming which accounts exist is not possible.
+  if (!resolved) return;
+
+  if (isSyntheticAuthEmail(resolved)) {
+    throw new AppError('auth.resetNeedsAdmin', 'auth/no-reset-address');
+  }
+
+  await sendPasswordResetEmail(auth, resolved);
 }
 
 export async function resendVerification(): Promise<void> {
