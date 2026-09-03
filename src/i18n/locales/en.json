@@ -155,7 +155,8 @@
     "needTwoOptions": "Add at least two answer options",
     "selectCorrectAnswer": "Mark the correct answer",
     "declarationRequired": "Please accept the declaration to continue.",
-    "mobileTaken": "An account already uses this mobile number."
+    "mobileTaken": "An account already uses this mobile number.",
+    "countryCodeLength": "Use exactly two letters, e.g. LK."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -179,7 +180,9 @@
     "operationNotAllowed": "This sign-in method is not enabled.",
     "loadFailed": "We could not load this content.",
     "storageNotSetUp": "File storage is not enabled on this project yet. Paste an image link instead, or ask an administrator to turn on Cloud Storage.",
-    "uploadTimedOut": "The upload is taking too long and was stopped. Check your connection, or paste an image link instead."
+    "uploadTimedOut": "The upload is taking too long and was stopped. Check your connection, or paste an image link instead.",
+    "countryInUse": "Branches still use this country. Move or remove them first.",
+    "organizationInUse": "Branches still belong to this organisation. Move or remove them first."
   },
   "nav": {
     "home": "Home",

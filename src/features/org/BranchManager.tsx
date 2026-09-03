@@ -1,34 +1,28 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/contexts/ToastContext';
 import { useAsync } from '@/hooks/useAsync';
-import { colors, fontSize, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
+import { spacing } from '@/constants/theme';
 import { matchesSearch } from '@/utils/format';
 import {
-  createCountry,
-  createOrganization,
   deleteBranch,
+  deleteCountry,
+  deleteOrganization,
   listBranches,
   listCountries,
   listOrganizations,
   saveBranch,
+  saveCountry,
+  saveOrganization,
 } from '@/services/orgService';
+import { CountryList, OrganizationList } from '@/features/org/SetupLists';
 import type { Branch } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
 import { AdminRow } from '@/features/AdminRow';
-import {
-  Button,
-  Card,
-  FormSheet,
-  Select,
-  TextField,
-  type Option,
-} from '@/components/ui';
+import { Select, TextField, type Option } from '@/components/ui';
 
 interface BranchForm {
   name: string;
@@ -63,13 +57,7 @@ const EMPTY: BranchForm = {
 export function BranchManager() {
   const { t } = useTranslation();
   const { user, can } = useAuth();
-  const toast = useToast();
 
-  const [addingCountry, setAddingCountry] = useState(false);
-  const [addingOrg, setAddingOrg] = useState(false);
-  const [newCountry, setNewCountry] = useState({ name: '', code: '' });
-  const [newOrg, setNewOrg] = useState({ name: '' });
-  const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState(0);
 
   const loadOrg = useCallback(async () => {
@@ -103,46 +91,6 @@ export function BranchManager() {
     return { items: filtered, cursor: null, hasMore: false };
   }, []);
 
-  const handleAddCountry = async () => {
-    if (!user || !newCountry.name.trim() || newCountry.code.trim().length !== 2) {
-      toast.error(t('validation.fieldRequired'));
-      return;
-    }
-    setBusy(true);
-    try {
-      await createCountry({ name: newCountry.name.trim(), code: newCountry.code.trim() }, user);
-      toast.success(t('common.success'));
-      setNewCountry({ name: '', code: '' });
-      setAddingCountry(false);
-      setVersion((v) => v + 1);
-      await reloadOrg();
-    } catch (error) {
-      toast.error(friendlyMessage(error, t));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleAddOrg = async () => {
-    if (!user || !newOrg.name.trim()) {
-      toast.error(t('validation.fieldRequired'));
-      return;
-    }
-    setBusy(true);
-    try {
-      await createOrganization({ name: newOrg.name.trim() }, user);
-      toast.success(t('common.success'));
-      setNewOrg({ name: '' });
-      setAddingOrg(false);
-      setVersion((v) => v + 1);
-      await reloadOrg();
-    } catch (error) {
-      toast.error(friendlyMessage(error, t));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <>
       <CrudScreen<Branch, BranchForm>
@@ -155,33 +103,38 @@ export function BranchManager() {
         deps={[version]}
         fetchPage={fetchPage}
         header={
-          <Card style={{ marginBottom: spacing.lg }}>
-            <Text style={styles.helper}>
-              {t('admin.organization')} · {t('auth.country')}
-            </Text>
-            <View style={styles.helperRow}>
-              <Button
-                label={`${t('common.add')} ${t('auth.country')}`}
-                icon="globe-outline"
-                variant="outline"
-                size="sm"
-                onPress={() => setAddingCountry(true)}
-                style={{ flex: 1 }}
-              />
-              <Button
-                label={`${t('common.add')} ${t('admin.organization')}`}
-                icon="business-outline"
-                variant="outline"
-                size="sm"
-                onPress={() => setAddingOrg(true)}
-                style={{ flex: 1 }}
-              />
-            </View>
-            <Text style={styles.counts}>
-              {(org?.countries ?? []).length} {t('auth.country')} ·{' '}
-              {(org?.organizations ?? []).length} {t('admin.organization')}
-            </Text>
-          </Card>
+          <View style={styles.setup}>
+            <CountryList
+              countries={org?.countries ?? []}
+              onSave={async (data, id) => {
+                if (!user) return;
+                await saveCountry(data, user, id);
+                setVersion((v) => v + 1);
+                await reloadOrg();
+              }}
+              onDelete={async (country) => {
+                if (!user) return;
+                await deleteCountry(country, user);
+                setVersion((v) => v + 1);
+                await reloadOrg();
+              }}
+            />
+            <OrganizationList
+              organizations={org?.organizations ?? []}
+              onSave={async (data, id) => {
+                if (!user) return;
+                await saveOrganization(data, user, id);
+                setVersion((v) => v + 1);
+                await reloadOrg();
+              }}
+              onDelete={async (organisation) => {
+                if (!user) return;
+                await deleteOrganization(organisation, user);
+                setVersion((v) => v + 1);
+                await reloadOrg();
+              }}
+            />
+          </View>
         }
         emptyForm={EMPTY}
         toForm={(branch) => ({
@@ -309,53 +262,10 @@ export function BranchManager() {
           </>
         )}
       />
-
-      <FormSheet
-        visible={addingCountry}
-        title={`${t('common.add')} ${t('auth.country')}`}
-        onClose={() => setAddingCountry(false)}
-        onSubmit={handleAddCountry}
-        submitting={busy}
-      >
-        <TextField
-          label={t('auth.country')}
-          value={newCountry.name}
-          onChangeText={(v) => setNewCountry((p) => ({ ...p, name: v }))}
-          icon="globe-outline"
-          required
-        />
-        <TextField
-          label="ISO code"
-          value={newCountry.code}
-          onChangeText={(v) => setNewCountry((p) => ({ ...p, code: v.toUpperCase().slice(0, 2) }))}
-          hint="Two letters — SA, LK, IN, GB"
-          autoCapitalize="characters"
-          maxLength={2}
-          required
-        />
-      </FormSheet>
-
-      <FormSheet
-        visible={addingOrg}
-        title={`${t('common.add')} ${t('admin.organization')}`}
-        onClose={() => setAddingOrg(false)}
-        onSubmit={handleAddOrg}
-        submitting={busy}
-      >
-        <TextField
-          label={t('admin.organization')}
-          value={newOrg.name}
-          onChangeText={(v) => setNewOrg({ name: v })}
-          icon="business-outline"
-          required
-        />
-      </FormSheet>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  helper: { fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md },
-  helperRow: { flexDirection: 'row', gap: spacing.md },
-  counts: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.md },
+  setup: { marginBottom: spacing.md },
 });

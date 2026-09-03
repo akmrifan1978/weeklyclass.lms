@@ -5,11 +5,13 @@ import {
   getById,
   listAll,
   listPage,
+  setDocById,
   softDelete,
   updateDocById,
   type Cursor,
   type Page,
 } from './firestore';
+import { AppError } from '@/utils/errors';
 import * as audit from './auditService';
 
 /**
@@ -45,23 +47,67 @@ export async function listCountries(): Promise<Country[]> {
     .map((row) => ({ ...row, code: row.code || row.id }));
 }
 
-export async function createCountry(
+/**
+ * Creates or updates a country. The ISO code doubles as the document id, so a
+ * country can never be added twice, and branches referring to it by code keep
+ * working when its display name is corrected.
+ */
+export async function saveCountry(
   data: Pick<Country, 'name' | 'code'> & Partial<Country>,
-  actor: AppUser
+  actor: AppUser,
+  id?: string
 ): Promise<string> {
-  const id = await createDoc(
+  const code = data.code.trim().toUpperCase();
+
+  if (id) {
+    await updateDocById<Country>(COLLECTIONS.countries, id, {
+      ...data,
+      code,
+      deleted: false,
+    });
+    await audit.log({
+      actor,
+      action: 'UPDATE',
+      collection: COLLECTIONS.countries,
+      documentId: id,
+      summary: `Updated country ${data.name}`,
+    });
+    return id;
+  }
+
+  await setDocById(
     COLLECTIONS.countries,
-    { status: 'active', ...data, code: data.code.toUpperCase() },
+    code,
+    { status: 'active', ...data, code, deleted: false },
     { actorId: actor.uid }
   );
   await audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.countries,
-    documentId: id,
+    documentId: code,
     summary: `Added country ${data.name}`,
   });
-  return id;
+  return code;
+}
+
+/**
+ * Removes a country, refusing while branches still reference it — a branch
+ * whose country vanished would show a blank field with no way to diagnose it.
+ */
+export async function deleteCountry(country: Country, actor: AppUser): Promise<void> {
+  const inUse = await listBranches(country.code);
+  if (inUse.length > 0) {
+    throw new AppError('errors.countryInUse', 'failed-precondition');
+  }
+  await softDelete(COLLECTIONS.countries, country.id, actor.uid);
+  await audit.log({
+    actor,
+    action: 'DELETE',
+    collection: COLLECTIONS.countries,
+    documentId: country.id,
+    summary: `Removed country ${country.name}`,
+  });
 }
 
 // --- Organizations ---------------------------------------------------------
@@ -74,11 +120,24 @@ export function listOrganizations(): Promise<Organization[]> {
   });
 }
 
-export async function createOrganization(
+export async function saveOrganization(
   data: Pick<Organization, 'name'> & Partial<Organization>,
-  actor: AppUser
+  actor: AppUser,
+  id?: string
 ): Promise<string> {
-  const id = await createDoc(
+  if (id) {
+    await updateDocById<Organization>(COLLECTIONS.organizations, id, data);
+    await audit.log({
+      actor,
+      action: 'UPDATE',
+      collection: COLLECTIONS.organizations,
+      documentId: id,
+      summary: `Updated organization ${data.name}`,
+    });
+    return id;
+  }
+
+  const newId = await createDoc(
     COLLECTIONS.organizations,
     { status: 'active', ...data },
     { actorId: actor.uid }
@@ -87,10 +146,26 @@ export async function createOrganization(
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.organizations,
-    documentId: id,
+    documentId: newId,
     summary: `Added organization ${data.name}`,
   });
-  return id;
+  return newId;
+}
+
+/** Refuses while branches still belong to it, for the same reason as above. */
+export async function deleteOrganization(org: Organization, actor: AppUser): Promise<void> {
+  const branches = await listBranches();
+  if (branches.some((branch) => branch.organizationId === org.id)) {
+    throw new AppError('errors.organizationInUse', 'failed-precondition');
+  }
+  await softDelete(COLLECTIONS.organizations, org.id, actor.uid);
+  await audit.log({
+    actor,
+    action: 'DELETE',
+    collection: COLLECTIONS.organizations,
+    documentId: org.id,
+    summary: `Removed organization ${org.name}`,
+  });
 }
 
 // --- Branches --------------------------------------------------------------
