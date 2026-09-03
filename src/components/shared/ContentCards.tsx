@@ -601,13 +601,13 @@ export function QuickAccessTile({
       style={({ pressed }) => [styles.tile, { opacity: pressed ? 0.85 : 1 }]}
     >
       {/*
-        The glyph is a darkened version of the tile's own colour, not the colour
-        itself. At 22px on a 10%-tint background the lighter brand tones read as
-        washed out; darkening keeps the colour recognisable rather than swapping
-        it for a different one.
+        The glyph is a slightly darkened version of the tile's own colour, not
+        the colour itself. At 22px on a 10%-tint background the lighter brand
+        tones read as washed out. The shift is deliberately small — enough to
+        give the glyph weight, not enough to lose the colour it is meant to be.
       */}
       <View style={[styles.tileIcon, { backgroundColor: `${tint}1A` }]}>
-        <Ionicons name={icon} size={22} color={darken(tint, 0.35)} />
+        <Ionicons name={icon} size={22} color={darken(tint, 0.18)} />
       </View>
       <Text style={styles.tileLabel} numberOfLines={2}>
         {label}

@@ -715,9 +715,9 @@
   "zakat": {
     "disclaimer": "A calculation aid, not a religious ruling. The rate and thresholds here are the classical ones, but how some assets are treated differs between scholars - ask someone qualified about your own situation.",
     "metalPrices": "உலோக விலைகள்",
-    "pricesHint": "Enter the current local price per gram, in your own currency. Every figure below uses the same currency.",
-    "goldPrice": "Gold price per gram",
-    "silverPrice": "Silver price per gram",
+    "pricesHint": "இவை சர்வதேச விலையிலிருந்து நிரப்பப்பட்டுள்ளன. பழைய தங்கத்திற்கு நகைக்கடை குறைவாகவே தரக்கூடும் — உங்கள் ஊர் விலை தெரிந்திருந்தால் அதை உள்ளிடுங்கள்.",
+    "goldPrice": "தங்கம் ஒரு கிராம் விலை ({{currency}})",
+    "silverPrice": "வெள்ளி ஒரு கிராம் விலை ({{currency}})",
     "nisabBasis": "Nisab basis",
     "basisSilver": "Silver (595 g)",
     "basisGold": "Gold (85 g)",
@@ -739,6 +739,13 @@
     "nisab": "நிஸாப்",
     "zakatDue": "Zakat due",
     "rateNote": "2.5% of net wealth, held for a full lunar year.",
-    "belowNisab": "Below the threshold, so no zakat is due. You are {{amount}} short of the nisab."
+    "belowNisab": "Below the threshold, so no zakat is due. You are {{amount}} short of the nisab.",
+    "currency": "நாணயம்",
+    "currencyHint": "இந்தத் திரையில் உள்ள அனைத்துத் தொகைகளும் இந்த நாணயத்தில். உலோக விலைகள் சர்வதேச விலையிலிருந்து இதற்கு மாற்றப்படுகின்றன.",
+    "fetchingRates": "தற்போதைய விலைகள் பெறப்படுகின்றன…",
+    "ratesLive": "நேரடி விலை, {{date}} இல் பெறப்பட்டது",
+    "ratesCached": "{{date}} இன் சேமித்த விலை — நீங்கள் இணையத்தில் இல்லை போலும்",
+    "ratesUnavailable": "தற்போதைய விலைகளைப் பெற முடியவில்லை. ஒரு கிராம் விலையை நீங்களே உள்ளிடுங்கள்.",
+    "useLiveRate": "மீண்டும் நேரடி விலையைப் பயன்படுத்து"
   }
 }

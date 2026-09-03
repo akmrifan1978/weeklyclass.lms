@@ -715,9 +715,9 @@
   "zakat": {
     "disclaimer": "A calculation aid, not a religious ruling. The rate and thresholds here are the classical ones, but how some assets are treated differs between scholars - ask someone qualified about your own situation.",
     "metalPrices": "ලෝහ මිලගණ්",
-    "pricesHint": "Enter the current local price per gram, in your own currency. Every figure below uses the same currency.",
-    "goldPrice": "Gold price per gram",
-    "silverPrice": "Silver price per gram",
+    "pricesHint": "මේවා ජාත්‍යන්තර මිලෙන් පිරවා ඇත. පාවිච්චි කළ රනට ස්වර්ණාභරණ වෙළෙන්දා අඩුවෙන් ගෙවිය හැක — ඔබේ ප්‍රාදේශීය මිල දන්නේ නම් එය ඇතුළත් කරන්න.",
+    "goldPrice": "රන් ග්‍රෑම් එකක මිල ({{currency}})",
+    "silverPrice": "රිදී ග්‍රෑම් එකක මිල ({{currency}})",
     "nisabBasis": "Nisab basis",
     "basisSilver": "Silver (595 g)",
     "basisGold": "Gold (85 g)",
@@ -739,6 +739,13 @@
     "nisab": "නිසාබ්",
     "zakatDue": "Zakat due",
     "rateNote": "2.5% of net wealth, held for a full lunar year.",
-    "belowNisab": "Below the threshold, so no zakat is due. You are {{amount}} short of the nisab."
+    "belowNisab": "Below the threshold, so no zakat is due. You are {{amount}} short of the nisab.",
+    "currency": "මුදල් ඒකකය",
+    "currencyHint": "මෙම තිරයේ සියලු මුදල් මෙම ඒකකයෙන්. ලෝහ මිල ජාත්‍යන්තර මිලෙන් මෙයට හරවනු ලැබේ.",
+    "fetchingRates": "වත්මන් මිල ලබා ගනිමින්…",
+    "ratesLive": "සජීවී මිල, {{date}} ලබා ගත්තා",
+    "ratesCached": "{{date}} හි සුරකින ලද මිල — ඔබ නොබැඳි බව පෙනේ",
+    "ratesUnavailable": "වත්මන් මිල ලබා ගත නොහැකි විය. ග්‍රෑම් එකක මිල ඔබම ඇතුළත් කරන්න.",
+    "useLiveRate": "නැවත සජීවී මිල භාවිත කරන්න"
   }
 }

@@ -715,9 +715,9 @@
   "zakat": {
     "disclaimer": "A calculation aid, not a religious ruling. The rate and thresholds here are the classical ones, but how some assets are treated differs between scholars - ask someone qualified about your own situation.",
     "metalPrices": "Metal prices",
-    "pricesHint": "Enter the current local price per gram, in your own currency. Every figure below uses the same currency.",
-    "goldPrice": "Gold price per gram",
-    "silverPrice": "Silver price per gram",
+    "pricesHint": "These are filled from the international spot price. A jeweller may pay less for second-hand gold — type over them with your local rate if you know it.",
+    "goldPrice": "Gold price per gram ({{currency}})",
+    "silverPrice": "Silver price per gram ({{currency}})",
     "nisabBasis": "Nisab basis",
     "basisSilver": "Silver (595 g)",
     "basisGold": "Gold (85 g)",
@@ -739,6 +739,13 @@
     "nisab": "Nisab threshold",
     "zakatDue": "Zakat due",
     "rateNote": "2.5% of net wealth, held for a full lunar year.",
-    "belowNisab": "Below the threshold, so no zakat is due. You are {{amount}} short of the nisab."
+    "belowNisab": "Below the threshold, so no zakat is due. You are {{amount}} short of the nisab.",
+    "currency": "Currency",
+    "currencyHint": "Every figure on this screen is in this currency. Metal prices are converted into it from the international spot price.",
+    "fetchingRates": "Fetching current rates…",
+    "ratesLive": "Live spot rate, fetched {{date}}",
+    "ratesCached": "Saved rate from {{date}} — you appear to be offline",
+    "ratesUnavailable": "Could not fetch current rates. Enter the price per gram yourself.",
+    "useLiveRate": "Use the live rate again"
   }
 }
