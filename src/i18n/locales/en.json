@@ -122,7 +122,7 @@
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "passwordHint": "At least 8 characters, including a letter and a number.",
-    "declaration": "I declare that the information provided is accurate to the best of my knowledge, and I authorize its use for registration processing on JDC-LMS for educational purposes.",
+    "declaration": "I declare that the information provided is accurate to the best of my knowledge, and I authorize its use for registration processing on WeeklyClass.LMS for educational purposes.",
     "profileAlreadyExists": "A profile already exists for this account. Sign in instead, or ask an administrator."
   },
   "validation": {

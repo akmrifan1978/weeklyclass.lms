@@ -404,9 +404,19 @@ export async function register(
     return { uid, status, generatedId, requiresApproval: status !== 'active' };
   } catch (error) {
     console.error('[WeeklyClass] register FAILED at the step logged above:', error);
-    // The auth account exists but the profile failed — remove the orphan so the
-    // person can retry with the same email address.
-    await credential.user.delete().catch(() => undefined);
+    // The auth account is deliberately KEPT. It used to be deleted here so the
+    // email could be reused on a retry, but that destroys a working login and
+    // its password every time a later step fails — which turned one recoverable
+    // error into a loop of vanishing accounts during first-run setup.
+    //
+    // Keeping it is recoverable in every direction: signing in completes the
+    // profile through the first-run bootstrap, and an admin can finish the
+    // record by hand. A deleted account and a forgotten password cannot be
+    // recovered by anyone.
+    console.error(
+      `[WeeklyClass] The sign-in for ${email} was kept (uid ${credential.user.uid}). ` +
+        `Sign in with it rather than registering again.`
+    );
     throw error;
   }
 }
