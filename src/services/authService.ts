@@ -116,27 +116,35 @@ async function waitForAuthToken(user: FirebaseUser): Promise<void> {
  * a broken security rule, and no amount of rule-editing fixes it.
  *
  * A denial that is really a race disappears on a retry with a fresh token; a
- * denial that is real survives all three attempts and is then reported as it
- * always was. Costing a genuine refusal a second of delay is well worth not
+ * denial that is real survives every attempt and is then reported as it always
+ * was. Costing a genuine refusal a few seconds of delay is well worth not
  * failing a legitimate registration.
+ *
+ * The budget below is deliberately generous — roughly seven seconds across five
+ * tries. Three tries over one second was not enough on a weak connection, which
+ * is exactly where this race is most likely to be lost, and the symptom was a
+ * registration refused for a permission the account definitely had.
  */
+const RETRY_BACKOFF_MS = [500, 1000, 1500, 3000];
+
 async function withTokenRetry<T>(
   label: string,
   user: FirebaseUser,
   run: () => Promise<T>
 ): Promise<T> {
-  for (let attempt = 1; ; attempt += 1) {
+  for (let attempt = 0; ; attempt += 1) {
     try {
       return await run();
     } catch (error) {
       const denied = (error as { code?: string })?.code === 'permission-denied';
-      if (!denied || attempt >= 3) throw error;
+      if (!denied || attempt >= RETRY_BACKOFF_MS.length) throw error;
+      const wait = RETRY_BACKOFF_MS[attempt];
       console.warn(
-        `[WeeklyClass] ${label} was refused on attempt ${attempt} — ` +
-          'refreshing the auth token and retrying'
+        `[WeeklyClass] ${label} was refused (attempt ${attempt + 1}) — ` +
+          `refreshing the auth token and retrying in ${wait}ms`
       );
       await user.getIdToken(true).catch(() => undefined);
-      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+      await new Promise((resolve) => setTimeout(resolve, wait));
     }
   }
 }
