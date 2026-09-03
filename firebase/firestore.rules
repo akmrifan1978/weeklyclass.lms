@@ -138,9 +138,11 @@ service cloud.firestore {
       allow get: if true;
       allow list: if isAdmin();
 
-      // Claimed once, by the account it names, and never reassigned.
+      // Claimed by the account it names, or by an admin creating that account
+      // on their behalf — an admin's own uid will never match the new user's,
+      // so without this an admin simply cannot add anyone.
       allow create: if isSignedIn()
-                    && request.resource.data.uid == request.auth.uid;
+                    && (request.resource.data.uid == request.auth.uid || isAdmin());
       allow update, delete: if isAdmin();
     }
 
@@ -148,7 +150,7 @@ service cloud.firestore {
       allow get: if true;
       allow list: if isAdmin();
       allow create: if isSignedIn()
-                    && request.resource.data.uid == request.auth.uid;
+                    && (request.resource.data.uid == request.auth.uid || isAdmin());
       allow update, delete: if isAdmin();
     }
 
@@ -179,13 +181,12 @@ service cloud.firestore {
     }
 
     // One phone number, one account. Same shape as `usernames`: readable by
-    // `get` so registration can check availability, never listable, and each row
-    // may only be created by the account it names.
+    // `get` so registration can check availability, and never listable.
     match /mobiles/{mobileKey} {
       allow get: if true;
       allow list: if isAdmin();
       allow create: if isSignedIn()
-                    && request.resource.data.uid == request.auth.uid;
+                    && (request.resource.data.uid == request.auth.uid || isAdmin());
       allow update, delete: if isAdmin();
     }
 
