@@ -197,6 +197,12 @@ export default function AdminDashboard() {
             onPress={() => router.push({ pathname: '/(admin)/calendar', params: { action: 'new' } })}
           />
           <QuickAccessTile
+            icon="videocam"
+            label={t('nav.onlineClasses')}
+            tint={brand.red}
+            onPress={() => router.push('/(admin)/online-classes')}
+          />
+          <QuickAccessTile
             icon="send-outline"
             label={t('dashboard.sendNotification')}
             tint={brand.red}

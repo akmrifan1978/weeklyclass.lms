@@ -76,6 +76,7 @@ export default function TeacherHome() {
     { permission: 'CREATE_QUIZ', icon: 'help-circle-outline', labelKey: 'nav.quizzes', route: '/(teacher)/quizzes', tint: brand.navy },
     { permission: 'VIEW_RESULTS', icon: 'trophy-outline', labelKey: 'nav.results', route: '/(teacher)/results', tint: brand.orange },
     { permission: 'MANAGE_CALENDAR', icon: 'calendar-outline', labelKey: 'nav.calendar', route: '/(teacher)/calendar', tint: brand.slate },
+    { permission: 'MANAGE_CALENDAR', icon: 'videocam', labelKey: 'nav.onlineClasses', route: '/(teacher)/online-classes', tint: brand.red },
   ];
 
   const visibleTiles = tiles.filter((tile) => can(tile.permission));

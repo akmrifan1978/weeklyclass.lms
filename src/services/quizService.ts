@@ -27,6 +27,7 @@ import {
   type Page,
 } from './firestore';
 import * as audit from './auditService';
+import { announce } from './announceService';
 
 /**
  * Quizzes.
@@ -125,6 +126,10 @@ export async function setQuizStatus(
   status: Quiz['status'],
   actor: AppUser
 ): Promise<void> {
+  // Read before the write so we can tell a first publish from a re-publish of
+  // something the class has already been told about.
+  const before = await getQuiz(quizId);
+
   await updateDocById<Quiz>(COLLECTIONS.quizzes, quizId, { status });
   await audit.log({
     actor,
@@ -133,6 +138,22 @@ export async function setQuizStatus(
     documentId: quizId,
     summary: `Quiz status set to ${status}`,
   });
+
+  // Announced here rather than on create, because an assignment is created as a
+  // draft and only becomes something a student can open at this moment.
+  // Reopening a closed assignment counts as an update, not as a new one.
+  if (status === 'published' && before) {
+    void announce(
+      {
+        kind: 'assignment',
+        title: before.title,
+        classId: before.classId,
+        route: `/(student)/quiz/${quizId}`,
+        isUpdate: before.status === 'closed',
+      },
+      actor
+    );
+  }
 }
 
 export async function deleteQuiz(quizId: string, actor: AppUser): Promise<void> {

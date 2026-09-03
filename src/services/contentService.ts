@@ -11,6 +11,7 @@ import {
   type Page,
 } from './firestore';
 import * as audit from './auditService';
+import { announce } from './announceService';
 
 /** Lessons, articles and study materials. */
 
@@ -84,10 +85,32 @@ export async function saveLesson(
         payload as unknown as Record<string, unknown>
       ),
     });
+    void announce(
+      {
+        kind: 'lesson',
+        title: payload.title,
+        classId: payload.classId,
+        published: payload.status === 'published',
+        isUpdate: true,
+      },
+      actor
+    );
     return id;
   }
 
   const newId = await createDoc(COLLECTIONS.lessons, payload, { actorId: actor.uid });
+
+  // The class is told as soon as it is published. Fire-and-forget by design:
+  // the lesson is saved either way, and a failed push must not undo it.
+  void announce(
+    {
+      kind: 'lesson',
+      title: payload.title,
+      classId: payload.classId,
+      published: payload.status === 'published',
+    },
+    actor
+  );
   await audit.log({
     actor,
     action: 'CREATE',
@@ -278,6 +301,18 @@ export async function saveMaterial(
 ): Promise<string> {
   const payload = { language: 'en' as const, status: 'published' as const, ...data };
 
+  const tell = (isUpdate: boolean) =>
+    void announce(
+      {
+        kind: 'material',
+        title: payload.title,
+        classId: payload.classId ?? null,
+        published: payload.status === 'published',
+        isUpdate,
+      },
+      actor
+    );
+
   if (id) {
     await updateDocById<Material>(COLLECTIONS.materials, id, payload);
     await audit.log({
@@ -287,10 +322,12 @@ export async function saveMaterial(
       documentId: id,
       summary: `Updated material "${data.title}"`,
     });
+    tell(true);
     return id;
   }
 
   const newId = await createDoc(COLLECTIONS.materials, payload, { actorId: actor.uid });
+  tell(false);
   await audit.log({
     actor,
     action: 'CREATE',

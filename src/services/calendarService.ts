@@ -212,3 +212,46 @@ export function groupByDate(events: CalendarEvent[]): Record<string, CalendarEve
   }
   return groups;
 }
+
+// ---------------------------------------------------------------------------
+// Online classes
+// ---------------------------------------------------------------------------
+
+/**
+ * An online class IS a calendar event — one that carries a meeting link. Giving
+ * it a separate collection would mean two things to keep in step, two places to
+ * look for "what is on this week", and a session that could go missing from the
+ * calendar it obviously belongs in.
+ *
+ * Firestore cannot filter on "field is not null" alongside an ordered range on
+ * another field without a composite index for every combination, so the meeting
+ * filter is applied in memory over an already-narrow page of upcoming events.
+ */
+export function isOnlineClass(event: CalendarEvent): boolean {
+  return Boolean(event.meetingUrl);
+}
+
+export async function listOnlineClasses(options: EventQuery = {}): Promise<CalendarEvent[]> {
+  const page = await listUpcoming({ ...options, pageSize: options.pageSize ?? 50 });
+  return page.items.filter(isOnlineClass);
+}
+
+/**
+ * Whether a session is joinable now.
+ *
+ * Opened fifteen minutes early, because people arrive before the hour and a join
+ * button that refuses until the exact minute is worse than useless. It stays
+ * open until the end time so latecomers are not locked out.
+ */
+export function joinWindow(
+  event: CalendarEvent,
+  now: Date = new Date()
+): 'upcoming' | 'live' | 'ended' {
+  const start = combineDateTime(event.date, event.startTime).getTime();
+  const end = combineDateTime(event.date, event.endTime).getTime();
+  const EARLY_MS = 15 * 60 * 1000;
+
+  if (now.getTime() < start - EARLY_MS) return 'upcoming';
+  if (now.getTime() > end) return 'ended';
+  return 'live';
+}

@@ -216,6 +216,12 @@ export default function StudentHome() {
               tint={brand.orange}
               onPress={() => router.push('/(student)/results')}
             />
+            <QuickAccessTile
+              icon="videocam"
+              label={t('nav.onlineClasses')}
+              tint={brand.red}
+              onPress={() => router.push('/(student)/online-classes')}
+            />
           </Grid>
 
           <IslamicTiles basePath="/(student)" />

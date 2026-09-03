@@ -14,6 +14,7 @@ import {
   type Page,
 } from './firestore';
 import * as audit from './auditService';
+import { announce } from './announceService';
 
 /**
  * Videos and class recordings share a collection and are separated by `kind`.
@@ -146,6 +147,19 @@ export async function saveVideo(
     ...data,
   };
 
+  const tell = (isUpdate: boolean) =>
+    void announce(
+      {
+        kind: 'video',
+        title: payload.title,
+        classId: payload.classId ?? null,
+        published: payload.status === 'published',
+        image: payload.thumbnail ?? null,
+        isUpdate,
+      },
+      actor
+    );
+
   if (id) {
     const before = await getVideo(id);
     await updateDocById<VideoItem>(COLLECTIONS.videos, id, payload);
@@ -161,10 +175,12 @@ export async function saveVideo(
       ),
     });
     if (payload.isFeatured) await setFeatured(id, actor);
+    tell(true);
     return id;
   }
 
   const newId = await createDoc(COLLECTIONS.videos, payload, { actorId: actor.uid });
+  tell(false);
   await audit.log({
     actor,
     action: 'CREATE',
