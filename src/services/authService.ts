@@ -234,6 +234,21 @@ async function tryBootstrapFirstAdmin(user: FirebaseUser): Promise<AppUser | nul
 }
 
 /**
+ * True when the first-run window is definitively shut.
+ *
+ * Deliberately returns false when the check itself fails, so an unreachable or
+ * refused read never blocks the one flow that can configure a new platform.
+ */
+async function bootstrapIsClosed(): Promise<boolean> {
+  try {
+    const snap = await getDoc(doc(db, COLLECTIONS.settings, 'bootstrap'));
+    return snap.exists();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * The same bootstrap, for an account that already has a profile — typically a
  * half-finished registration that left a pending student behind. With no admin
  * in existence there is nobody who could approve or promote it, so the first
@@ -342,15 +357,27 @@ export async function login(identifier: string, password: string): Promise<Login
   // administrator, whether or not a partial profile already exists. A half
   // finished registration leaves a pending student behind, and with no admin
   // in existence there would be nobody able to approve or promote it.
+  //
+  // Once the platform IS configured this must not be attempted at all. It used
+  // to run for every non-admin sign-in on the principle that the rule, not a
+  // client read, is the authority — which is true, but it meant every student
+  // and teacher login fired a write that was certain to be refused and logged a
+  // frightening "first-admin promotion failed" over a completely normal login.
+  //
+  // `settings/bootstrap` is world-readable, so checking it costs one cached read
+  // and is trustworthy when it succeeds. If the read itself fails we fall back
+  // to the old behaviour and try anyway: a failed read must not be able to
+  // strand the very first administrator, which is the whole point of the window.
+  const bootstrapClosed = await bootstrapIsClosed();
   let bootstrapError: unknown = null;
 
-  if (!profile) {
+  if (!profile && !bootstrapClosed) {
     profile = await tryBootstrapFirstAdmin(credential.user).catch((error) => {
       bootstrapError = error;
       console.error('[WeeklyClass] first-admin bootstrap failed:', error);
       return null;
     });
-  } else if (profile.role !== 'admin') {
+  } else if (profile && profile.role !== 'admin' && !bootstrapClosed) {
     profile = (await promoteToFirstAdmin(profile).catch((error) => {
       console.error('[WeeklyClass] first-admin promotion failed:', error);
       return null;
