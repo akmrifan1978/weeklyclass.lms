@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
+import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { toDate } from '@/utils/date';
 import { nextEventFor } from '@/services/calendarService';
 import { getFeaturedVideo, getLiveVideo, listVideosForStudent } from '@/services/videoService';
@@ -24,6 +25,7 @@ import {
   UpcomingEventCard,
   VideoRow,
 } from '@/components/shared/ContentCards';
+import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
   Avatar,
   Card,
@@ -46,6 +48,9 @@ export default function StudentHome() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { language } = useLanguage();
+  // This dashboard remembers its own language; see useLanguageScope.
+  const { language: dashboardLanguage, setLanguage: setDashboardLanguage } =
+    useLanguageScope('student');
   const router = useRouter();
 
   const load = useCallback(async () => {
@@ -94,6 +99,11 @@ export default function StudentHome() {
           </Text>
           {user?.studentId ? <Text style={styles.studentId}>{user.studentId}</Text> : null}
         </View>
+        <LanguageMenu
+          value={dashboardLanguage}
+          onChange={setDashboardLanguage}
+          tint={colors.textSecondary}
+        />
         <Avatar name={user?.fullName ?? '?'} uri={user?.profileImage} size={48} />
       </View>
 
@@ -204,6 +214,18 @@ export default function StudentHome() {
               label={t('nav.results')}
               tint={brand.orange}
               onPress={() => router.push('/(student)/results')}
+            />
+            <QuickAccessTile
+              icon="time-outline"
+              label={t('nav.prayer')}
+              tint={brand.navy}
+              onPress={() => router.push('/(student)/prayer')}
+            />
+            <QuickAccessTile
+              icon="book"
+              label={t('nav.quran')}
+              tint={brand.sand}
+              onPress={() => router.push('/(student)/quran')}
             />
           </Grid>
 

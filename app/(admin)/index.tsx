@@ -8,12 +8,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
+import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { relativeTime } from '@/utils/date';
 import { humanise } from '@/utils/format';
 import { loadDashboardStats } from '@/services/statsService';
 import { listLogs } from '@/services/auditService';
 import { listUsers } from '@/services/userService';
 import { QuickAccessTile } from '@/components/shared/ContentCards';
+import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
   AsyncBoundary,
   Avatar,
@@ -31,6 +33,9 @@ export default function AdminDashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { language } = useLanguage();
+  // The admin dashboard remembers its own language; see useLanguageScope.
+  const { language: dashboardLanguage, setLanguage: setDashboardLanguage } =
+    useLanguageScope('admin');
   const router = useRouter();
 
   const load = useCallback(async () => {
@@ -54,6 +59,11 @@ export default function AdminDashboard() {
             {user?.fullName}
           </Text>
         </View>
+        <LanguageMenu
+          value={dashboardLanguage}
+          onChange={setDashboardLanguage}
+          tint={colors.textSecondary}
+        />
       </View>
 
       <Spacer />

@@ -325,3 +325,26 @@ export function hasPermission(user: AppUser | null, permission: Permission): boo
   if (user.role === 'admin') return true;
   return user.permissions?.[permission] === true;
 }
+
+/**
+ * Stores one dashboard's language choice on the profile, so it follows the
+ * person to another device.
+ *
+ * Deliberately silent on failure. The device's own copy is what every screen
+ * reads; this is a convenience on top of it, and a refused or offline write must
+ * never surface as an error over something as ordinary as picking a language.
+ */
+export async function saveDashboardLanguage(
+  uid: string,
+  scope: string,
+  code: LanguageCode
+): Promise<void> {
+  try {
+    await updateDoc(doc(db, COLLECTIONS.users, uid), {
+      [`dashboardLanguages.${scope}`]: code,
+      updatedAt: serverTimestamp(),
+    });
+  } catch {
+    // Nothing to do — the choice already applies on this device.
+  }
+}

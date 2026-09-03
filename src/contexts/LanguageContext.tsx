@@ -3,6 +3,13 @@ import { Alert, I18nManager, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { applyLanguage, isRTL, loadStoredLanguage } from '@/i18n';
+import {
+  loadScopeLanguages,
+  mergeScopeLanguages,
+  saveScopeLanguage,
+  type LanguageScope,
+  type ScopeLanguages,
+} from '@/i18n/scopes';
 import { LANGUAGES } from '@/constants/app';
 import { listLanguages } from '@/services/languageService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
@@ -15,6 +22,12 @@ interface LanguageContextValue {
   available: AppLanguage[];
   ready: boolean;
   setLanguage: (code: LanguageCode) => Promise<void>;
+  /** The language a dashboard should use — its own, or the app-wide default. */
+  languageFor: (scope: LanguageScope) => LanguageCode;
+  /** Sets and persists one dashboard's language, and applies it immediately. */
+  setLanguageFor: (scope: LanguageScope, code: LanguageCode) => Promise<void>;
+  /** Preferences loaded from the profile, so they follow across devices. */
+  adoptScopeLanguages: (fromProfile: ScopeLanguages | undefined) => void;
 }
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
@@ -34,12 +47,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }))
   );
   const [ready, setReady] = useState(false);
+  const [scopes, setScopes] = useState<ScopeLanguages>({});
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const stored = await loadStoredLanguage();
+      const [stored, storedScopes] = await Promise.all([
+        loadStoredLanguage(),
+        loadScopeLanguages(),
+      ]);
       if (cancelled) return;
+      setScopes(storedScopes);
       // Restoring is not a choice, so it must not overwrite what is stored.
       await applyLanguage(stored, { persist: false });
       setLanguageState(stored);
@@ -78,6 +96,30 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [language]
   );
 
+  // A scope with no choice of its own follows the app-wide language, so nobody
+  // has to configure five dashboards before the app reads the way they want.
+  const languageFor = useCallback(
+    (scope: LanguageScope): LanguageCode => scopes[scope] ?? language,
+    [scopes, language]
+  );
+
+  const setLanguageFor = useCallback(
+    async (scope: LanguageScope, code: LanguageCode) => {
+      setScopes((previous) => ({ ...previous, [scope]: code }));
+      await saveScopeLanguage(scope, code);
+      // Applied without persisting app-wide: choosing Arabic for the Qur'an must
+      // not silently switch the rest of the app to Arabic next time it opens.
+      await applyLanguage(code, { persist: false });
+      logEvent(AnalyticsEvents.languageChanged, { language: code, scope });
+    },
+    []
+  );
+
+  const adoptScopeLanguages = useCallback((fromProfile: ScopeLanguages | undefined) => {
+    if (!fromProfile) return;
+    setScopes((previous) => mergeScopeLanguages(previous, fromProfile));
+  }, []);
+
   const value = useMemo<LanguageContextValue>(
     () => ({
       language,
@@ -85,8 +127,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       available,
       ready,
       setLanguage,
+      languageFor,
+      setLanguageFor,
+      adoptScopeLanguages,
     }),
-    [language, available, ready, setLanguage]
+    [language, available, ready, setLanguage, languageFor, setLanguageFor, adoptScopeLanguages]
   );
 
   // Keep i18next and local state aligned if something calls changeLanguage directly.

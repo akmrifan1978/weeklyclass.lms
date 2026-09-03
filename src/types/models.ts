@@ -41,6 +41,11 @@ export interface AppUser extends BaseDoc {
   status: UserStatus;
   country: string;
   language: LanguageCode;
+  /**
+   * Per-dashboard language choices, so they follow someone to a new device.
+   * The device's own stored choice wins where the two disagree.
+   */
+  dashboardLanguages?: Partial<Record<string, LanguageCode>>;
   profileImage?: string | null;
   organizationId?: string | null;
   branchId?: string | null;

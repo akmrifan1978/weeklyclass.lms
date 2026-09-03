@@ -9,6 +9,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import '@/i18n';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
+import { scopeForSegments, type ScopeLanguages } from '@/i18n/scopes';
+import { applyLanguage } from '@/i18n';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { initAnalytics } from '@/firebase/analytics';
 import { initAppCheck } from '@/firebase/appCheck';
@@ -72,6 +74,38 @@ function RoleGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Pulls the per-dashboard language choices off the profile once it loads, so a
+ * person signing in on a new device finds their dashboards already in the
+ * languages they chose. The device's own stored choices still win — see
+ * mergeScopeLanguages.
+ */
+function ScopeLanguageSync() {
+  const { user } = useAuth();
+  const { adoptScopeLanguages, languageFor } = useLanguage();
+  const segments = useSegments();
+  const stored = user?.dashboardLanguages;
+
+  useEffect(() => {
+    adoptScopeLanguages(stored as ScopeLanguages | undefined);
+  }, [stored, adoptScopeLanguages]);
+
+  // Applying from the route covers every screen in a dashboard, not only the
+  // ones that ask. Without this, walking from the Qur'an into Lessons left
+  // Lessons in the Qur'an's language.
+  //
+  // Persisting is off on purpose: reading one section in Arabic must not change
+  // what the rest of the app opens in next time.
+  const scope = scopeForSegments(segments as string[]);
+  const scopeLanguage = scope ? languageFor(scope) : null;
+
+  useEffect(() => {
+    if (scopeLanguage) void applyLanguage(scopeLanguage, { persist: false });
+  }, [scopeLanguage]);
+
+  return null;
+}
+
 function RootNavigator() {
   const router = useRouter();
 
@@ -85,6 +119,7 @@ function RootNavigator() {
 
   return (
     <RoleGate>
+      <ScopeLanguageSync />
       <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />

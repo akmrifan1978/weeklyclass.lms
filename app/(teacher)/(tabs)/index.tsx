@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
+import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { useTeacherScope } from '@/hooks/useTeacherScope';
 import { nextEventFor } from '@/services/calendarService';
 import { loadTeacherStats } from '@/services/statsService';
@@ -18,6 +19,7 @@ import {
   QuickAccessTile,
   UpcomingEventCard,
 } from '@/components/shared/ContentCards';
+import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
   Avatar,
   Card,
@@ -40,6 +42,9 @@ export default function TeacherHome() {
   const { t } = useTranslation();
   const { user, can } = useAuth();
   const { language } = useLanguage();
+  // This dashboard remembers its own language; see useLanguageScope.
+  const { language: dashboardLanguage, setLanguage: setDashboardLanguage } =
+    useLanguageScope('teacher');
   const router = useRouter();
   const { classes, classIds, loading: scopeLoading } = useTeacherScope();
 
@@ -84,6 +89,11 @@ export default function TeacherHome() {
           </Text>
           {user?.teacherId ? <Text style={styles.teacherId}>{user.teacherId}</Text> : null}
         </View>
+        <LanguageMenu
+          value={dashboardLanguage}
+          onChange={setDashboardLanguage}
+          tint={colors.textSecondary}
+        />
         <Avatar name={user?.fullName ?? '?'} uri={user?.profileImage} size={48} />
       </View>
 
@@ -141,23 +151,38 @@ export default function TeacherHome() {
             </>
           ) : null}
 
-          {visibleTiles.length ? (
-            <>
-              <Spacer size={spacing.xxl} />
-              <SectionHeader title={t('dashboard.quickAccess')} icon="grid-outline" />
-              <Grid minItemWidth={105} gap={spacing.md}>
-                {visibleTiles.map((tile) => (
-                  <QuickAccessTile
-                    key={tile.route}
-                    icon={tile.icon}
-                    label={t(tile.labelKey)}
-                    tint={tile.tint}
-                    onPress={() => router.push(tile.route as never)}
-                  />
-                ))}
-              </Grid>
-            </>
-          ) : (
+          {/*
+            Prayer times and the Qur'an are not gated on a permission. They are
+            not teaching tools an admin grants access to — they are for the
+            person, and every teacher should be able to reach them.
+          */}
+          <Spacer size={spacing.xxl} />
+          <SectionHeader title={t('dashboard.quickAccess')} icon="grid-outline" />
+          <Grid minItemWidth={105} gap={spacing.md}>
+            {visibleTiles.map((tile) => (
+              <QuickAccessTile
+                key={tile.route}
+                icon={tile.icon}
+                label={t(tile.labelKey)}
+                tint={tile.tint}
+                onPress={() => router.push(tile.route as never)}
+              />
+            ))}
+            <QuickAccessTile
+              icon="time-outline"
+              label={t('nav.prayer')}
+              tint={brand.navy}
+              onPress={() => router.push('/(teacher)/prayer')}
+            />
+            <QuickAccessTile
+              icon="book"
+              label={t('nav.quran')}
+              tint={brand.sand}
+              onPress={() => router.push('/(teacher)/quran')}
+            />
+          </Grid>
+
+          {visibleTiles.length ? null : (
             <>
               <Spacer size={spacing.xxl} />
               <Card>

@@ -214,7 +214,9 @@
     "settings": "Settings",
     "auditLogs": "Audit Log",
     "myClasses": "My Classes",
-    "myStudents": "My Students"
+    "myStudents": "My Students",
+    "prayer": "Prayer times",
+    "quran": "Qur'an"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -548,7 +550,9 @@
     "defaultThumbnail": "Default video thumbnail",
     "defaultThumbnailHint": "Used when a video has no thumbnail of its own.",
     "brandingNote": "Set these once. New recordings, videos and classes start from them, then keep their own copy — so changing a default never alters anything already published.",
-    "colours": "Colours"
+    "colours": "Colours",
+    "languageScopeHint": "This choice applies to this dashboard only, and is remembered when you come back.",
+    "language": "Language"
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -604,5 +608,34 @@
     "MANAGE_SETTINGS": "Manage settings",
     "MANAGE_BRANCHES": "Manage branches",
     "MANAGE_LANGUAGES": "Manage languages"
+  },
+  "prayer": {
+    "fajr": "Fajr",
+    "dhuhr": "Dhuhr",
+    "asr": "Asr",
+    "maghrib": "Maghrib",
+    "isha": "Isha",
+    "sunrise": "Sunrise",
+    "today": "Today's times",
+    "city": "City",
+    "cityHint": "Times are calculated for this city in {{country}}.",
+    "cityRequired": "Which city?",
+    "cityRequiredHelp": "Enter your city above to see prayer times for it.",
+    "showTimes": "Show times",
+    "nextIn": "{{prayer}} in {{time}}",
+    "allDone": "All of today's prayers have passed.",
+    "showingSaved": "Showing saved times - you appear to be offline.",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours"
+  },
+  "quran": {
+    "searchSurah": "Search surah",
+    "ayahCount_one": "{{count}} ayah",
+    "ayahCount_other": "{{count}} ayahs",
+    "meccan": "Meccan",
+    "medinan": "Medinan",
+    "arabicOnly": "Showing the Arabic alone. Choose Tamil, Sinhala or English above to see a translation beside it."
   }
 }

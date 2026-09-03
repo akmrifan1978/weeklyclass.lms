@@ -248,6 +248,9 @@ service cloud.firestore {
                       isSelf(uid)
                       && onlyChanged([
                            'fullName', 'mobile', 'profileImage', 'language',
+                           // Per-dashboard language choices. Presentation only:
+                           // it grants nothing and is safe to let people set.
+                           'dashboardLanguages',
                            'dateOfBirth', 'gender', 'qualification',
                            'pushTokens', 'lastLoginAt', 'searchTokens', 'updatedAt'
                          ])

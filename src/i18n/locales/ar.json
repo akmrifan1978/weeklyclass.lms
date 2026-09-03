@@ -214,7 +214,9 @@
     "settings": "الإعدادات",
     "auditLogs": "سجل النشاط",
     "myClasses": "صفوفي",
-    "myStudents": "طلابي"
+    "myStudents": "طلابي",
+    "prayer": "مواقيت الصلاة",
+    "quran": "القرآن الكريم"
   },
   "dashboard": {
     "quickAccess": "وصول سريع",
@@ -548,7 +550,9 @@
     "defaultThumbnail": "الصورة المصغّرة الافتراضية",
     "defaultThumbnailHint": "تُستخدم عندما لا يكون للفيديو صورة مصغّرة خاصة به.",
     "brandingNote": "اضبط هذه مرة واحدة. تبدأ التسجيلات والفيديوهات والفصول الجديدة منها ثم تحتفظ بنسختها الخاصة — لذا فإن تغيير الإعداد الافتراضي لا يغيّر ما نُشر بالفعل.",
-    "colours": "الألوان"
+    "colours": "الألوان",
+    "languageScopeHint": "ينطبق هذا الاختيار على هذه اللوحة فقط، ويُحفظ عند عودتك إليها.",
+    "language": "اللغة"
   },
   "confirm": {
     "deleteTitle": "حذف هذا السجل؟",
@@ -604,5 +608,34 @@
     "MANAGE_SETTINGS": "إدارة الإعدادات",
     "MANAGE_BRANCHES": "إدارة الفروع",
     "MANAGE_LANGUAGES": "إدارة اللغات"
+  },
+  "prayer": {
+    "fajr": "الفجر",
+    "dhuhr": "الظهر",
+    "asr": "العصر",
+    "maghrib": "المغرب",
+    "isha": "العشاء",
+    "sunrise": "الشروق",
+    "today": "مواقيت اليوم",
+    "city": "المدينة",
+    "cityHint": "تُحسب المواقيت لهذه المدينة في {{country}}.",
+    "cityRequired": "أي مدينة؟",
+    "cityRequiredHelp": "أدخل مدينتك أعلاه لعرض مواقيت الصلاة فيها.",
+    "showTimes": "عرض المواقيت",
+    "nextIn": "{{prayer}} بعد {{time}}",
+    "allDone": "انقضت جميع صلوات اليوم.",
+    "showingSaved": "تُعرض مواقيت محفوظة - يبدو أنك غير متصل.",
+    "minutes_one": "دقيقة واحدة",
+    "minutes_other": "{{count}} دقيقة",
+    "hours_one": "ساعة واحدة",
+    "hours_other": "{{count}} ساعة"
+  },
+  "quran": {
+    "searchSurah": "ابحث عن سورة",
+    "ayahCount_one": "آية واحدة",
+    "ayahCount_other": "{{count}} آية",
+    "meccan": "مكية",
+    "medinan": "مدنية",
+    "arabicOnly": "يُعرض النص العربي وحده. اختر التاميلية أو السنهالية أو الإنجليزية أعلاه لعرض ترجمة بجانبه."
   }
 }
