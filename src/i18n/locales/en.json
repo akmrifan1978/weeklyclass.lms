@@ -884,6 +884,7 @@
     "addEpisode": "Add episode",
     "translationFor": "Translation ({{language}})",
     "translatedTitle": "Title in {{language}}",
-    "translatedSummary": "Summary in {{language}}"
+    "translatedSummary": "Summary in {{language}}",
+    "source": "Source: {{source}}"
   }
 }

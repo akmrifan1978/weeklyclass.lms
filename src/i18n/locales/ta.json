@@ -884,6 +884,7 @@
     "addEpisode": "அத்தியாயத்தைச் சேர்",
     "translationFor": "மொழிபெயர்ப்பு ({{language}})",
     "translatedTitle": "{{language}} இல் தலைப்பு",
-    "translatedSummary": "{{language}} இல் சுருக்கம்"
+    "translatedSummary": "{{language}} இல் சுருக்கம்",
+    "source": "மூலம்: {{source}}"
   }
 }

@@ -884,6 +884,7 @@
     "addEpisode": "කථාංගයක් එක් කරන්න",
     "translationFor": "පරිවර්තනය ({{language}})",
     "translatedTitle": "{{language}} බසින් මාතෘකාව",
-    "translatedSummary": "{{language}} බසින් සාරාංශය"
+    "translatedSummary": "{{language}} බසින් සාරාංශය",
+    "source": "මූලාශ්‍රය: {{source}}"
   }
 }

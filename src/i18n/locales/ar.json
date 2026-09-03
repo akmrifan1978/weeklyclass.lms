@@ -884,6 +884,7 @@
     "addEpisode": "إضافة حلقة",
     "translationFor": "الترجمة ({{language}})",
     "translatedTitle": "العنوان بـ{{language}}",
-    "translatedSummary": "الملخص بـ{{language}}"
+    "translatedSummary": "الملخص بـ{{language}}",
+    "source": "المصدر: {{source}}"
   }
 }

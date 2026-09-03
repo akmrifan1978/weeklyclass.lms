@@ -220,6 +220,14 @@ export interface VideoItem extends BaseDoc {
    * A language with no entry falls back to the original fields.
    */
   translations?: Partial<Record<LanguageCode, { title?: string; summary?: string }>>;
+  /**
+   * Where imported content came from. binbaz.org.sa permits copying "on
+   * condition that the source is cited", so for anything imported from there
+   * these are not decoration — the attribution is the licence, and the screen
+   * that shows the content shows them too.
+   */
+  sourceUrl?: string | null;
+  sourceName?: string | null;
   status: ContentStatus;
 }
 

@@ -188,6 +188,27 @@ function EpisodeCard({
               style={{ marginTop: spacing.md }}
             />
           ) : null}
+
+          {/*
+            Attribution, shown because the source requires it. binbaz.org.sa
+            permits copying "on condition that the source is cited" — this line
+            IS that condition, not a nicety, so it is not hidden behind a tap.
+          */}
+          {episode.sourceName ? (
+            <Pressable
+              onPress={() =>
+                episode.sourceUrl ? void Linking.openURL(episode.sourceUrl) : undefined
+              }
+              accessibilityRole={episode.sourceUrl ? 'link' : 'text'}
+              accessibilityLabel={t('noor.source', { source: episode.sourceName })}
+              style={styles.sourceRow}
+            >
+              <Ionicons name="link-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.source}>
+                {t('noor.source', { source: episode.sourceName })}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </Card>
@@ -220,4 +241,11 @@ const styles = StyleSheet.create({
   },
   summary: { fontSize: fontSize.sm, lineHeight: 21, color: colors.textSecondary },
   noSummary: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.md,
+  },
+  source: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted },
 });
