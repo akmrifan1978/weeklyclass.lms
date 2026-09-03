@@ -854,9 +854,12 @@
     "bookNumber": "நூல் {{number}}",
     "authenticityNote": "Sahih al-Bukhari and Sahih Muslim are the two collections whose authenticity is least disputed. Within the other books individual narrations carry different gradings, which are not shown here — each one lists its book and number so you can check it.",
     "searchInBook": "Search in this book",
-    "englishFallback": "Only Sahih al-Bukhari and Sahih Muslim have a Tamil translation here. This collection is shown in English.",
+    "englishFallback": "இந்தத் தொகுப்புக்கு உங்கள் மொழியில் மொழிபெயர்ப்பு இல்லை; எனவே அரபி மூலமும், அதன் கீழ் ஆங்கில மொழிபெயர்ப்பும் காட்டப்படுகின்றன. ஸஹீஹ் புகாரி மற்றும் ஸஹீஹ் முஸ்லிம் மட்டுமே தமிழ் மொழிபெயர்ப்பைக் கொண்டுள்ளன.",
     "previousBook": "Previous",
-    "nextBook": "Next"
+    "nextBook": "Next",
+    "translationAvailable": "மொழிபெயர்ப்பு உள்ளது",
+    "arabicEnglishOnly": "அரபி + ஆங்கிலம் மட்டும்",
+    "coverageNote": "ஒவ்வொரு ஹதீஸும் அரபியில் காட்டப்படுகிறது. மொழிபெயர்ப்பு இருந்தால் அதன் கீழ் தோன்றும் — இரு ஸஹீஹ்களுக்குத் தமிழ், மற்றவைக்கு ஆங்கிலம். திறப்பதற்கு முன்பே தெரியும்படி தொகுப்புகள் குறிக்கப்பட்டுள்ளன."
   },
   "progress": {
     "submitted": "சமர்ப்பித்தவை",

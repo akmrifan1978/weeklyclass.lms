@@ -82,6 +82,13 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
             <Text style={styles.noticeText}>{t('hadith.authenticityNote')}</Text>
           </Card>
 
+          {/* Coverage stated before anything is opened, so nobody picks a
+              collection expecting Tamil and finds English. */}
+          <Card style={styles.notice}>
+            <Ionicons name="language-outline" size={18} color={colors.textMuted} />
+            <Text style={styles.noticeText}>{t('hadith.coverageNote')}</Text>
+          </Card>
+
           {loadingList ? (
             <SkeletonList count={6} />
           ) : (
@@ -94,6 +101,8 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
                     key={c.id}
                     name={c.name}
                     sahih
+                    translated={c.translated}
+                    language={language}
                     onPress={() => {
                       setCollection(c.id);
                       setSection(1);
@@ -108,6 +117,8 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
                   <CollectionRow
                     key={c.id}
                     name={c.name}
+                    translated={c.translated}
+                    language={language}
                     onPress={() => {
                       setCollection(c.id);
                       setSection(1);
@@ -168,8 +179,26 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
                   </View>
                   <Text style={styles.number}>#{h.number}</Text>
                 </View>
+
+                {/*
+                  Arabic first, then the translation. The Arabic is the
+                  narration; the translation is somebody's rendering of it. For
+                  most collections that rendering is English whatever the reader
+                  chose, so having the original above it is the difference
+                  between a usable page and a dead end.
+                */}
+                {h.arabic && language !== 'ar' ? (
+                  <Text style={styles.arabic} accessibilityLanguage="ar">
+                    {h.arabic}
+                  </Text>
+                ) : null}
+
                 <Text
-                  style={[styles.text, language === 'ar' ? styles.arabic : null]}
+                  style={[
+                    styles.text,
+                    language === 'ar' ? styles.arabic : null,
+                    h.arabic && language !== 'ar' ? styles.translation : null,
+                  ]}
                 >
                   {h.text}
                 </Text>
@@ -206,13 +235,22 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
 function CollectionRow({
   name,
   sahih,
+  translated,
+  language,
   onPress,
 }: {
   name: string;
   sahih?: boolean;
+  /** False when this collection has no edition in the reader's language. */
+  translated: boolean;
+  language: string;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
+  // Only worth flagging when the reader actually asked for another language: an
+  // English reader being told "shown in English" is noise.
+  const flagFallback = !translated && language !== 'en';
+
   return (
     <Pressable
       onPress={onPress}
@@ -227,7 +265,14 @@ function CollectionRow({
       />
       <View style={{ flex: 1 }}>
         <Text style={styles.collectionName}>{name}</Text>
-        {sahih ? <Text style={styles.sahihTag}>{t('hadith.sahih')}</Text> : null}
+        <View style={styles.tagRow}>
+          {sahih ? <Text style={styles.sahihTag}>{t('hadith.sahih')}</Text> : null}
+          {flagFallback ? (
+            <Text style={styles.fallbackTag}>{t('hadith.arabicEnglishOnly')}</Text>
+          ) : (
+            <Text style={styles.translatedTag}>{t('hadith.translationAvailable')}</Text>
+          )}
+        </View>
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </Pressable>
@@ -255,7 +300,10 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.7 },
   collectionName: { fontSize: fontSize.md, color: colors.text, fontWeight: fontWeight.medium },
-  sahihTag: { fontSize: fontSize.xs, color: colors.success, marginTop: 1 },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+  sahihTag: { fontSize: fontSize.xs, color: colors.success },
+  translatedTag: { fontSize: fontSize.xs, color: colors.textMuted },
+  fallbackTag: { fontSize: fontSize.xs, color: colors.warning },
   hadith: { marginBottom: spacing.md },
   refRow: {
     flexDirection: 'row',
@@ -273,7 +321,20 @@ const styles = StyleSheet.create({
   number: { fontSize: fontSize.xs, color: colors.textMuted },
   text: { fontSize: fontSize.sm, lineHeight: 23, color: colors.text },
   // Arabic needs the extra size and line height, same as the Qur'an screens.
-  arabic: { fontSize: 22, lineHeight: 44, textAlign: 'right', writingDirection: 'rtl' },
+  arabic: {
+    fontSize: 22,
+    lineHeight: 44,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    color: colors.text,
+  },
+  translation: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    color: colors.textSecondary,
+  },
   pager: {
     flexDirection: 'row',
     alignItems: 'center',

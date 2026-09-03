@@ -29,6 +29,12 @@ export interface HadithCollection {
   sahih: boolean;
   /** Sections (books) available, by number. */
   sections: Record<string, string>;
+  /**
+   * True when this collection has an edition in the language asked for. Where
+   * it is false the reader gets English beside the Arabic — and is told so on
+   * the list, rather than discovering it after opening the book.
+   */
+  translated: boolean;
 }
 
 /**
@@ -111,7 +117,10 @@ interface EditionsPayload {
 export async function listCollections(
   language: LanguageCode
 ): Promise<HadithCollection[]> {
-  const cacheKey = `${CACHE_PREFIX}collections/${language}`;
+  // Key is versioned: a list cached before `translated` existed would come back
+  // without it, and an absent flag reads as "not translated" — mislabelling
+  // every collection for anyone who had used the screen before this change.
+  const cacheKey = `${CACHE_PREFIX}collections/${language}/v2`;
   const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
   if (cached) return JSON.parse(cached) as HadithCollection[];
 
@@ -124,6 +133,7 @@ export async function listCollections(
     name: editions[id].name,
     sahih: SAHIH.has(id),
     sections: {},
+    translated: !editionFor(id, language).fellBack,
   }));
 
   void AsyncStorage.setItem(cacheKey, JSON.stringify(result)).catch(() => undefined);
@@ -132,7 +142,18 @@ export async function listCollections(
 
 export interface Hadith {
   number: number;
+  /** The translation, in the closest available language. */
   text: string;
+  /**
+   * The Arabic original, always fetched.
+   *
+   * Tamil exists for Bukhari and Muslim alone in this dataset, and Sinhala for
+   * nothing at all — so for most collections the "translation" above is English
+   * whatever the reader chose. Showing the Arabic beside it means they always
+   * have the actual narration, not only somebody's rendering of it, and it costs
+   * one extra cached request.
+   */
+  arabic: string | null;
   /** `book:hadith` as printed, which is how a narration is cited. */
   reference: string;
 }
@@ -169,14 +190,29 @@ export async function getSection(
   language: LanguageCode
 ): Promise<HadithSection> {
   const { edition, fellBack } = editionFor(collection, language);
-  const cacheKey = `${CACHE_PREFIX}${edition}/${section}`;
+  const cacheKey = `${CACHE_PREFIX}${edition}/${section}/v2`;
 
   const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
   if (cached) return JSON.parse(cached) as HadithSection;
 
-  const data = await fetchJson<SectionPayload>(
-    `${CDN}/editions/${edition}/${section}.json`
-  );
+  // Both editions at once. The Arabic is the narration itself and is worth
+  // having whatever language the reader picked; when Arabic IS the choice the
+  // second request is skipped rather than fetched twice.
+  const arabicEdition = `ara-${collection}`;
+  const [data, arabicData] = await Promise.all([
+    fetchJson<SectionPayload>(`${CDN}/editions/${edition}/${section}.json`),
+    edition === arabicEdition
+      ? Promise.resolve(null)
+      : fetchJson<SectionPayload>(
+          `${CDN}/editions/${arabicEdition}/${section}.json`
+        ).catch(() => null),
+  ]);
+
+  // Matched by hadith number rather than by position: a translation edition can
+  // omit a narration, and zipping by index would then pair every later hadith
+  // with the wrong Arabic — silently, and in a way nobody would spot.
+  const arabicByNumber = new Map<number, string>();
+  for (const h of arabicData?.hadiths ?? []) arabicByNumber.set(h.hadithnumber, h.text);
 
   const sectionNames = data.metadata.section ?? {};
   const result: HadithSection = {
@@ -189,6 +225,7 @@ export async function getSection(
     hadiths: data.hadiths.map((h) => ({
       number: h.hadithnumber,
       text: h.text,
+      arabic: arabicByNumber.get(h.hadithnumber) ?? null,
       reference: h.reference
         ? `${h.reference.book}:${h.reference.hadith}`
         : String(h.hadithnumber),

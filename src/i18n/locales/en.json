@@ -853,10 +853,13 @@
     "otherCollections": "Other collections",
     "sahih": "Authentic",
     "searchInBook": "Search in this book",
-    "englishFallback": "Only Sahih al-Bukhari and Sahih Muslim have a Tamil translation here. This collection is shown in English.",
+    "englishFallback": "No translation exists for this collection in your language, so the Arabic is shown with the English translation beneath it. Only Sahih al-Bukhari and Sahih Muslim have a Tamil translation.",
     "previousBook": "Previous",
     "nextBook": "Next",
-    "bookNumber": "Book {{number}}"
+    "bookNumber": "Book {{number}}",
+    "translationAvailable": "Translated",
+    "arabicEnglishOnly": "Arabic + English only",
+    "coverageNote": "Every narration is shown in Arabic. A translation appears beneath it where one exists — Tamil for the two Sahihs, English for the rest. Collections are labelled so you know before you open one."
   },
   "progress": {
     "none": "Nothing to show yet",
