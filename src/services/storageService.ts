@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import {
   ref,
   uploadBytesResumable,
@@ -11,14 +12,26 @@ import { AppError } from '@/utils/errors';
 import { formatBytes } from '@/utils/format';
 
 /**
- * Firebase Storage uploads.
+ * File uploads, with two backends.
  *
- * The Spark plan gives 5 GB of storage and 1 GB/day of downloads, so:
- *  - file sizes are capped before upload (see UPLOAD_LIMITS),
- *  - videos are never uploaded — only their URLs are stored, so a class
- *    recording can live on YouTube/Vimeo at no cost,
- *  - every object is written under a predictable path so the security rules can
- *    reason about who owns it.
+ * CLOUDINARY (preferred, and free) — used when EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME
+ * and EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET are set. Firebase now requires a
+ * billing account before Cloud Storage can be enabled at all, which leaves a
+ * free project with no way to upload anything. Cloudinary's free tier is
+ * generous (25 GB), needs no card, and its "unsigned upload preset" exists
+ * precisely so a client can upload without a backend signing the request.
+ *
+ * FIREBASE STORAGE — used when Cloudinary is not configured. Works only on a
+ * project where Storage has been enabled, i.e. a paid one.
+ *
+ * Either way, videos are never uploaded — only their URLs are stored, so a
+ * class recording lives on YouTube at no cost.
+ *
+ * On the unsigned preset: the preset name ships in the app, so anyone who
+ * extracts it could upload to that folder. Cloudinary presets can restrict
+ * format, size and folder, which bounds the damage to junk files you can
+ * delete. That trade is worth it here; the alternative is no uploads at all.
+ * See docs/FIREBASE.md.
  */
 
 export type UploadKind = 'avatar' | 'material' | 'thumbnail' | 'article' | 'branding';
@@ -29,6 +42,84 @@ export type UploadKind = 'avatar' | 'material' | 'thumbnail' | 'article' | 'bran
  * reports the problem instead of appearing to work forever.
  */
 const UPLOAD_TIMEOUT_MS = 90_000;
+
+const CLOUDINARY_CLOUD = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
+const CLOUDINARY_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? '';
+
+/** True when in-app uploading is actually possible, so the UI can say so. */
+export function uploadsConfigured(): boolean {
+  return Boolean(CLOUDINARY_CLOUD && CLOUDINARY_PRESET);
+}
+
+/**
+ * Uploads through Cloudinary's unsigned endpoint.
+ *
+ * `auto` handles images and documents alike, so one path covers avatars,
+ * branding and study materials. No SDK is involved — it is a single multipart
+ * POST, which keeps the bundle small and avoids another dependency.
+ */
+async function uploadToCloudinary(params: {
+  uri: string;
+  fileName: string;
+  kind: UploadKind;
+  contentType: string;
+  onProgress?: (percent: number) => void;
+}): Promise<UploadResult> {
+  const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`;
+
+  const form = new FormData();
+  // React Native's FormData takes this shape; on web the fetched blob is used.
+  if (params.uri.startsWith('data:') || params.uri.startsWith('blob:') || Platform.OS === 'web') {
+    const blob = await fetch(params.uri).then((r) => r.blob());
+    form.append('file', blob, params.fileName);
+  } else {
+    form.append('file', {
+      uri: params.uri,
+      name: params.fileName,
+      type: params.contentType,
+    } as unknown as Blob);
+  }
+  form.append('upload_preset', CLOUDINARY_PRESET);
+  form.append('folder', `weeklyclass/${params.kind}`);
+
+  // Cloudinary gives no progress events over fetch. Report an indeterminate
+  // midpoint so the button does not look frozen on a slow connection.
+  params.onProgress?.(50);
+
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+
+  let payload: { secure_url?: string; bytes?: number; error?: { message?: string } };
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: form,
+      signal: controller.signal,
+    });
+    payload = await response.json();
+  } catch (error) {
+    throw (error as Error)?.name === 'AbortError'
+      ? new AppError('errors.uploadTimedOut', 'cloudinary/timeout')
+      : new AppError('errors.uploadFailed', 'cloudinary/network');
+  } finally {
+    clearTimeout(deadline);
+  }
+
+  if (!payload.secure_url) {
+    console.error('[WeeklyClass] Cloudinary rejected the upload:', payload.error);
+    throw new AppError('errors.uploadFailed', 'cloudinary/rejected');
+  }
+
+  params.onProgress?.(100);
+  return {
+    url: payload.secure_url,
+    // Cloudinary is addressed by URL, not by a Storage path; nothing to delete
+    // through storageService.remove().
+    path: '',
+    size: payload.bytes ?? 0,
+    contentType: params.contentType,
+  };
+}
 
 /**
  * Turns a Storage failure into something that says what to do about it. The
@@ -116,6 +207,20 @@ export async function upload(params: {
   contentType?: string;
   onProgress?: (percent: number) => void;
 }): Promise<UploadResult> {
+  const contentType = params.contentType ?? 'application/octet-stream';
+
+  // Cloudinary first when it is configured — it is the only path that works on
+  // a free Firebase project.
+  if (uploadsConfigured()) {
+    return uploadToCloudinary({
+      uri: params.uri,
+      fileName: params.fileName,
+      kind: params.kind,
+      contentType,
+      onProgress: params.onProgress,
+    });
+  }
+
   const response = await fetch(params.uri);
   const blob = await response.blob();
 
@@ -126,7 +231,6 @@ export async function upload(params: {
 
   const path = pathFor(params.kind, params.ownerId, params.fileName);
   const objectRef = ref(storage, path);
-  const contentType = params.contentType ?? blob.type ?? 'application/octet-stream';
 
   const task = uploadBytesResumable(objectRef, blob, { contentType });
 

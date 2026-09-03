@@ -64,7 +64,8 @@
     "success": "تم",
     "copied": "تم النسخ",
     "imageLinkHint": "الصق رابط صورة مباشراً (ينتهي بـ .jpg أو .png).",
-    "uploadNeedsStorage": "يتطلب الرفع خدمة Cloud Storage، وهي متاحة في الخطة المدفوعة فقط. لصق رابط يعمل في الخطة المجانية."
+    "uploadNeedsStorage": "يتطلب الرفع خدمة Cloud Storage، وهي متاحة في الخطة المدفوعة فقط. لصق رابط يعمل في الخطة المجانية.",
+    "uploadOrLink": "ارفع ملفاً، أو الصق رابطاً."
   },
   "auth": {
     "studentLogin": "دخول الطالب",

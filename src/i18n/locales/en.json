@@ -64,7 +64,8 @@
     "success": "Done",
     "copied": "Copied",
     "imageLinkHint": "Paste a direct image link (ending .jpg or .png).",
-    "uploadNeedsStorage": "Uploading requires Cloud Storage, which Firebase only offers on a paid plan. Pasting a link works on the free plan."
+    "uploadNeedsStorage": "Uploading requires Cloud Storage, which Firebase only offers on a paid plan. Pasting a link works on the free plan.",
+    "uploadOrLink": "Upload a file, or paste a link."
   },
   "auth": {
     "studentLogin": "Student Login",

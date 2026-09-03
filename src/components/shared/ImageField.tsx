@@ -124,7 +124,9 @@ export function ImageField({
         loading={uploading}
         onPress={pick}
       />
-      <Text style={styles.uploadNote}>{t('common.uploadNeedsStorage')}</Text>
+      {storageService.uploadsConfigured() ? null : (
+        <Text style={styles.uploadNote}>{t('common.uploadNeedsStorage')}</Text>
+      )}
     </View>
   );
 }

@@ -129,7 +129,7 @@ appearing to work and quietly failing.
 | Area | Works free | The honest limitation |
 |---|---|---|
 | Auth, Firestore, Hosting | Yes | 50k reads/day, 1 GiB stored, 10 GB/month hosting |
-| **Cloud Storage (file uploads)** | **No** | Firebase now requires the Blaze plan to enable Storage at all on new projects. Every image field therefore accepts a **link** as well as an upload, and the link path is the primary one — it costs nothing and works today. |
+| **File uploads** | Yes, via Cloudinary | Firebase now requires the Blaze plan to enable Cloud Storage at all, so uploads go to **Cloudinary** instead — 25 GB free, no card. Set two variables in `.env` and the upload buttons work. Leave them blank and every image field still accepts a **link**, which needs nothing. |
 | Push to devices, sent now | Yes | Via the Expo Push Service, which needs no secret key |
 | Push to devices, **scheduled** | Partly | The record is stored and appears in-app at the chosen time. Firing a *device* push at that moment needs a server job (Cloud Functions → Blaze). The compose screen says this on the form. |
 | Web push | No | Sending to FCM web tokens requires a server key, which must never ship in client code. Web users get in-app notifications. |

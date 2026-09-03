@@ -24,11 +24,9 @@ In the console's left-hand sidebar:
 this repo replace the defaults in step 5) → pick the region closest to your
 users. *The region cannot be changed later.*
 
-**Storage** → *(optional, and no longer free)* — Firebase now requires the Blaze
-plan before Cloud Storage can be enabled on a new project. The app is built to
-work entirely without it: every image field takes a **link** as well as an
-upload, and links are the primary path. Skip this step unless you have billing
-enabled and specifically want in-app uploads.
+**Storage** → **skip it.** Firebase now requires the Blaze plan before Cloud
+Storage can be enabled on a new project. Uploads go to Cloudinary instead — see
+[File uploads](#file-uploads-free) below.
 
 ## 3. Register a web app and copy the config
 
@@ -160,6 +158,37 @@ Sign in as your admin and work through, roughly in this order:
    what they should be able to do.
 5. **Students** — add students, or let them self-register and approve them from
    the pending list on the dashboard.
+
+---
+
+## File uploads (free)
+
+Firebase Storage needs a paid plan, so in-app uploading uses **Cloudinary**:
+25 GB free, no card required. It is optional — leave it unconfigured and every
+image field still accepts a pasted link.
+
+1. Sign up at [cloudinary.com](https://cloudinary.com)
+2. **Dashboard** → copy your **Cloud name**
+3. **Settings → Upload → Add upload preset**
+   - **Signing mode: Unsigned**
+   - Restrict **Allowed formats** to `jpg,png,webp,pdf` and set a max file size
+4. Add both values to `.env`:
+
+```
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
+EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your-preset-name
+```
+
+5. Restart the dev server — env vars are read at startup
+
+**On the security trade.** An unsigned preset means the preset name ships inside
+the app, so anyone who extracts it could upload to that folder. This is the
+accepted cost of uploading without a backend to sign requests, and it is why
+step 3 asks you to restrict formats and size: the worst case becomes junk files
+you can delete, not a hole in your data. Everything that matters — who can
+create a *record* pointing at a file — is still enforced by the Firestore rules.
+
+If that trade is unacceptable, leave Cloudinary unconfigured and use links.
 
 ---
 
