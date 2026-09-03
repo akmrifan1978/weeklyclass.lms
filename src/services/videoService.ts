@@ -228,10 +228,16 @@ export function embedUrl(url: string): string | null {
   return null;
 }
 
-/** Best-effort thumbnail when the author did not upload one. */
-export function autoThumbnail(url: string): string | null {
+/**
+ * Best-effort thumbnail when the author did not upload one: YouTube publishes a
+ * still for every video, so a pasted YouTube link needs no image at all.
+ * `fallback` is the organisation's default from Settings, used when even that is
+ * unavailable — so a card is never blank.
+ */
+export function autoThumbnail(url: string, fallback?: string | null): string | null {
   const youtube = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|live\/|shorts\/)|youtu\.be\/)([\w-]{11})/
   );
-  return youtube?.[1] ? `https://img.youtube.com/vi/${youtube[1]}/hqdefault.jpg` : null;
+  if (youtube?.[1]) return `https://img.youtube.com/vi/${youtube[1]}/hqdefault.jpg`;
+  return fallback || null;
 }

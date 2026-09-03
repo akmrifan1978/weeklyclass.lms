@@ -13,6 +13,7 @@ import {
   saveEvent,
 } from '@/services/calendarService';
 import { listBranches, listClasses } from '@/services/orgService';
+import { getSettings } from '@/services/settingsService';
 import type { AudienceRole, CalendarEvent, MeetingProvider } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
@@ -78,6 +79,15 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
 
   const { data: org } = useAsync(loadOrg, [classScope?.join(',')]);
 
+  // New classes start from the organisation's branding, then keep their own
+  // copy — the same rule recordings follow.
+  const loadBranding = useCallback(async () => {
+    const settings = await getSettings().catch(() => null);
+    return { logoUrl: settings?.logoUrl ?? '', bannerUrl: settings?.bannerUrl ?? '' };
+  }, []);
+
+  const { data: branding } = useAsync(loadBranding, []);
+
   const branchOptions = useMemo<Option[]>(
     () => (org?.branches ?? []).map((b) => ({ value: b.id, label: b.name, description: b.city })),
     [org?.branches]
@@ -127,7 +137,11 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
           onChange={setMode}
         />
       }
-      emptyForm={EMPTY}
+      emptyForm={{
+        ...EMPTY,
+        logoUrl: branding?.logoUrl ?? '',
+        bannerUrl: branding?.bannerUrl ?? '',
+      }}
       toForm={(event) => ({
         title: event.title,
         description: event.description ?? '',

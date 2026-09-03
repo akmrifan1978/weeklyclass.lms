@@ -528,7 +528,11 @@
     "registration": "Registration",
     "registrationEnabled": "Allow new registrations",
     "requireApproval": "Require admin approval for new accounts",
-    "settingsSaved": "Settings saved"
+    "settingsSaved": "Settings saved",
+    "defaultThumbnail": "Default video thumbnail",
+    "defaultThumbnailHint": "Used when a video has no thumbnail of its own.",
+    "brandingNote": "Set these once. New recordings, videos and classes start from them, then keep their own copy — so changing a default never alters anything already published.",
+    "colours": "Colours"
   },
   "confirm": {
     "deleteTitle": "Delete this record?",

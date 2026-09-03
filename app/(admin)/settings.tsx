@@ -10,6 +10,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
 import { getSettings, updateSettings } from '@/services/settingsService';
 import { PermissionGuard } from '@/components/shared/RoleGuard';
+import { ImageField } from '@/components/shared/ImageField';
 import type { AppSettings, LanguageCode } from '@/types';
 import {
   AsyncBoundary,
@@ -97,33 +98,44 @@ function SettingsScreen() {
             onChangeText={(v) => set('tagline', v)}
             multiline
           />
-          <TextField
+        </Card>
+
+        <Spacer />
+
+        <SectionHeader title={t('settings.branding')} icon="images-outline" />
+        <Card>
+          <Text style={styles.brandingNote}>{t('settings.brandingNote')}</Text>
+
+          <ImageField
             label={t('settings.logo')}
             value={form.logoUrl ?? ''}
-            onChangeText={(v) => set('logoUrl', v || null)}
-            icon="image-outline"
-            autoCapitalize="none"
+            onChange={(url) => set('logoUrl', url || null)}
+            aspectRatio={1}
           />
-          <TextField
-            label={t('settings.favicon')}
-            value={form.faviconUrl ?? ''}
-            onChangeText={(v) => set('faviconUrl', v || null)}
-            icon="globe-outline"
-            autoCapitalize="none"
-          />
-          <TextField
+          <ImageField
             label={t('settings.banner')}
             value={form.bannerUrl ?? ''}
-            onChangeText={(v) => set('bannerUrl', v || null)}
-            icon="images-outline"
-            autoCapitalize="none"
-            containerStyle={{ marginBottom: 0 }}
+            onChange={(url) => set('bannerUrl', url || null)}
+            aspectRatio={3}
+          />
+          <ImageField
+            label={t('settings.defaultThumbnail')}
+            value={form.thumbnailUrl ?? ''}
+            onChange={(url) => set('thumbnailUrl', url || null)}
+            hint={t('settings.defaultThumbnailHint')}
+            aspectRatio={16 / 9}
+          />
+          <ImageField
+            label={t('settings.favicon')}
+            value={form.faviconUrl ?? ''}
+            onChange={(url) => set('faviconUrl', url || null)}
+            aspectRatio={1}
           />
         </Card>
 
         <Spacer />
 
-        <SectionHeader title={t('settings.branding')} icon="color-palette-outline" />
+        <SectionHeader title={t('settings.colours')} icon="color-palette-outline" />
         <Card>
           <View style={styles.colorRow}>
             <View style={[styles.swatch, { backgroundColor: form.primaryColor }]} />
@@ -280,6 +292,12 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.text,
     paddingTop: spacing.sm,
+  },
+  brandingNote: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: spacing.lg,
   },
   colorRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md },
   swatch: {

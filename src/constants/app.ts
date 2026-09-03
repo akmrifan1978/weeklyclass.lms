@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   logoUrl: null,
   faviconUrl: null,
   bannerUrl: null,
+  thumbnailUrl: null,
   primaryColor: '#092F6B',
   secondaryColor: '#ED5B03',
   supportEmail: 'support@weeklyclass.app',

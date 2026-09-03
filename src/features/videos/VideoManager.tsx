@@ -89,6 +89,7 @@ export function VideoManager({
     return {
       logoUrl: settings?.logoUrl ?? '',
       bannerUrl: settings?.bannerUrl ?? '',
+      thumbnail: settings?.thumbnailUrl ?? '',
     };
   }, []);
 
@@ -141,6 +142,7 @@ export function VideoManager({
         ...EMPTY,
         logoUrl: branding?.logoUrl ?? '',
         bannerUrl: branding?.bannerUrl ?? '',
+        thumbnail: branding?.thumbnail ?? '',
       }}
       toForm={(video) => ({
         title: video.title,

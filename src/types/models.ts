@@ -456,9 +456,16 @@ export interface AppLanguage extends BaseDoc {
 export interface AppSettings {
   appName: string;
   tagline: string;
+  /**
+   * Set once here and inherited by everything created afterwards — recordings,
+   * videos and calendar events all start from these. Each record then keeps its
+   * own copy, so changing a default never restyles anything already published.
+   */
   logoUrl?: string | null;
   faviconUrl?: string | null;
   bannerUrl?: string | null;
+  /** Fallback card image when a video has no thumbnail of its own. */
+  thumbnailUrl?: string | null;
   primaryColor: string;
   secondaryColor: string;
   supportEmail: string;
