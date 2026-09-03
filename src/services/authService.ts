@@ -166,6 +166,16 @@ export interface RegistrationResult {
  * write their own `users/{uid}` document under the security rules. If the
  * platform requires approval, they are signed straight back out.
  */
+/**
+ * Registration is a chain of remote calls, any of which can fail or stall on a
+ * weak connection. Logging each step turns "it did not work" into a precise
+ * location, which is otherwise very hard to recover after the fact.
+ */
+function step(name: string, detail?: unknown): void {
+  if (detail === undefined) console.info(`[WeeklyClass] register: ${name}`);
+  else console.info(`[WeeklyClass] register: ${name}`, detail);
+}
+
 export async function register(
   role: Extract<UserRole, 'student' | 'teacher'>,
   input: RegistrationInput
@@ -183,15 +193,21 @@ export async function register(
   }
   const requireApproval = settings?.requireApproval ?? true;
 
+  step('1/6 settings read ok', { requireApproval });
+
   const username = normaliseUsername(input.username);
   const email = input.email.trim().toLowerCase();
 
+  step('2/6 creating auth account', email);
   const credential = await createUserWithEmailAndPassword(auth, email, input.password);
   const uid = credential.user.uid;
+  step('2/6 auth account created', uid);
 
   try {
     const status: UserStatus = requireApproval ? 'pending' : 'active';
+    step('3/6 allocating sequential id');
     const generatedId = await nextSequentialId(role === 'student' ? 'STU' : 'TCH');
+    step('3/6 id allocated', generatedId);
 
     const profile: Omit<AppUser, 'id'> = {
       uid,
@@ -223,6 +239,7 @@ export async function register(
       deleted: false,
     };
 
+    step('4/6 writing profile document', `users/${uid}`);
     await setDoc(doc(db, COLLECTIONS.users, uid), {
       ...profile,
       searchTokens: searchTokens(profile.fullName, username, email, generatedId),
@@ -231,7 +248,9 @@ export async function register(
       createdBy: uid,
     });
 
+    step('5/6 claiming username index', username);
     await claimIdentity({ username, email, uid, role });
+    step('5/6 username index claimed');
 
     // Everything above is essential and is awaited. These two are not: the
     // account already exists and is usable. Awaiting them added two more
@@ -252,8 +271,10 @@ export async function register(
       await fbSignOut(auth);
     }
 
+    step('6/6 complete', { generatedId, status });
     return { uid, status, generatedId, requiresApproval: status !== 'active' };
   } catch (error) {
+    console.error('[WeeklyClass] register FAILED at the step logged above:', error);
     // The auth account exists but the profile failed — remove the orphan so the
     // person can retry with the same email address.
     await credential.user.delete().catch(() => undefined);
