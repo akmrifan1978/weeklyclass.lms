@@ -24,6 +24,8 @@ export const COLLECTIONS = {
   results: 'results',
   calendarEvents: 'calendarEvents',
   notifications: 'notifications',
+  supportRequests: 'supportRequests',
+  qaQuestions: 'qaQuestions',
   announcements: 'announcements',
   languages: 'languages',
   settings: 'settings',
@@ -58,6 +60,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     readingPlan: true,
     tajweed: true,
     zakat: true,
+    hadith: true,
   },
 };
 
@@ -68,6 +71,7 @@ export const ISLAMIC_FEATURES = [
   'readingPlan',
   'tajweed',
   'zakat',
+  'hadith',
 ] as const;
 
 export interface LanguageOption {

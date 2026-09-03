@@ -222,6 +222,30 @@ export default function StudentHome() {
               tint={brand.red}
               onPress={() => router.push('/(student)/online-classes')}
             />
+            <QuickAccessTile
+              icon="sparkles"
+              label={t('video.newReleases')}
+              tint={brand.orangeLight}
+              onPress={() => router.push('/(student)/new-releases')}
+            />
+            <QuickAccessTile
+              icon="chatbubbles"
+              label={t('nav.qa')}
+              tint={brand.navy}
+              onPress={() => router.push('/(student)/qa')}
+            />
+            <QuickAccessTile
+              icon="stats-chart"
+              label={t('nav.myProgress')}
+              tint={brand.slate}
+              onPress={() => router.push('/(student)/progress')}
+            />
+            <QuickAccessTile
+              icon="help-buoy"
+              label={t('nav.support')}
+              tint={brand.sand}
+              onPress={() => router.push('/(student)/support')}
+            />
           </Grid>
 
           <IslamicTiles basePath="/(student)" />

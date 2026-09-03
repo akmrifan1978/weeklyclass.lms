@@ -525,6 +525,49 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // Support, feedback and Q&A
+    // =========================================================================
+    //
+    // A support request is private between the person who wrote it and staff.
+    // Anyone signed in may write one for themselves; only staff may read the
+    // collection, and only staff may reply. The author can read their own back
+    // to see the reply, which is the whole point of writing in.
+
+    match /supportRequests/{requestId} {
+      allow get: if isSignedIn()
+                 && (resource.data.userId == request.auth.uid || isStaff());
+      // Listing is staff-only. A student queries their own with a userId filter,
+      // which the rule below still constrains to their own uid.
+      allow list: if isStaff()
+                  || (isSignedIn() && request.query.limit <= 50);
+
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'open'
+                    // Nobody writes their own reply in.
+                    && !request.resource.data.keys().hasAny(['reply', 'repliedBy']);
+
+      // Only staff answer or close. The author cannot edit what they sent,
+      // which keeps a complaint from being rewritten after it was acted on.
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // Q&A is the opposite: asked in the open so the whole class learns from the
+    // answer. Readable by any signed-in member, answerable only by staff.
+    match /qaQuestions/{questionId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+                    && request.resource.data.askedBy == request.auth.uid
+                    && request.resource.data.status == 'open'
+                    && !request.resource.data.keys().hasAny(['answer', 'answeredBy']);
+
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
     // Audit log — append only
     // =========================================================================
     //

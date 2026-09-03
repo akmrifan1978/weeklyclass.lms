@@ -286,6 +286,60 @@ export interface CalendarEvent extends BaseDoc {
 }
 
 // ---------------------------------------------------------------------------
+// Support, feedback and Q&A
+// ---------------------------------------------------------------------------
+
+/**
+ * What someone is writing in about. One collection rather than four, because a
+ * complaint and a piece of feedback need exactly the same handling — reach the
+ * admin, get a reply, be closed — and splitting them would give the admin four
+ * inboxes to remember to check.
+ */
+export type SupportKind = 'feedback' | 'complaint' | 'question' | 'contact';
+
+export type SupportStatus = 'open' | 'answered' | 'closed';
+
+export interface SupportRequest extends BaseDoc {
+  kind: SupportKind;
+  subject: string;
+  message: string;
+  /** Who wrote it. Kept denormalised so the inbox needs no second read. */
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  userMobile?: string | null;
+  classId?: string | null;
+  branchId?: string | null;
+  status: SupportStatus;
+  /** The admin's reply, visible to the person who wrote in. */
+  reply?: string | null;
+  repliedBy?: string | null;
+  repliedByName?: string | null;
+  repliedAt?: FireDate | null;
+}
+
+/**
+ * A question asked in the open, for a class to see — not the same thing as a
+ * support request, which is private between one person and the admin. Answers
+ * here are teaching, so everyone in the class benefits from reading them.
+ */
+export interface QaQuestion extends BaseDoc {
+  question: string;
+  askedBy: string;
+  askedByName: string;
+  classId?: string | null;
+  /** Optionally tied to the online class it was asked during. */
+  eventId?: string | null;
+  answer?: string | null;
+  answeredBy?: string | null;
+  answeredByName?: string | null;
+  answeredAt?: FireDate | null;
+  status: 'open' | 'answered';
+  /** Staff can hide a question without deleting what someone wrote. */
+  hidden?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Attendance
 // ---------------------------------------------------------------------------
 
@@ -532,7 +586,13 @@ export interface AppSettings {
 }
 
 /** The optional Islamic sections an admin can switch on or off. */
-export type IslamicFeature = 'prayer' | 'quran' | 'readingPlan' | 'tajweed' | 'zakat';
+export type IslamicFeature =
+  | 'prayer'
+  | 'quran'
+  | 'readingPlan'
+  | 'tajweed'
+  | 'zakat'
+  | 'hadith';
 
 export interface DashboardStats {
   totalStudents: number;

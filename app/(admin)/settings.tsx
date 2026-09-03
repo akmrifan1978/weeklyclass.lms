@@ -39,6 +39,7 @@ const ISLAMIC_FEATURE_LABELS: Record<IslamicFeature, string> = {
   readingPlan: 'quran.dailyReading',
   tajweed: 'nav.tajweed',
   zakat: 'nav.zakat',
+  hadith: 'nav.hadith',
 };
 
 function SettingsScreen() {
