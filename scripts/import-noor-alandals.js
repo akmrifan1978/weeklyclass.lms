@@ -22,6 +22,8 @@
  *
  * Options
  *   --topics N   how many topics to import. Default 10. Use `all` for every one.
+ *   --topic FID  import one topic by its id, e.g. --topic 282 for the section on
+ *                IVF and related questions. Takes precedence over --topics.
  *   --dry        print what would be written and write nothing.
  */
 
@@ -118,13 +120,26 @@ async function main() {
   }
 
   console.log('\n  Reading the topic index…');
-  const topics = extractTopics(await fetchText(`${BASE}/`));
-  console.log(`  ${topics.length} topic(s) found; importing ${Math.min(limit, topics.length)}.\n`);
+  const allTopics = extractTopics(await fetchText(`${BASE}/`));
+
+  // One topic by id, for importing a single section rather than walking the
+  // index from the top. The name still comes from the index, so the record is
+  // filed under the same subject a reader would browse to.
+  const only = args.topic && args.topic !== true ? String(args.topic) : null;
+  const topics = only
+    ? allTopics.filter(([id]) => id === only)
+    : allTopics.slice(0, limit);
+
+  if (only && topics.length === 0) {
+    console.error(`  No topic with id ${only} on the index.`);
+    process.exit(1);
+  }
+  console.log(`  ${allTopics.length} topic(s) found; importing ${topics.length}.`);
 
   let imported = 0;
   let skipped = 0;
 
-  for (const [topicId, topicName] of topics.slice(0, limit)) {
+  for (const [topicId, topicName] of topics) {
     await sleep(DELAY_MS);
 
     let fatwas;

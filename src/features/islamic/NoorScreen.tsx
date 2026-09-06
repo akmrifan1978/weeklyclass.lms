@@ -10,8 +10,10 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import { formatDate } from '@/utils/date';
+import * as videoService from '@/services/videoService';
 import { listVideosForStudent } from '@/services/videoService';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
+import { TranslationManager } from './TranslationManager';
 import type { LanguageCode, VideoItem } from '@/types';
 import {
   AppHeader,
@@ -97,7 +99,12 @@ export function NoorScreen({ headerTint }: { headerTint?: string }) {
           />
         ) : (
           episodes.map((episode) => (
-            <EpisodeCard key={episode.id} episode={episode} language={language} />
+            <EpisodeCard
+              key={episode.id}
+              episode={episode}
+              language={language}
+              onChanged={reload}
+            />
           ))
         )}
       </Screen>
@@ -105,12 +112,18 @@ export function NoorScreen({ headerTint }: { headerTint?: string }) {
   );
 }
 
-/** The translated title and summary, falling back to what was entered. */
+/**
+ * What a reader sees.
+ *
+ * Only an approved translation counts. A draft — written but not yet reviewed —
+ * is deliberately invisible here; staff see it through the manager below, which
+ * is the whole point of having a review step.
+ */
 function translationFor(
   episode: VideoItem,
   language: LanguageCode
 ): { title: string; summary: string | undefined } {
-  const entry = episode.translations?.[language];
+  const entry = videoService.publishedTranslation(episode, language);
   return {
     title: entry?.title?.trim() || episode.title,
     summary: entry?.summary?.trim() || episode.description,
@@ -120,17 +133,23 @@ function translationFor(
 function EpisodeCard({
   episode,
   language,
+  onChanged,
 }: {
   episode: VideoItem;
   language: LanguageCode;
+  onChanged: () => void;
 }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
-  const approved = episode.translations?.[language];
+  const approved = videoService.publishedTranslation(episode, language);
   const shown = translationFor(episode, language);
-  // A translation exists only when a person wrote one for THIS language. The
-  // Arabic is never replaced by a fallback from another.
+  // A translation exists only when a person wrote one for THIS language AND an
+  // admin approved it. The Arabic is never replaced by a fallback.
   const translated = Boolean(approved?.title || approved?.summary);
+  // Staff see the review tools; a draft awaiting review is theirs to see, not
+  // the reader's.
+  const isStaff = user?.role === 'admin' || user?.role === 'teacher';
 
   return (
     <Card style={styles.card}>
@@ -219,6 +238,10 @@ function EpisodeCard({
             permits copying "on condition that the source is cited" — this line
             IS that condition, not a nicety, so it is not hidden behind a tap.
           */}
+          {isStaff ? (
+            <TranslationManager video={episode} onChanged={onChanged} />
+          ) : null}
+
           {episode.sourceName ? (
             <Pressable
               onPress={() =>

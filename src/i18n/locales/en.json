@@ -976,5 +976,26 @@
     "howItWorks": "Which languages are offered is managed here and takes effect immediately. The interface translations themselves ship with the app, so a newly added language shows an English interface until src/i18n/locales/<code>.json is added and the app is rebuilt. Qur'an, Hadith and Duas are unaffected: a language with no approved translation shows the Arabic original alone.",
     "deleteWarning": "Remove {{name}}? Disabling it is reversible; removing it is not.",
     "inUse": "Some accounts still use this language. Disable it instead, or move those accounts to another language first."
+  },
+  "translation": {
+    "manage": "Translations",
+    "pipelineHint": "Arabic original → translation → admin review → published. Readers only ever see an approved translation.",
+    "statusNone": "Not translated",
+    "statusDraft": "Draft — awaiting review, not shown to readers",
+    "statusApproved": "Approved by {{name}}",
+    "approve": "Approve and publish",
+    "approved": "Translation published",
+    "withdraw": "Withdraw from publication",
+    "withdrawn": "Withdrawn — readers now see the Arabic only",
+    "editTitle": "Write the translation",
+    "fieldTitle": "Translated question",
+    "fieldTitleHint": "The question in this language. The Arabic above is never changed.",
+    "fieldSummary": "Translated answer or summary",
+    "saveNote": "Saving stores this as a draft. An admin must approve it before anyone reads it, and editing an approved translation returns it to draft.",
+    "savedAsDraft": "Saved as a draft, awaiting admin review",
+    "removeWarning": "Remove this translation? The Arabic original is not affected.",
+    "awaitingAdmin": "You can write and edit translations. An admin publishes them.",
+    "adminOnly": "Only an administrator can publish a translation.",
+    "nothingToApprove": "There is no translation to publish yet."
   }
 }
