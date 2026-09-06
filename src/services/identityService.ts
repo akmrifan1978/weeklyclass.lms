@@ -154,13 +154,31 @@ export async function claimIdentity(params: {
   uid: string;
   role: UserRole;
   mobile?: string;
+  /**
+   * Suppresses the "DENIED" console error on refusal.
+   *
+   * For the optional repair on sign-in, where a failure changes nothing and is
+   * already swallowed by the caller. Shouting about it put a red error in front
+   * of an admin whose login had in fact worked perfectly.
+   */
+  quiet?: boolean;
 }): Promise<void> {
   const username = normaliseUsername(params.username);
   const email = params.email.trim().toLowerCase();
   const authEmail = (params.authEmail ?? email).trim().toLowerCase();
   const mobileKey = params.mobile ? normaliseMobile(params.mobile) : '';
 
-  await denialContext('claim', `usernames/${username} + mobiles/${mobileKey}`, () =>
+  // Names only what is actually written. The label used to read "mobiles/" with
+  // nothing after it for an account with no mobile number, which pointed at a
+  // write that was never attempted.
+  const target = mobileKey
+    ? `usernames/${username} + mobiles/${mobileKey}`
+    : `usernames/${username}`;
+
+  const withContext = <T,>(run: () => Promise<T>) =>
+    params.quiet ? run() : denialContext('claim', target, run);
+
+  await withContext(() =>
    runTransaction(db, async (tx) => {
     const usernameRef = doc(db, COLLECTIONS.usernames, username);
     const existing = await tx.get(usernameRef);

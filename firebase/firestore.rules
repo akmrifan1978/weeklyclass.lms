@@ -143,7 +143,16 @@ service cloud.firestore {
       // so without this an admin simply cannot add anyone.
       allow create: if isSignedIn()
                     && (request.resource.data.uid == request.auth.uid || isAdmin());
-      allow update, delete: if isAdmin();
+
+      // An account may repair its OWN row — both before and after must name the
+      // same uid, so this cannot be used to seize somebody else's username. The
+      // app does this on sign-in when the index is missing or stale, which is
+      // the normal state for an account created by hand in the console.
+      allow update: if isAdmin()
+                    || (isSignedIn()
+                        && resource.data.uid == request.auth.uid
+                        && request.resource.data.uid == request.auth.uid);
+      allow delete: if isAdmin();
     }
 
     match /emailLookup/{emailHash} {

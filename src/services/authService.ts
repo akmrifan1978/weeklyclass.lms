@@ -437,22 +437,20 @@ export async function login(identifier: string, password: string): Promise<Login
     lastLoginAt: serverTimestamp(),
   }).catch(() => undefined);
 
-  // Self-heal the lookup indexes. An account created straight in the Firebase
-  // console — which is how the very first admin has to be made — has a profile
-  // but no `usernames/{username}` or `mobiles/{key}` row, so signing in by
-  // username or mobile number silently fails for it. Signing in by email once
-  // repairs both. `credential.user.email` is the authoritative sign-in address;
-  // the profile's own `email` is only a contact detail and may be shared.
-  // Fire-and-forget: it must never delay or break a successful login.
+  // Self-heal the lookup indexes, but ONLY when they are actually broken.
+  //
+  // An account created straight in the Firebase console — which is how the very
+  // first admin has to be made — has a profile but no `usernames/{username}`
+  // row, so signing in by username or mobile silently fails for it. Signing in
+  // by email once repairs that.
+  //
+  // It used to rewrite the row on every single login, which for an account
+  // whose index was already correct meant a pointless write on every sign-in —
+  // and when that write was refused it printed a red error over a login that
+  // had worked perfectly. Reading first costs one cached lookup and skips the
+  // write entirely in the normal case.
   if (profile.username) {
-    void claimIdentity({
-      username: profile.username,
-      email: profile.email,
-      authEmail: credential.user.email ?? profile.authEmail ?? profile.email,
-      uid: profile.uid,
-      role: profile.role,
-      mobile: profile.mobile,
-    }).catch(() => undefined);
+    void repairIdentityIndex(profile, credential.user.email).catch(() => undefined);
   }
 
   await audit.log({
@@ -464,6 +462,39 @@ export async function login(identifier: string, password: string): Promise<Login
   });
 
   return { user: profile, firebaseUser: credential.user };
+}
+
+/**
+ * Rewrites `usernames/{username}` only if it is missing or points somewhere
+ * else. Silent throughout: this is a repair nobody asked for, and a failed one
+ * leaves the account exactly as usable as it already was.
+ */
+async function repairIdentityIndex(
+  profile: AppUser,
+  signInEmail: string | null
+): Promise<void> {
+  const authEmail = signInEmail ?? profile.authEmail ?? profile.email;
+
+  const existing = await getDoc(
+    doc(db, COLLECTIONS.usernames, normaliseUsername(profile.username))
+  ).catch(() => null);
+
+  const row = existing?.exists() ? existing.data() : null;
+  const correct =
+    row?.uid === profile.uid &&
+    ((row?.authEmail as string) ?? (row?.email as string)) === authEmail;
+
+  if (correct) return;
+
+  await claimIdentity({
+    username: profile.username,
+    email: profile.email,
+    authEmail,
+    uid: profile.uid,
+    role: profile.role,
+    mobile: profile.mobile,
+    quiet: true,
+  });
 }
 
 export async function logout(actor?: AppUser | null): Promise<void> {
