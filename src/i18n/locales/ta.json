@@ -225,7 +225,8 @@
     "support": "உதவியும் கருத்தும்",
     "qa": "நேரடி கேள்வி பதில்",
     "hadith": "ஹதீஸ்",
-    "myProgress": "எனது முன்னேற்றம்"
+    "myProgress": "எனது முன்னேற்றம்",
+    "duas": "துஆக்கள்"
   },
   "dashboard": {
     "quickAccess": "விரைவு அணுகல்",
@@ -318,7 +319,7 @@
     "recordings": "வகுப்புப் பதிவுகள்",
     "noRecordings": "No recordings yet",
     "venue": "இடம்",
-    "venueHint": "நிகழ்ச்சி நடைபெற்ற இடம், எ.கா. ஜித்தா தஃவா மையம் – தமிழ் பிரிவு",
+    "venueHint": "மண்டபம் அல்லது மையத்தின் பெயர்",
     "logo": "சின்னம்",
     "banner": "பதாகை",
     "brandingHint": "இந்தப் பதிவுடன் காட்டப்படும். வெளியிடப்பட்ட பதிவுகள் அவை உருவாக்கப்பட்ட சின்னத்தையும் பதாகையையும் தக்கவைக்கும்; இவற்றை மாற்றுவது புதியவற்றை மட்டுமே பாதிக்கும்.",
@@ -332,7 +333,11 @@
     "earlier": "முந்தைய பதிவுகள்",
     "newThisFortnight": "{{count}} added in the last two weeks",
     "nothingNew": "Nothing new in the last two weeks.",
-    "noRecordingsHelp": "Recordings appear here once your teacher publishes them."
+    "noRecordingsHelp": "Recordings appear here once your teacher publishes them.",
+    "topic": "தலைப்பு",
+    "topicHint": "அமர்வின் பொருள்; தொகுத்தலுக்கும் தேடலுக்கும் பயன்படும்",
+    "location": "இடம்",
+    "locationHint": "ஊர் அல்லது நாடு, எ.கா. ஜித்தா, சவூதி அரேபியா"
   },
   "article": {
     "title": "கட்டுரைகள்",
@@ -900,5 +905,53 @@
     "translatedTitle": "{{language}} இல் தலைப்பு",
     "translatedSummary": "{{language}} இல் சுருக்கம்",
     "source": "மூலம்: {{source}}"
+  },
+  "footer": {
+    "copyright": "© {{year}} {{name}}"
+  },
+  "dua": {
+    "search": "துஆக்களைத் தேடு",
+    "sourceNote": "இங்குள்ள ஒவ்வொரு துஆவும் குர்ஆனிலிருந்தோ ஸஹீஹ் புகாரி, ஸஹீஹ் முஸ்லிம் அல்லது அபூ தாவூதிலிருந்தோ எடுக்கப்பட்டவை; சரிபார்க்க ஆதாரம் காட்டப்பட்டுள்ளது. அரபியே துஆ; ஒலிபெயர்ப்பு சொல்ல உதவும், பொருள் விளக்கும்.",
+    "times": "{{count}}×",
+    "categoryDaily": "நாள் முழுவதும்",
+    "categoryPrayer": "தொழுகையைச் சுற்றி",
+    "categoryFood": "உணவும் பானமும்",
+    "categoryTravel": "பயணம்",
+    "categoryDistress": "துன்பமும் நோயும்",
+    "categoryProtection": "பாதுகாப்பு",
+    "waking": "விழித்தெழும்போது",
+    "sleeping": "உறங்கும் முன்",
+    "leavingHome": "வீட்டை விட்டு வெளியேறும்போது",
+    "enteringMasjid": "பள்ளிவாசலில் நுழையும்போது",
+    "leavingMasjid": "பள்ளிவாசலை விட்டு வெளியேறும்போது",
+    "afterAdhan": "பாங்குக்குப் பிறகு",
+    "afterPrayerTasbih": "தொழுகைக்குப் பிறகு",
+    "istighfar": "தொழுகைக்குப் பின் பாவமன்னிப்பு",
+    "beforeEating": "உண்பதற்கு முன்",
+    "afterEating": "உண்ட பிறகு",
+    "travel": "பயணம் தொடங்கும்போது",
+    "distress": "துன்பத்தில்",
+    "anxiety": "கவலையின்போது",
+    "illness": "நோயாளிக்காக",
+    "morningEvening": "காலையும் மாலையும்",
+    "sayyidulIstighfar": "பாவமன்னிப்புக் கோரலின் சிறந்த வழி",
+    "refuge": "பாதுகாப்புத் தேடல்",
+    "wakingMeaning": "All praise is for Allah, who gave us life after He caused us to die, and to Him is the return.",
+    "sleepingMeaning": "In Your name, O Allah, I die and I live.",
+    "leavingHomeMeaning": "In the name of Allah, I place my trust in Allah, and there is no power nor strength except with Allah.",
+    "enteringMasjidMeaning": "O Allah, open for me the doors of Your mercy.",
+    "leavingMasjidMeaning": "O Allah, I ask You from Your bounty.",
+    "afterAdhanMeaning": "O Allah, Lord of this perfect call and the prayer to be established, grant Muhammad the intercession and favour.",
+    "afterPrayerTasbihMeaning": "Glory be to Allah, all praise is for Allah, and Allah is the greatest — each said thirty-three times.",
+    "istighfarMeaning": "I seek the forgiveness of Allah.",
+    "beforeEatingMeaning": "In the name of Allah.",
+    "afterEatingMeaning": "All praise is for Allah, who fed me this and provided it for me without any might or power on my part.",
+    "travelMeaning": "Glory to Him who has subjected this to us, and we could never have accomplished it ourselves; and indeed to our Lord we will return.",
+    "distressMeaning": "There is no god but Allah, the Mighty, the Forbearing; there is no god but Allah, Lord of the mighty throne.",
+    "anxietyMeaning": "Allah is sufficient for us, and He is the best disposer of affairs.",
+    "illnessMeaning": "O Allah, Lord of mankind, remove the harm and cure — You are the Healer.",
+    "morningEveningMeaning": "In the name of Allah, with whose name nothing on earth or in heaven can cause harm, and He is the All-Hearing, the All-Knowing.",
+    "sayyidulIstighfarMeaning": "O Allah, You are my Lord, there is no god but You. You created me and I am Your servant, and I keep to Your covenant and promise as much as I am able.",
+    "refugeMeaning": "I seek refuge in the perfect words of Allah from the evil of what He has created."
   }
 }

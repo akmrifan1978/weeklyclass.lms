@@ -41,6 +41,7 @@ const ISLAMIC_FEATURE_LABELS: Record<IslamicFeature, string> = {
   zakat: 'nav.zakat',
   hadith: 'nav.hadith',
   noor: 'noor.title',
+  dua: 'nav.duas',
 };
 
 function SettingsScreen() {

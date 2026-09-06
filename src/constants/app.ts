@@ -62,6 +62,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     zakat: true,
     hadith: true,
     noor: true,
+    dua: true,
   },
 };
 
@@ -74,6 +75,7 @@ export const ISLAMIC_FEATURES = [
   'zakat',
   'hadith',
   'noor',
+  'dua',
 ] as const;
 
 export interface LanguageOption {

@@ -225,7 +225,8 @@
     "support": "උදව් සහ ප්‍රතිපෝෂණ",
     "qa": "සජීවී ප්‍රශ්න පිළිතුරු",
     "hadith": "හදීස්",
-    "myProgress": "මගේ ප්‍රගතිය"
+    "myProgress": "මගේ ප්‍රගතිය",
+    "duas": "දුආ"
   },
   "dashboard": {
     "quickAccess": "ඉක්මන් ප්‍රවේශය",
@@ -318,7 +319,7 @@
     "recordings": "පන්ති පටිගත කිරීම්",
     "noRecordings": "No recordings yet",
     "venue": "ස්ථානය",
-    "venueHint": "වැඩසටහන පැවති ස්ථානය, උදා. ජෙඩ්ඩා දාවා මධ්‍යස්ථානය – දෙමළ අංශය",
+    "venueHint": "ශාලාවේ හෝ මධ්‍යස්ථානයේ නම",
     "logo": "ලාංඡනය",
     "banner": "බැනරය",
     "brandingHint": "මෙම පටිගත කිරීම සමඟ පෙන්වයි. ප්‍රකාශිත පටිගත කිරීම් ඒවා සෑදූ ලාංඡනය හා බැනරය තබා ගනී, එබැවින් මේවා වෙනස් කිරීම නව ඒවාට පමණක් බලපායි.",
@@ -332,7 +333,11 @@
     "earlier": "පෙර පටිගත කිරීම්",
     "newThisFortnight": "{{count}} added in the last two weeks",
     "nothingNew": "Nothing new in the last two weeks.",
-    "noRecordingsHelp": "Recordings appear here once your teacher publishes them."
+    "noRecordingsHelp": "Recordings appear here once your teacher publishes them.",
+    "topic": "විෂයය",
+    "topicHint": "සැසියේ විෂයය; සමූහගත කිරීමට සහ සෙවීමට",
+    "location": "ස්ථානය",
+    "locationHint": "නගරය හෝ රට, උදා. ජෙඩා, සෞදි අරාබිය"
   },
   "article": {
     "title": "ලිපි",
@@ -900,5 +905,53 @@
     "translatedTitle": "{{language}} බසින් මාතෘකාව",
     "translatedSummary": "{{language}} බසින් සාරාංශය",
     "source": "මූලාශ්‍රය: {{source}}"
+  },
+  "footer": {
+    "copyright": "© {{year}} {{name}}"
+  },
+  "dua": {
+    "search": "දුආ සොයන්න",
+    "sourceNote": "මෙහි ඇති සෑම දුආවක්ම අල් කුර්ආනයෙන් හෝ සහීහ් බුහාරි, සහීහ් මුස්ලිම් හෝ අබූ දාවූද් වෙතින් වන අතර, පරීක්ෂා කළ හැකි වන පරිදි මූලාශ්‍රය දක්වා ඇත. අරාබි බස දුආවයි; අක්ෂර පරිවර්තනය කීමට උදව් වන අතර අර්ථය පැහැදිලි කරයි.",
+    "times": "{{count}}×",
+    "categoryDaily": "දවස පුරා",
+    "categoryPrayer": "නැමදුම වටා",
+    "categoryFood": "ආහාර හා පාන",
+    "categoryTravel": "ගමන",
+    "categoryDistress": "දුෂ්කරතා හා රෝග",
+    "categoryProtection": "ආරක්ෂාව",
+    "waking": "අවදි වන විට",
+    "sleeping": "නිදාගැනීමට පෙර",
+    "leavingHome": "නිවසින් පිටවන විට",
+    "enteringMasjid": "පල්ලියට ඇතුළු වන විට",
+    "leavingMasjid": "පල්ලියෙන් පිටවන විට",
+    "afterAdhan": "අදාන් වලින් පසු",
+    "afterPrayerTasbih": "නැමදුමෙන් පසු",
+    "istighfar": "නැමදුමෙන් පසු සමාව අයැදීම",
+    "beforeEating": "අනුභවයට පෙර",
+    "afterEating": "අනුභවයෙන් පසු",
+    "travel": "ගමන ආරම්භ කරන විට",
+    "distress": "දුෂ්කරතාවයේදී",
+    "anxiety": "කනස්සල්ලේදී",
+    "illness": "රෝගියෙකු වෙනුවෙන්",
+    "morningEvening": "උදෑසන හා සවස",
+    "sayyidulIstighfar": "සමාව අයැදීමේ උතුම් ක්‍රමය",
+    "refuge": "ආරක්ෂාව පැතීම",
+    "wakingMeaning": "All praise is for Allah, who gave us life after He caused us to die, and to Him is the return.",
+    "sleepingMeaning": "In Your name, O Allah, I die and I live.",
+    "leavingHomeMeaning": "In the name of Allah, I place my trust in Allah, and there is no power nor strength except with Allah.",
+    "enteringMasjidMeaning": "O Allah, open for me the doors of Your mercy.",
+    "leavingMasjidMeaning": "O Allah, I ask You from Your bounty.",
+    "afterAdhanMeaning": "O Allah, Lord of this perfect call and the prayer to be established, grant Muhammad the intercession and favour.",
+    "afterPrayerTasbihMeaning": "Glory be to Allah, all praise is for Allah, and Allah is the greatest — each said thirty-three times.",
+    "istighfarMeaning": "I seek the forgiveness of Allah.",
+    "beforeEatingMeaning": "In the name of Allah.",
+    "afterEatingMeaning": "All praise is for Allah, who fed me this and provided it for me without any might or power on my part.",
+    "travelMeaning": "Glory to Him who has subjected this to us, and we could never have accomplished it ourselves; and indeed to our Lord we will return.",
+    "distressMeaning": "There is no god but Allah, the Mighty, the Forbearing; there is no god but Allah, Lord of the mighty throne.",
+    "anxietyMeaning": "Allah is sufficient for us, and He is the best disposer of affairs.",
+    "illnessMeaning": "O Allah, Lord of mankind, remove the harm and cure — You are the Healer.",
+    "morningEveningMeaning": "In the name of Allah, with whose name nothing on earth or in heaven can cause harm, and He is the All-Hearing, the All-Knowing.",
+    "sayyidulIstighfarMeaning": "O Allah, You are my Lord, there is no god but You. You created me and I am Your servant, and I keep to Your covenant and promise as much as I am able.",
+    "refugeMeaning": "I seek refuge in the perfect words of Allah from the evil of what He has created."
   }
 }

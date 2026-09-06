@@ -19,6 +19,7 @@ import {
   QuickAccessTile,
   UpcomingEventCard,
 } from '@/components/shared/ContentCards';
+import { AppFooter } from '@/components/shared/AppFooter';
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
@@ -175,6 +176,8 @@ export default function TeacherHome() {
           </Grid>
 
           <IslamicTiles basePath="/(teacher)" />
+
+          <AppFooter />
 
           {visibleTiles.length ? null : (
             <>

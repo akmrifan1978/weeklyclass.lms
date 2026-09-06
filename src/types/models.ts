@@ -185,6 +185,16 @@ export interface VideoItem extends BaseDoc {
   speaker?: string;
   /** Where the programme was held, e.g. "Jeddah Dawah Center — Tamil Section". */
   venue?: string;
+  /**
+   * Town or country, kept apart from the venue.
+   *
+   * "Jeddah Dawah Center" and "Jeddah, Saudi Arabia" answer different questions —
+   * one names the room, the other places it — and squeezing both into one field
+   * makes it useless for grouping by either.
+   */
+  location?: string;
+  /** Subject of the session, used for grouping and search. */
+  topic?: string;
   /** Event/recording date, distinct from createdAt. */
   date?: FireDate;
   thumbnail?: string | null;
@@ -282,7 +292,12 @@ export interface CalendarEvent extends BaseDoc {
   /** `HH:mm` 24h. */
   startTime: string;
   endTime: string;
+  /** Venue name, for a session that also has a physical room. */
   venue?: string;
+  /** Town or country — see the note on VideoItem.location. */
+  location?: string;
+  /** Subject of the session. */
+  topic?: string;
   speaker?: string;
   /** Kept for events created before sessions could have several teachers. */
   teacherId?: string | null;
@@ -639,7 +654,8 @@ export type IslamicFeature =
   | 'tajweed'
   | 'zakat'
   | 'hadith'
-  | 'noor';
+  | 'noor'
+  | 'dua';
 
 export interface DashboardStats {
   totalStudents: number;

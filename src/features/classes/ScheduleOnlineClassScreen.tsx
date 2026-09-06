@@ -62,6 +62,9 @@ export function ScheduleOnlineClassScreen() {
     endTime: '',
     classId: '',
     speaker: '',
+    venue: '',
+    location: '',
+    topic: '',
     teacherIds: [] as string[],
     meetingUrl: '',
     meetingId: '',
@@ -118,6 +121,9 @@ export function ScheduleOnlineClassScreen() {
             endTime: event.endTime,
             classId: event.classId ?? '',
             speaker: event.speaker ?? '',
+            venue: event.venue ?? '',
+            location: event.location ?? '',
+            topic: event.topic ?? '',
             teacherIds: calendar.teachersFor(event),
             meetingUrl: event.meetingUrl ?? '',
             meetingId: event.meetingId ?? '',
@@ -168,6 +174,9 @@ export function ScheduleOnlineClassScreen() {
           endTime: form.endTime,
           classId: form.classId || null,
           speaker: form.speaker.trim(),
+          venue: form.venue.trim(),
+          location: form.location.trim(),
+          topic: form.topic.trim(),
           teacherIds: form.teacherIds,
           // Kept in step so anything still reading the single field — an older
           // screen, an export — sees the lead teacher rather than nothing.
@@ -426,6 +435,27 @@ export function ScheduleOnlineClassScreen() {
           value={form.speaker}
           onChangeText={(v) => setForm((p) => ({ ...p, speaker: v }))}
           icon="person-outline"
+        />
+        <TextField
+          label={t('video.topic')}
+          value={form.topic}
+          onChangeText={(v) => setForm((p) => ({ ...p, topic: v }))}
+          icon="pricetag-outline"
+          hint={t('video.topicHint')}
+        />
+        <TextField
+          label={t('video.venue')}
+          value={form.venue}
+          onChangeText={(v) => setForm((p) => ({ ...p, venue: v }))}
+          icon="business-outline"
+          hint={t('video.venueHint')}
+        />
+        <TextField
+          label={t('video.location')}
+          value={form.location}
+          onChangeText={(v) => setForm((p) => ({ ...p, location: v }))}
+          icon="location-outline"
+          hint={t('video.locationHint')}
         />
         <TextField
           label={t('common.description')}

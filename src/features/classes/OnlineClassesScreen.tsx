@@ -190,6 +190,23 @@ function SessionCard({
         </Text>
       ) : null}
 
+      {/* Venue and location are shown separately: one names the room, the
+          other places it, and a reader wants whichever applies to them. */}
+      {event.venue || event.location ? (
+        <Text style={styles.meta}>
+          <Ionicons name="location-outline" size={12} />{' '}
+          {[event.venue, event.location].filter(Boolean).join(' · ')}
+        </Text>
+      ) : null}
+
+      {event.topic ? (
+        <View style={styles.topicChip}>
+          <Text style={styles.topicText} numberOfLines={1}>
+            {event.topic}
+          </Text>
+        </View>
+      ) : null}
+
       {event.description ? (
         <Text style={styles.description} numberOfLines={3}>
           {event.description}
@@ -253,6 +270,16 @@ const styles = StyleSheet.create({
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: brand.red },
   liveText: { fontSize: fontSize.xs, color: brand.red, fontWeight: fontWeight.bold },
   meta: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.sm },
+  topicChip: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accentSoft,
+    maxWidth: '100%',
+  },
+  topicText: { fontSize: fontSize.xs, color: brand.orange, fontWeight: fontWeight.semibold },
   description: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,

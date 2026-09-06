@@ -79,6 +79,13 @@ const TILES: Tile[] = [
     path: '/noor',
     tint: brand.orange,
   },
+  {
+    feature: 'dua',
+    icon: 'sparkles-outline',
+    labelKey: 'nav.duas',
+    path: '/duas',
+    tint: brand.slate,
+  },
 ];
 
 export function IslamicTiles({

@@ -225,7 +225,8 @@
     "support": "Help & feedback",
     "qa": "Live Q&A",
     "hadith": "Hadith",
-    "myProgress": "My progress"
+    "myProgress": "My progress",
+    "duas": "Duas"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -318,7 +319,7 @@
     "recordings": "Class recordings",
     "noRecordings": "No recordings yet",
     "venue": "Venue",
-    "venueHint": "Where the programme was held, e.g. Jeddah Dawah Center – Tamil Section",
+    "venueHint": "Name of the hall or centre",
     "logo": "Logo",
     "banner": "Banner",
     "brandingHint": "Shown with this recording. Published recordings keep the logo and banner they were created with, so changing these only affects new ones.",
@@ -332,7 +333,11 @@
     "newThisFortnight": "{{count}} added in the last two weeks",
     "nothingNew": "Nothing new in the last two weeks.",
     "earlier": "Earlier recordings",
-    "noRecordingsHelp": "Recordings appear here once your teacher publishes them."
+    "noRecordingsHelp": "Recordings appear here once your teacher publishes them.",
+    "topic": "Topic",
+    "topicHint": "Subject of the session, used for grouping and search",
+    "location": "Location",
+    "locationHint": "Town or country, e.g. Jeddah, Saudi Arabia"
   },
   "article": {
     "title": "Articles",
@@ -900,5 +905,53 @@
     "translatedTitle": "Title in {{language}}",
     "translatedSummary": "Summary in {{language}}",
     "source": "Source: {{source}}"
+  },
+  "footer": {
+    "copyright": "© {{year}} {{name}}"
+  },
+  "dua": {
+    "search": "Search duas",
+    "sourceNote": "Every dua here is from the Qur'an or from Sahih al-Bukhari, Sahih Muslim or Abu Dawud, and shows its reference so you can check it. The Arabic is the supplication; the transliteration helps you say it and the meaning explains it.",
+    "times": "{{count}}×",
+    "categoryDaily": "Through the day",
+    "categoryPrayer": "Around prayer",
+    "categoryFood": "Food and drink",
+    "categoryTravel": "Travel",
+    "categoryDistress": "Difficulty and illness",
+    "categoryProtection": "Protection",
+    "waking": "On waking",
+    "wakingMeaning": "All praise is for Allah, who gave us life after He caused us to die, and to Him is the return.",
+    "sleeping": "Before sleeping",
+    "sleepingMeaning": "In Your name, O Allah, I die and I live.",
+    "leavingHome": "Leaving the house",
+    "leavingHomeMeaning": "In the name of Allah, I place my trust in Allah, and there is no power nor strength except with Allah.",
+    "enteringMasjid": "Entering the masjid",
+    "enteringMasjidMeaning": "O Allah, open for me the doors of Your mercy.",
+    "leavingMasjid": "Leaving the masjid",
+    "leavingMasjidMeaning": "O Allah, I ask You from Your bounty.",
+    "afterAdhan": "After the adhan",
+    "afterAdhanMeaning": "O Allah, Lord of this perfect call and the prayer to be established, grant Muhammad the intercession and favour.",
+    "afterPrayerTasbih": "After the prayer",
+    "afterPrayerTasbihMeaning": "Glory be to Allah, all praise is for Allah, and Allah is the greatest — each said thirty-three times.",
+    "istighfar": "Seeking forgiveness after prayer",
+    "istighfarMeaning": "I seek the forgiveness of Allah.",
+    "beforeEating": "Before eating",
+    "beforeEatingMeaning": "In the name of Allah.",
+    "afterEating": "After eating",
+    "afterEatingMeaning": "All praise is for Allah, who fed me this and provided it for me without any might or power on my part.",
+    "travel": "When setting out",
+    "travelMeaning": "Glory to Him who has subjected this to us, and we could never have accomplished it ourselves; and indeed to our Lord we will return.",
+    "distress": "In distress",
+    "distressMeaning": "There is no god but Allah, the Mighty, the Forbearing; there is no god but Allah, Lord of the mighty throne.",
+    "anxiety": "When anxious",
+    "anxietyMeaning": "Allah is sufficient for us, and He is the best disposer of affairs.",
+    "illness": "For someone who is ill",
+    "illnessMeaning": "O Allah, Lord of mankind, remove the harm and cure — You are the Healer.",
+    "morningEvening": "Morning and evening",
+    "morningEveningMeaning": "In the name of Allah, with whose name nothing on earth or in heaven can cause harm, and He is the All-Hearing, the All-Knowing.",
+    "sayyidulIstighfar": "The best way of seeking forgiveness",
+    "sayyidulIstighfarMeaning": "O Allah, You are my Lord, there is no god but You. You created me and I am Your servant, and I keep to Your covenant and promise as much as I am able.",
+    "refuge": "Seeking refuge",
+    "refugeMeaning": "I seek refuge in the perfect words of Allah from the evil of what He has created."
   }
 }
