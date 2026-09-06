@@ -574,7 +574,9 @@
     "languageScopeHint": "This choice applies to this dashboard only, and is remembered when you come back.",
     "language": "Language",
     "islamicSections": "Islamic sections",
-    "islamicSectionsHint": "Switch these on or off for everyone. They appear the same way on the student, teacher and admin dashboards."
+    "islamicSectionsHint": "Switch these on or off for everyone. They appear the same way on the student, teacher and admin dashboards.",
+    "venueLabel": "Venue",
+    "venueHint": "Shown on the sign-in screen, e.g. Jeddah Dawah Center – Tamil Section"
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -957,5 +959,22 @@
     "approvedTranslation": "Approved translation · {{language}}",
     "noApprovedTranslation": "No approved translation in your language. The Arabic original is shown alone.",
     "toggleTranslation": "Show or hide the translation"
+  },
+  "language": {
+    "add": "Add language",
+    "code": "Language code",
+    "codeHint": "Two or three letters, e.g. ur for Urdu, ml for Malayalam",
+    "codeFormat": "Use two or three letters, like ta or urd",
+    "nameEnglish": "Name in English",
+    "nativeName": "Name in the language itself",
+    "nativeNameHint": "How speakers write it, e.g. اردو or മലയാളം",
+    "order": "Position in the list",
+    "orderHint": "Lower numbers appear first",
+    "rtl": "Right to left",
+    "rtlHint": "For Arabic, Urdu and other right-to-left scripts",
+    "noInterfaceTranslations": "No interface translation file yet — menus and buttons will read in English until one is added.",
+    "howItWorks": "Which languages are offered is managed here and takes effect immediately. The interface translations themselves ship with the app, so a newly added language shows an English interface until src/i18n/locales/<code>.json is added and the app is rebuilt. Qur'an, Hadith and Duas are unaffected: a language with no approved translation shows the Arabic original alone.",
+    "deleteWarning": "Remove {{name}}? Disabling it is reversible; removing it is not.",
+    "inUse": "Some accounts still use this language. Disable it instead, or move those accounts to another language first."
   }
 }

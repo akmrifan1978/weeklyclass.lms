@@ -110,6 +110,13 @@ function SettingsScreen() {
             onChangeText={(v) => set('tagline', v)}
             multiline
           />
+          <TextField
+            label={t('settings.venueLabel')}
+            value={form.venue ?? ''}
+            onChangeText={(v) => set('venue', v)}
+            icon="business-outline"
+            hint={t('settings.venueHint')}
+          />
         </Card>
 
         <Spacer />

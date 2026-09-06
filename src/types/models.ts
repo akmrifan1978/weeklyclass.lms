@@ -607,6 +607,15 @@ export interface AppSettings {
   appName: string;
   tagline: string;
   /**
+   * Where the platform is run from, shown on the sign-in screen beneath the
+   * name — e.g. "Jeddah Dawah Center – Tamil Section".
+   *
+   * Deliberately part of the identity rather than the contact block: it tells
+   * someone opening the app for the first time whose platform this is, which
+   * matters most on the one screen they see before signing in.
+   */
+  venue?: string;
+  /**
    * Set once here and inherited by everything created afterwards — recordings,
    * videos and calendar events all start from these. Each record then keeps its
    * own copy, so changing a default never restyles anything already published.

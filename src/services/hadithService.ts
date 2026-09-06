@@ -97,7 +97,11 @@ export function editionFor(
   collection: string,
   language: LanguageCode
 ): { edition: string | null; source?: string } {
-  const edition = EDITIONS[language](collection);
+  // An admin can add a language the app has no edition table for. Unknown means
+  // no approved translation — which is the safe answer, not a crash, and is
+  // exactly what the rule requires anyway.
+  const lookup = EDITIONS[language];
+  const edition = lookup ? lookup(collection) : null;
   return { edition, source: edition ? EDITION_SOURCE[edition] : undefined };
 }
 
@@ -106,7 +110,7 @@ export function hasApprovedTranslation(
   collection: string,
   language: LanguageCode
 ): boolean {
-  return EDITIONS[language](collection) !== null;
+  return editionFor(collection, language).edition !== null;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {

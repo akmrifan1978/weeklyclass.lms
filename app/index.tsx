@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { APP_NAME } from '@/constants/app';
+import { useAsync } from '@/hooks/useAsync';
+import { getSettings } from '@/services/settingsService';
 import {
   brand,
   colors,
@@ -39,6 +41,9 @@ const ROLES: {
 
 export default function SplashScreen() {
   const { t } = useTranslation();
+  // `settings/app` is world-readable precisely so this screen can show the
+  // organisation's own identity before anyone signs in.
+  const { data: settings } = useAsync(() => getSettings(), []);
   const router = useRouter();
   const { language, available, setLanguage } = useLanguage();
   const [switchingLanguage, setSwitchingLanguage] = useState(false);
@@ -65,11 +70,25 @@ export default function SplashScreen() {
             <View style={styles.logo}>
               <Ionicons name="book" size={38} color={brand.orange} />
             </View>
+            {/*
+              Read from Settings, not from the bundled constants: an
+              organisation that has renamed the platform or set its venue should
+              see that on the one screen everybody meets before signing in. The
+              constants remain the fallback for a first run, when settings have
+              not loaded or have never been saved.
+            */}
             <Text style={styles.appName} accessibilityRole="header">
-              {APP_NAME}
+              {settings?.appName?.trim() || APP_NAME}
             </Text>
+            {settings?.venue?.trim() ? (
+              <Text style={styles.venue}>
+                {t('settings.venueLabel')}: {settings.venue.trim()}
+              </Text>
+            ) : null}
             <View style={styles.rule} />
-            <Text style={styles.tagline}>{t('app.tagline')}</Text>
+            <Text style={styles.tagline}>
+              {settings?.tagline?.trim() || t('app.tagline')}
+            </Text>
           </View>
 
           <View style={styles.roleBlock}>
@@ -194,6 +213,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: brand.orange,
     marginVertical: spacing.lg,
+  },
+  venue: {
+    fontSize: 13,
+    color: brand.sandLight,
+    textAlign: 'center',
+    marginTop: 6,
   },
   tagline: {
     fontSize: fontSize.sm,
