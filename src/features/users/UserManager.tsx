@@ -549,12 +549,28 @@ function UserForm({
     () => (org?.countries ?? []).map((c) => ({ value: c.code, label: c.name })),
     [org?.countries]
   );
+  /**
+   * Every branch, labelled with where it is.
+   *
+   * These used to be filtered to the person's own country, which quietly
+   * conflates two unrelated facts: a branch's country is where the branch is,
+   * and a person's is where the person is. A teacher living in Sri Lanka who
+   * belongs to the Jeddah branch is an ordinary case, and the filter made it
+   * unrepresentable — the picker simply came up empty, with nothing to say why.
+   *
+   * The country is shown against each branch instead, so the choice is informed
+   * rather than made for you.
+   */
   const branchOptions = useMemo<Option[]>(
     () =>
-      (org?.branches ?? [])
-        .filter((b) => !form.country || b.countryCode === form.country)
-        .map((b) => ({ value: b.id, label: b.name, description: b.city })),
-    [org?.branches, form.country]
+      (org?.branches ?? []).map((b) => ({
+        value: b.id,
+        label: b.name,
+        description: [b.city, countryName(org?.countries ?? [], b.countryCode)]
+          .filter(Boolean)
+          .join(', '),
+      })),
+    [org?.branches, org?.countries]
   );
   const classOptions = useMemo<Option[]>(
     () => classes.map((c) => ({ value: c.id, label: c.name })),
@@ -828,3 +844,9 @@ const styles = StyleSheet.create({
   },
   detailBadges: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
 });
+
+/** A country's name from its code, for labelling a branch by where it is. */
+function countryName(countries: Country[], code?: string): string {
+  if (!code) return '';
+  return countries.find((c) => c.code === code)?.name ?? code;
+}

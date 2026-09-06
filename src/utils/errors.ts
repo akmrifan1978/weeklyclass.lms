@@ -27,6 +27,10 @@ const FIREBASE_ERROR_KEYS: Record<string, string> = {
   'auth/invalid-credential': 'errors.invalidCredentials',
   'auth/invalid-login-credentials': 'errors.invalidCredentials',
   'auth/email-already-in-use': 'errors.emailInUse',
+  // Should no longer reach anyone — an account with no address now gets a
+  // mobile-derived one — but a code that arrives unmapped is shown as "something
+  // went wrong", which tells whoever hit it nothing at all.
+  'auth/missing-email': 'errors.emailOrMobileNeeded',
   'auth/weak-password': 'errors.weakPassword',
   'auth/too-many-requests': 'errors.tooManyRequests',
   'auth/network-request-failed': 'errors.networkUnavailable',

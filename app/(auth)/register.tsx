@@ -169,12 +169,28 @@ export default function RegisterScreen() {
     [countries]
   );
 
+  /**
+   * Every branch, labelled with where it is.
+   *
+   * These used to be filtered to the person's own country, which quietly
+   * conflates two unrelated facts: a branch's country is where the branch is,
+   * and a person's is where the person is. A teacher living in Sri Lanka who
+   * belongs to the Jeddah branch is an ordinary case, and the filter made it
+   * unrepresentable — the picker simply came up empty, with nothing to say why.
+   *
+   * The country is shown against each branch instead, so the choice is informed
+   * rather than made for you.
+   */
   const branchOptions = useMemo<Option[]>(
     () =>
-      branches
-        .filter((b) => !form.country || b.countryCode === form.country)
-        .map((b) => ({ value: b.id, label: b.name, description: b.city })),
-    [branches, form.country]
+      branches.map((b) => ({
+        value: b.id,
+        label: b.name,
+        description: [b.city, countries.find((c) => c.code === b.countryCode)?.name]
+          .filter(Boolean)
+          .join(', '),
+      })),
+    [branches, countries]
   );
 
   const classOptions = useMemo<Option[]>(

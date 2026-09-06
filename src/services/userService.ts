@@ -236,10 +236,21 @@ export async function createUserAsAdmin(
     // an email address may be shared. Where Firebase Auth refuses a second
     // account on an address it already holds, the account signs in under one
     // derived from its mobile number instead. See identityService.
-    let authEmail = email;
+    //
+    // And where there is no address at all — which is now allowed, because
+    // plenty of teachers do not have one — the same derived address is used
+    // from the start. Without this, an admin adding a teacher with the email
+    // blank got `auth/missing-email`, which reached them as "something went
+    // wrong" and named nothing.
+    const signInAddress = email || authEmailForMobile(input.mobile);
+    let authEmail = signInAddress;
     let credential;
     try {
-      credential = await createUserWithEmailAndPassword(secondaryAuth, email, input.password);
+      credential = await createUserWithEmailAndPassword(
+        secondaryAuth,
+        signInAddress,
+        input.password
+      );
     } catch (error) {
       if ((error as { code?: string })?.code !== 'auth/email-already-in-use') throw error;
       authEmail = authEmailForMobile(input.mobile);
