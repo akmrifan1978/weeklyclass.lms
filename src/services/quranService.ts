@@ -35,6 +35,25 @@ const TRANSLATIONS: Record<LanguageCode, string | null> = {
   en: 'en.sahih',
 };
 
+/**
+ * Who produced each translation.
+ *
+ * Shown beside the rendering, because a reader is entitled to know whose
+ * translation they are reading before they weigh it against the Arabic. All
+ * four are published editions; nothing here is generated.
+ */
+const TRANSLATION_SOURCE: Record<string, string> = {
+  'ta.tamil': 'Jan Trust Foundation',
+  'si.naseemismail': 'Naseem Ismail & Masoor Maulana',
+  'en.sahih': 'Saheeh International',
+};
+
+/** The named source of this language's translation, if one is approved. */
+export function translationSourceFor(language: LanguageCode): string | undefined {
+  const edition = TRANSLATIONS[language];
+  return edition ? TRANSLATION_SOURCE[edition] : undefined;
+}
+
 export interface SurahSummary {
   number: number;
   name: string;

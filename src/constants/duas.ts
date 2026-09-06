@@ -30,7 +30,12 @@ export interface Dua {
   titleKey: string;
   arabic: string;
   transliteration: string;
-  /** Meaning, translated per language through the locale files. */
+  /**
+   * Base key for the meaning. The actual text is looked up per language through
+   * `meaningFor`, which returns null where no approved meaning exists — the
+   * locale files' own English fallback must NOT be used here, because it would
+   * silently present English as though it were the Tamil meaning.
+   */
   meaningKey: string;
   /** Qurʾān `surah:ayah`, or collection and number. */
   reference: string;
@@ -228,3 +233,21 @@ export const DUAS: Dua[] = [
     repeat: 3,
   },
 ];
+
+/**
+ * Languages with an approved, human-written meaning for these supplications.
+ *
+ * Arabic needs none — the duʿāʾ IS the Arabic. English is complete. Tamil and
+ * Sinhala are not yet written, and until someone writes them these screens show
+ * the Arabic alone rather than English standing in for a language nobody asked
+ * for.
+ *
+ * Add a language here only once every meaning in DUAS has actually been
+ * translated and checked. A half-filled language is worse than none: the reader
+ * cannot tell which entries were rendered and which were merely defaulted.
+ */
+export const DUA_MEANING_LANGUAGES = new Set<string>(['en']);
+
+export function hasApprovedMeaning(language: string): boolean {
+  return DUA_MEANING_LANGUAGES.has(language);
+}

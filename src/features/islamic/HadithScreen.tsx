@@ -10,6 +10,7 @@ import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import * as hadithService from '@/services/hadithService';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
+import { ScriptureText } from './ScriptureText';
 import {
   AppHeader,
   Button,
@@ -65,7 +66,7 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
   } = useAsync(loadSection, [loadSection], { enabled: Boolean(collection) });
 
   const visible = (current?.hadiths ?? []).filter((h) =>
-    matchesSearch(search, h.text, h.reference, String(h.number))
+    matchesSearch(search, h.arabic, h.translation, h.reference, String(h.number))
   );
 
   if (!collection) {
@@ -148,12 +149,12 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
           placeholder={t('hadith.searchInBook')}
         />
 
-        {/* Said plainly rather than silently showing English under a Tamil
-            setting: only Bukhari and Muslim have a Tamil translation here. */}
-        {current?.fellBackToEnglish ? (
+        {/* No approved translation in this language means the Arabic alone —
+            not English standing in for Tamil. Said plainly, once, at the top. */}
+        {current && !current.hasTranslation ? (
           <Card style={styles.notice}>
             <Ionicons name="language-outline" size={18} color={colors.warning} />
-            <Text style={styles.noticeText}>{t('hadith.englishFallback')}</Text>
+            <Text style={styles.noticeText}>{t('hadith.arabicOnlyNotice')}</Text>
           </Card>
         ) : null}
 
@@ -173,35 +174,29 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
           <>
             {visible.map((h) => (
               <Card key={h.number} style={styles.hadith}>
-                <View style={styles.refRow}>
-                  <View style={styles.refChip}>
-                    <Text style={styles.refText}>{h.reference}</Text>
-                  </View>
-                  <Text style={styles.number}>#{h.number}</Text>
-                </View>
-
-                {/*
-                  Arabic first, then the translation. The Arabic is the
-                  narration; the translation is somebody's rendering of it. For
-                  most collections that rendering is English whatever the reader
-                  chose, so having the original above it is the difference
-                  between a usable page and a dead end.
-                */}
-                {h.arabic && language !== 'ar' ? (
-                  <Text style={styles.arabic} accessibilityLanguage="ar">
-                    {h.arabic}
-                  </Text>
-                ) : null}
-
-                <Text
-                  style={[
-                    styles.text,
-                    language === 'ar' ? styles.arabic : null,
-                    h.arabic && language !== 'ar' ? styles.translation : null,
-                  ]}
-                >
-                  {h.text}
-                </Text>
+                {/* One component decides how Arabic and translation are shown
+                    everywhere, so no screen can quietly break the rule. */}
+                <ScriptureText
+                  arabic={h.arabic}
+                  arabicSize={22}
+                  translation={
+                    h.translation
+                      ? {
+                          text: h.translation,
+                          language,
+                          source: current?.translationSource,
+                        }
+                      : null
+                  }
+                  badge={
+                    <>
+                      <View style={styles.refChip}>
+                        <Text style={styles.refText}>{h.reference}</Text>
+                      </View>
+                      <Text style={styles.number}>#{h.number}</Text>
+                    </>
+                  }
+                />
               </Card>
             ))}
 

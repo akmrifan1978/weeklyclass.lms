@@ -869,13 +869,13 @@
     "otherCollections": "Other collections",
     "sahih": "Authentic",
     "searchInBook": "Search in this book",
-    "englishFallback": "No translation exists for this collection in your language, so the Arabic is shown with the English translation beneath it. Only Sahih al-Bukhari and Sahih Muslim have a Tamil translation.",
     "previousBook": "Previous",
     "nextBook": "Next",
     "bookNumber": "Book {{number}}",
     "translationAvailable": "Translated",
-    "arabicEnglishOnly": "Arabic + English only",
-    "coverageNote": "Every narration is shown in Arabic. A translation appears beneath it where one exists — Tamil for the two Sahihs, English for the rest. Collections are labelled so you know before you open one."
+    "arabicEnglishOnly": "Arabic only",
+    "coverageNote": "Every narration is shown in Arabic. A translation appears beneath it where one exists — Tamil for the two Sahihs, English for the rest. Collections are labelled so you know before you open one.",
+    "arabicOnlyNotice": "There is no approved translation of this collection in your language, so the Arabic original is shown on its own. Sahih al-Bukhari and Sahih Muslim have a published Tamil translation."
   },
   "progress": {
     "none": "Nothing to show yet",
@@ -949,6 +949,13 @@
     "sayyidulIstighfar": "The best way of seeking forgiveness",
     "sayyidulIstighfarMeaning": "O Allah, You are my Lord, there is no god but You. You created me and I am Your servant, and I keep to Your covenant and promise as much as I am able.",
     "refuge": "Seeking refuge",
-    "refugeMeaning": "I seek refuge in the perfect words of Allah from the evil of what He has created."
+    "refugeMeaning": "I seek refuge in the perfect words of Allah from the evil of what He has created.",
+    "arabicOnlyNotice": "Meanings have been written in English so far. In other languages the Arabic is shown on its own rather than an unchecked translation."
+  },
+  "scripture": {
+    "originalArabic": "Original Arabic",
+    "approvedTranslation": "Approved translation · {{language}}",
+    "noApprovedTranslation": "No approved translation in your language. The Arabic original is shown alone.",
+    "toggleTranslation": "Show or hide the translation"
   }
 }

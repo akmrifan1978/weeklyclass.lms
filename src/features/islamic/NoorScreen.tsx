@@ -126,8 +126,11 @@ function EpisodeCard({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const approved = episode.translations?.[language];
   const shown = translationFor(episode, language);
-  const translated = Boolean(episode.translations?.[language]?.title);
+  // A translation exists only when a person wrote one for THIS language. The
+  // Arabic is never replaced by a fallback from another.
+  const translated = Boolean(approved?.title || approved?.summary);
 
   return (
     <Card style={styles.card}>
@@ -183,10 +186,22 @@ function EpisodeCard({
 
       {expanded ? (
         <View style={styles.body}>
-          {shown.summary ? (
-            <Text style={styles.summary}>{shown.summary}</Text>
+          {/* The Arabic question is the record; a translation appears beneath
+              it only where one has been written and checked for this language.
+              Nothing is generated, and nothing from another language stands in. */}
+          <Text style={styles.arabicBody} accessibilityLanguage="ar" selectable>
+            {episode.title}
+          </Text>
+
+          {translated && approved?.summary ? (
+            <View style={styles.translationBlock}>
+              <Text style={styles.translationLabel}>
+                {t('scripture.approvedTranslation', { language })}
+              </Text>
+              <Text style={styles.summary}>{approved.summary}</Text>
+            </View>
           ) : (
-            <Text style={styles.noSummary}>{t('noor.noTranslation')}</Text>
+            <Text style={styles.noSummary}>{t('scripture.noApprovedTranslation')}</Text>
           )}
 
           {episode.videoUrl ? (
@@ -260,6 +275,24 @@ const styles = StyleSheet.create({
     borderTopColor: colors.divider,
   },
   summary: { fontSize: fontSize.sm, lineHeight: 21, color: colors.textSecondary },
+  arabicBody: {
+    fontSize: 20,
+    lineHeight: 40,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  translationBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  translationLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
+  },
   noSummary: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   sourceRow: {
     flexDirection: 'row',

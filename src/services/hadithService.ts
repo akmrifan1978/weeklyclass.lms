@@ -56,38 +56,57 @@ export const COLLECTIONS_ORDER = [
 export const SAHIH = new Set(['bukhari', 'muslim']);
 
 /**
- * Edition prefix per app language.
+ * Published translation editions, per language and collection.
  *
- * Only Bukhari and Muslim carry a Tamil translation in this dataset; everything
- * else falls back to English rather than showing nothing, and the screen says
- * which translation is on show.
+ * NO FALLBACK. A collection with no edition in the reader's language gets NO
+ * translation — not English standing in for Tamil. Substituting another
+ * language silently presents one translation as though it were the one asked
+ * for, and a reader who cannot read it is left unable to tell whether it is the
+ * hadith or somebody's rendering. Arabic alone is the honest answer.
+ *
+ * These are published translations, which is what makes them approved. Nothing
+ * here is generated.
  */
-const LANGUAGE_PREFIX: Record<LanguageCode, string> = {
-  ar: 'ara',
-  ta: 'tam',
-  en: 'eng',
-  // No Sinhala edition exists here. English is the honest fallback.
-  si: 'eng',
+const EDITIONS: Record<LanguageCode, (collection: string) => string | null> = {
+  // Arabic is not a translation; it is the text, and every collection has it.
+  ar: () => null,
+  ta: (c) => (TAMIL_AVAILABLE.has(c) ? `tam-${c}` : null),
+  en: (c) => `eng-${c}`,
+  // The dataset carries no Sinhala edition of any collection.
+  si: () => null,
 };
 
 const TAMIL_AVAILABLE = new Set(['bukhari', 'muslim']);
 
-/** The edition actually fetched, which may not be the language asked for. */
+/** Named translators, so a reader can weigh the rendering they are given. */
+const EDITION_SOURCE: Record<string, string> = {
+  'tam-bukhari': 'Jan Trust Foundation',
+  'tam-muslim': 'Jan Trust Foundation',
+  'eng-bukhari': 'M. Muhsin Khan',
+  'eng-muslim': 'Abdul Hamid Siddiqui',
+};
+
+/**
+ * The translation edition for a language, or null when none is approved.
+ *
+ * Null is not a failure state — it is the correct answer for most collections
+ * in Tamil and for every collection in Sinhala, and the screens treat it as
+ * "show the Arabic alone" rather than as something to work around.
+ */
 export function editionFor(
   collection: string,
   language: LanguageCode
-): { edition: string; language: LanguageCode; fellBack: boolean } {
-  if (language === 'ta' && !TAMIL_AVAILABLE.has(collection)) {
-    return { edition: `eng-${collection}`, language: 'en', fellBack: true };
-  }
-  if (language === 'si') {
-    return { edition: `eng-${collection}`, language: 'en', fellBack: true };
-  }
-  return {
-    edition: `${LANGUAGE_PREFIX[language]}-${collection}`,
-    language,
-    fellBack: false,
-  };
+): { edition: string | null; source?: string } {
+  const edition = EDITIONS[language](collection);
+  return { edition, source: edition ? EDITION_SOURCE[edition] : undefined };
+}
+
+/** True when this language has an approved translation of this collection. */
+export function hasApprovedTranslation(
+  collection: string,
+  language: LanguageCode
+): boolean {
+  return EDITIONS[language](collection) !== null;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -133,7 +152,7 @@ export async function listCollections(
     name: editions[id].name,
     sahih: SAHIH.has(id),
     sections: {},
-    translated: !editionFor(id, language).fellBack,
+    translated: hasApprovedTranslation(id, language),
   }));
 
   void AsyncStorage.setItem(cacheKey, JSON.stringify(result)).catch(() => undefined);
@@ -142,18 +161,16 @@ export async function listCollections(
 
 export interface Hadith {
   number: number;
-  /** The translation, in the closest available language. */
-  text: string;
+  /** The Arabic narration. Always present, always shown, never altered. */
+  arabic: string;
   /**
-   * The Arabic original, always fetched.
+   * An approved translation, or null when none exists for this language.
    *
-   * Tamil exists for Bukhari and Muslim alone in this dataset, and Sinhala for
-   * nothing at all — so for most collections the "translation" above is English
-   * whatever the reader chose. Showing the Arabic beside it means they always
-   * have the actual narration, not only somebody's rendering of it, and it costs
-   * one extra cached request.
+   * Null is the normal case for most collections in Tamil and for all of them
+   * in Sinhala. It means the screen shows the Arabic alone — not English
+   * standing in for the language that was asked for.
    */
-  arabic: string | null;
+  translation: string | null;
   /** `book:hadith` as printed, which is how a narration is cited. */
   reference: string;
 }
@@ -164,8 +181,10 @@ export interface HadithSection {
   section: number;
   sectionName: string;
   hadiths: Hadith[];
-  /** Set when the requested language had no edition and English was used. */
-  fellBackToEnglish: boolean;
+  /** True when this language has a published edition of this collection. */
+  hasTranslation: boolean;
+  /** Named translator of that edition, where known. */
+  translationSource?: string;
   /** How many sections this collection has, for paging on. */
   sectionCount: number;
 }
@@ -189,43 +208,44 @@ export async function getSection(
   section: number,
   language: LanguageCode
 ): Promise<HadithSection> {
-  const { edition, fellBack } = editionFor(collection, language);
-  const cacheKey = `${CACHE_PREFIX}${edition}/${section}/v2`;
+  const { edition, source } = editionFor(collection, language);
+  const cacheKey = `${CACHE_PREFIX}${collection}/${section}/${edition ?? 'ar-only'}/v3`;
 
   const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
   if (cached) return JSON.parse(cached) as HadithSection;
 
-  // Both editions at once. The Arabic is the narration itself and is worth
-  // having whatever language the reader picked; when Arabic IS the choice the
-  // second request is skipped rather than fetched twice.
-  const arabicEdition = `ara-${collection}`;
-  const [data, arabicData] = await Promise.all([
-    fetchJson<SectionPayload>(`${CDN}/editions/${edition}/${section}.json`),
-    edition === arabicEdition
-      ? Promise.resolve(null)
-      : fetchJson<SectionPayload>(
-          `${CDN}/editions/${arabicEdition}/${section}.json`
-        ).catch(() => null),
+  // The Arabic is always fetched; it is the narration. The translation edition
+  // is fetched only when one is approved for this language.
+  const [arabicData, translationData] = await Promise.all([
+    fetchJson<SectionPayload>(`${CDN}/editions/ara-${collection}/${section}.json`),
+    edition
+      ? fetchJson<SectionPayload>(`${CDN}/editions/${edition}/${section}.json`).catch(
+          () => null
+        )
+      : Promise.resolve(null),
   ]);
 
   // Matched by hadith number rather than by position: a translation edition can
   // omit a narration, and zipping by index would then pair every later hadith
-  // with the wrong Arabic — silently, and in a way nobody would spot.
-  const arabicByNumber = new Map<number, string>();
-  for (const h of arabicData?.hadiths ?? []) arabicByNumber.set(h.hadithnumber, h.text);
+  // with the wrong translation — silently, and in a way nobody would spot.
+  const translationByNumber = new Map<number, string>();
+  for (const h of translationData?.hadiths ?? []) {
+    translationByNumber.set(h.hadithnumber, h.text);
+  }
 
-  const sectionNames = data.metadata.section ?? {};
+  const sectionNames = arabicData.metadata.section ?? {};
   const result: HadithSection = {
     collection,
-    collectionName: data.metadata.name,
+    collectionName: arabicData.metadata.name,
     section,
     sectionName: Object.values(sectionNames)[0] ?? String(section),
-    fellBackToEnglish: fellBack,
-    sectionCount: Object.keys(data.metadata.sections ?? sectionNames).length || 0,
-    hadiths: data.hadiths.map((h) => ({
+    hasTranslation: Boolean(edition),
+    translationSource: source,
+    sectionCount: Object.keys(arabicData.metadata.sections ?? sectionNames).length || 0,
+    hadiths: arabicData.hadiths.map((h) => ({
       number: h.hadithnumber,
-      text: h.text,
-      arabic: arabicByNumber.get(h.hadithnumber) ?? null,
+      arabic: h.text,
+      translation: translationByNumber.get(h.hadithnumber) ?? null,
       reference: h.reference
         ? `${h.reference.book}:${h.reference.hadith}`
         : String(h.hadithnumber),

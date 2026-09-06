@@ -8,6 +8,7 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import * as quranService from '@/services/quranService';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
+import { ScriptureText } from './ScriptureText';
 import { AppHeader, Card, EmptyState, Screen, SkeletonList } from '@/components/ui';
 
 /**
@@ -69,19 +70,23 @@ export function SurahScreen({
 
             {data.ayahs.map((ayah) => (
               <Card key={ayah.number} style={styles.ayah}>
-                <View style={styles.ayahHeader}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{ayah.number}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.arabic} accessibilityLanguage="ar">
-                  {ayah.arabic}
-                </Text>
-
-                {ayah.translation ? (
-                  <Text style={styles.translation}>{ayah.translation}</Text>
-                ) : null}
+                <ScriptureText
+                  arabic={ayah.arabic}
+                  translation={
+                    ayah.translation
+                      ? {
+                          text: ayah.translation,
+                          language,
+                          source: quranService.translationSourceFor(language),
+                        }
+                      : null
+                  }
+                  badge={
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{ayah.number}</Text>
+                    </View>
+                  }
+                />
               </Card>
             ))}
           </>

@@ -6,8 +6,14 @@ import { useTranslation } from 'react-i18next';
 import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { matchesSearch } from '@/utils/format';
-import { DUAS, DUA_CATEGORY_KEYS, type DuaCategory } from '@/constants/duas';
+import {
+  DUAS,
+  DUA_CATEGORY_KEYS,
+  hasApprovedMeaning,
+  type DuaCategory,
+} from '@/constants/duas';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
+import { ScriptureText } from './ScriptureText';
 import {
   AppHeader,
   Card,
@@ -44,12 +50,16 @@ export function DuaScreen({ headerTint }: { headerTint?: string }) {
   const { language, setLanguage } = useLanguageScope('dua');
   const [search, setSearch] = useState('');
 
+  // English is currently the only language with a written, checked meaning for
+  // every supplication. In any other, the Arabic stands alone.
+  const meaningApproved = hasApprovedMeaning(language);
+
   const grouped = useMemo(() => {
     const matching = DUAS.filter((dua) =>
       matchesSearch(
         search,
         t(dua.titleKey),
-        t(dua.meaningKey),
+        meaningApproved ? t(dua.meaningKey) : undefined,
         dua.transliteration,
         dua.arabic,
         dua.reference
@@ -59,7 +69,7 @@ export function DuaScreen({ headerTint }: { headerTint?: string }) {
       category,
       duas: matching.filter((dua) => dua.category === category),
     })).filter((group) => group.duas.length > 0);
-  }, [search, t]);
+  }, [search, t, meaningApproved]);
 
   return (
     <>
@@ -102,12 +112,20 @@ export function DuaScreen({ headerTint }: { headerTint?: string }) {
                     ) : null}
                   </View>
 
-                  <Text style={styles.arabic} accessibilityLanguage="ar">
-                    {dua.arabic}
-                  </Text>
+                  <ScriptureText
+                    arabic={dua.arabic}
+                    arabicSize={24}
+                    translation={
+                      meaningApproved
+                        ? { text: t(dua.meaningKey), language }
+                        : null
+                    }
+                  />
 
+                  {/* The transliteration is a pronunciation aid, not a
+                      translation — it carries no meaning and is shown in every
+                      language. */}
                   <Text style={styles.transliteration}>{dua.transliteration}</Text>
-                  <Text style={styles.meaning}>{t(dua.meaningKey)}</Text>
 
                   <View style={styles.refRow}>
                     <Ionicons name="bookmark-outline" size={12} color={brand.orange} />

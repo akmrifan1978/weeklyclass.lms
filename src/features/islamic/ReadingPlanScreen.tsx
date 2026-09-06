@@ -13,6 +13,7 @@ import * as quranService from '@/services/quranService';
 import * as plans from '@/services/quranPlanService';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { AyahAudio } from './AyahAudio';
+import { ScriptureText } from './ScriptureText';
 import {
   AppHeader,
   Button,
@@ -253,10 +254,18 @@ export function ReadingPlanScreen({ headerTint }: { headerTint?: string }) {
                               <AyahAudio url={ayah.audio} />
                             ) : null}
                           </View>
-                          <Text style={styles.arabic}>{ayah.arabic}</Text>
-                          {ayah.translation ? (
-                            <Text style={styles.translation}>{ayah.translation}</Text>
-                          ) : null}
+                          <ScriptureText
+                            arabic={ayah.arabic}
+                            translation={
+                              ayah.translation
+                                ? {
+                                    text: ayah.translation,
+                                    language,
+                                    source: quranService.translationSourceFor(language),
+                                  }
+                                : null
+                            }
+                          />
                         </Card>
                       ))}
                     </View>
