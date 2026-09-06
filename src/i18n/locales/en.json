@@ -129,8 +129,13 @@
     "declaration": "I declare that the information provided is accurate to the best of my knowledge, and I authorize its use for registration processing on WeeklyClass.LMS for educational purposes.",
     "profileAlreadyExists": "A profile already exists for this account. Sign in instead, or ask an administrator.",
     "mobileOrEmail": "Mobile number or email",
-    "resetNeedsAdmin": "This account signs in with its mobile number and has no email of its own, so a reset link cannot be sent. Ask your administrator to set a new password.",
-    "sharedEmailNote": "The same email may be used for more than one account. Your mobile number is what identifies you, so sign in with that."
+    "resetNeedsAdmin": "This account signs in with a mobile number, not an email address, so there is no inbox to send a reset link to. Ask an admin to help you back in.",
+    "sharedEmailNote": "The same email may be used for more than one account. Your mobile number is what identifies you, so sign in with that.",
+    "helpRequestSent": "Your request has reached the admins. They will contact you on the number or address you gave.",
+    "contactBackOn": "How can we reach you?",
+    "contactBackOnHint": "A mobile number or an email address an admin can use to contact you.",
+    "askAdminForHelp": "Ask an admin for help",
+    "sameEmail": "That is already your sign-in address."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
@@ -504,7 +509,19 @@
     "appLanguage": "App language",
     "support": "Help & support",
     "about": "About",
-    "version": "Version"
+    "version": "Version",
+    "signIn": "Sign-in & recovery",
+    "signInEmail": "Sign-in email",
+    "signInEmailOk": "Password reset links are sent to this address.",
+    "noSignInEmail": "None — mobile number only",
+    "noSignInEmailWhy": "Your email was already registered to another account, so this one signs in by mobile number. That means a password reset cannot be emailed to you. Add an address you control to fix this.",
+    "addSignInEmail": "Add a sign-in email",
+    "changeSignInEmail": "Change sign-in email",
+    "addSignInEmailHelp": "Enter an email address that only you use. It must not already belong to another account here.",
+    "newSignInEmail": "New sign-in email",
+    "newSignInEmailHint": "You will sign in with this address from now on.",
+    "verifyInbox": "Check that inbox",
+    "verifyInboxHelp": "We have sent a confirmation link to the new address. Nothing changes until you open it. Until then, keep signing in exactly as you do now — and the first time after you open it, sign in with the new email address."
   },
   "admin": {
     "manageUsers": "Manage users",
@@ -839,7 +856,9 @@
     "kindHint_question": "Ask about a class, an assignment or anything you are unsure of.",
     "kindHint_feedback": "Tell us what is working and what could be better.",
     "kindHint_complaint": "Report a problem. It goes only to the administrators.",
-    "kindHint_contact": "A private message to the administrators."
+    "kindHint_contact": "A private message to the administrators.",
+    "kind_passwordHelp": "Password help",
+    "notSignedIn": "not signed in"
   },
   "qa": {
     "askTitle": "Ask a question",

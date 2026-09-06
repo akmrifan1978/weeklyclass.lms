@@ -13,7 +13,8 @@ import { friendlyMessage } from '@/utils/errors';
 import { humanise } from '@/utils/format';
 import { passwordSchema, validate } from '@/utils/validation';
 import { useAsync } from '@/hooks/useAsync';
-import { changePassword } from '@/services/authService';
+import { changePassword, changeSignInEmail } from '@/services/authService';
+import { isSyntheticAuthEmail } from '@/services/identityService';
 import { updateUser } from '@/services/userService';
 import { getBranch, getClass } from '@/services/orgService';
 import * as storageService from '@/services/storageService';
@@ -48,12 +49,15 @@ export function ProfileScreen() {
 
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [changingEmail, setChangingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({ fullName: '', mobile: '', qualification: '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
+  const [emailForm, setEmailForm] = useState({ address: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const loadContext = useCallback(async () => {
@@ -165,8 +169,31 @@ export function ProfileScreen() {
     }
   };
 
+  const handleChangeEmail = async () => {
+    setBusy(true);
+    try {
+      await changeSignInEmail(emailForm.password, emailForm.address);
+      // Not "done" — "check that inbox". The address does not change until the
+      // link in it is opened, and saying otherwise would leave someone thinking
+      // they can already recover an account they still cannot.
+      setEmailSent(true);
+      setChangingEmail(false);
+      setEmailForm({ address: '', password: '' });
+      setErrors({});
+    } catch (error) {
+      setErrors({ emailAddress: friendlyMessage(error, t) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const isStudent = user.role === 'student';
   const isTeacher = user.role === 'teacher';
+
+  // What the account actually signs in with, which is only sometimes the email
+  // shown under personal details.
+  const signInEmail = user.authEmail ?? user.email;
+  const strandedEmail = isSyntheticAuthEmail(signInEmail);
 
   return (
     <View style={{ flex: 1 }}>
@@ -303,6 +330,55 @@ export function ProfileScreen() {
 
         <Spacer />
 
+        {/* Sign-in address, kept apart from the contact email above because they
+            are not the same thing and confusing them is what strands people.
+            The contact address is where the school writes to you; this is the
+            one Firebase will accept a password reset for. */}
+        <SectionHeader title={t('profile.signIn')} icon="log-in-outline" />
+        <Card>
+          <DetailRow
+            label={t('profile.signInEmail')}
+            value={strandedEmail ? t('profile.noSignInEmail') : signInEmail}
+            icon="at-outline"
+          />
+          {strandedEmail ? (
+            <>
+              <View style={styles.warning}>
+                <Ionicons name="warning-outline" size={16} color={colors.warning} />
+                <Text style={styles.warningText}>{t('profile.noSignInEmailWhy')}</Text>
+              </View>
+              <Button
+                label={t('profile.addSignInEmail')}
+                icon="mail-outline"
+                fullWidth
+                onPress={() => {
+                  setEmailForm({ address: '', password: '' });
+                  setErrors({});
+                  setChangingEmail(true);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <Divider />
+              <Text style={styles.hintText}>{t('profile.signInEmailOk')}</Text>
+              <Button
+                label={t('profile.changeSignInEmail')}
+                icon="mail-outline"
+                variant="outline"
+                fullWidth
+                onPress={() => {
+                  setEmailForm({ address: '', password: '' });
+                  setErrors({});
+                  setChangingEmail(true);
+                }}
+              />
+            </>
+          )}
+        </Card>
+
+        <Spacer />
+
         <Card>
           <Button
             label={t('profile.changePassword')}
@@ -401,6 +477,48 @@ export function ProfileScreen() {
         />
       </FormSheet>
 
+      <FormSheet
+        visible={changingEmail}
+        title={t(strandedEmail ? 'profile.addSignInEmail' : 'profile.changeSignInEmail')}
+        onClose={() => setChangingEmail(false)}
+        onSubmit={handleChangeEmail}
+        submitting={busy}
+        submitDisabled={!emailForm.address.trim() || !emailForm.password}
+      >
+        <Text style={styles.sheetIntro}>{t('profile.addSignInEmailHelp')}</Text>
+        <TextField
+          label={t('profile.newSignInEmail')}
+          value={emailForm.address}
+          onChangeText={(v) => setEmailForm((f) => ({ ...f, address: v }))}
+          error={errors.emailAddress}
+          icon="mail-outline"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          hint={t('profile.newSignInEmailHint')}
+          required
+        />
+        {/* Firebase demands a fresh sign-in before it will touch the address,
+            and rightly: a borrowed unlocked phone must not be able to move an
+            account to a stranger's inbox. */}
+        <PasswordField
+          label={t('profile.currentPassword')}
+          value={emailForm.password}
+          onChangeText={(v) => setEmailForm((f) => ({ ...f, password: v }))}
+          icon="lock-closed-outline"
+          required
+        />
+      </FormSheet>
+
+      <ConfirmDialog
+        visible={emailSent}
+        title={t('profile.verifyInbox')}
+        message={t('profile.verifyInboxHelp')}
+        confirmLabel={t('common.close')}
+        onCancel={() => setEmailSent(false)}
+        onConfirm={() => setEmailSent(false)}
+      />
+
       <ConfirmDialog
         visible={confirmLogout}
         title={t('auth.logout')}
@@ -418,6 +536,28 @@ export function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  warning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.warningSoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  warningText: { flex: 1, fontSize: fontSize.xs, color: colors.text, lineHeight: 17 },
+  hintText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginBottom: spacing.md,
+  },
+  sheetIntro: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
   headerCard: { alignItems: 'center', paddingVertical: spacing.xxl },
   name: {
     fontSize: fontSize.xl,

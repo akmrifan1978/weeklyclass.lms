@@ -5,6 +5,7 @@ import {
   sendPasswordResetEmail,
   sendEmailVerification,
   updatePassword,
+  verifyBeforeUpdateEmail,
   reauthenticateWithCredential,
   EmailAuthProvider,
   onAuthStateChanged,
@@ -766,6 +767,46 @@ export async function changePassword(
   const credential = EmailAuthProvider.credential(user.email, currentPassword);
   await reauthenticateWithCredential(user, credential);
   await updatePassword(user, newPassword);
+}
+
+/**
+ * Points the account at a real inbox, so its owner can recover it.
+ *
+ * An account whose sign-in address ends `@mobile.weeklyclass.app` has nowhere
+ * to receive a reset link — the address does not exist. That happens when the
+ * person's own email was already registered to somebody else, usually a
+ * relative, and it leaves them dependent on an admin forever. This is the way
+ * out of that, and it is the only one available without a server.
+ *
+ * `verifyBeforeUpdateEmail` rather than `updateEmail`: the change takes effect
+ * only when the link in the NEW inbox is clicked, so a typo cannot lock someone
+ * out of an account they are currently standing in.
+ *
+ * Nothing is written to Firestore here. Until that link is clicked the account
+ * still signs in at the old address, and the indexes must keep saying so; once
+ * it is clicked, the repair on the next sign-in rewrites them from the live
+ * value. Updating them now would break sign-in during the gap, and permanently
+ * if the link were never opened.
+ */
+export async function changeSignInEmail(
+  currentPassword: string,
+  newEmail: string
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user?.email) throw new AppError('errors.sessionExpired', 'unauthenticated');
+
+  const address = newEmail.trim().toLowerCase();
+  if (!isEmail(address)) throw new AppError('validation.emailInvalid', 'invalid-argument');
+  if (address === user.email.toLowerCase()) {
+    throw new AppError('auth.sameEmail', 'invalid-argument');
+  }
+  if (isSyntheticAuthEmail(address)) {
+    throw new AppError('validation.emailInvalid', 'invalid-argument');
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await verifyBeforeUpdateEmail(user, address);
 }
 
 export function subscribeToAuth(

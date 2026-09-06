@@ -103,6 +103,51 @@ export async function submitRequest(
 }
 
 /**
+ * A plea for help from somebody who cannot sign in.
+ *
+ * Every other request here is written by an authenticated user, and this one
+ * cannot be: the whole problem is that they are locked out. So it is the single
+ * kind the rules accept from a signed-out client, under tight validation — a
+ * fixed kind, a fixed open status, no reply fields, and short strings.
+ *
+ * The honest cost: an unauthenticated write is a spam surface, and Firestore
+ * rules cannot rate-limit. Nothing here is secret and nothing is destroyed, so
+ * the worst case is junk rows an admin deletes. That is a better trade than
+ * leaving somebody with a synthetic sign-in address no way to ask for help.
+ *
+ * Deliberately NOT audit-logged: there is no actor to attribute it to, and the
+ * request itself carries everything an admin needs.
+ */
+export async function requestPasswordHelp(input: {
+  /** Whatever they tried to sign in with — mobile, username or email. */
+  identifier: string;
+  /** How to reach them back, since by definition we cannot email the account. */
+  contact: string;
+}): Promise<string> {
+  const identifier = input.identifier.trim().slice(0, 120);
+  const contact = input.contact.trim().slice(0, 120);
+
+  return createDoc(COLLECTIONS.supportRequests, {
+    kind: 'passwordHelp' as SupportKind,
+    subject: `Password help: ${identifier}`,
+    message: `Cannot sign in as "${identifier}". Contact back on: ${contact || 'not given'}.`,
+    // No uid to record — that is the point. The name is what they typed, so an
+    // admin can match it against the register themselves.
+    userId: null,
+    userName: identifier,
+    userRole: null,
+    userMobile: contact || null,
+    classId: null,
+    branchId: null,
+    status: 'open' as SupportStatus,
+    reply: null,
+    repliedBy: null,
+    repliedByName: null,
+    repliedAt: null,
+  });
+}
+
+/**
  * Answers a request and tells the person who wrote it.
  *
  * The notification is targeted at that one user rather than their class: they

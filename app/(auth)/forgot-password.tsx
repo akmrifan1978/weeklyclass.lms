@@ -6,19 +6,33 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
+import { AppError, friendlyMessage } from '@/utils/errors';
 import { recoverySchema, validate } from '@/utils/validation';
 import { requestPasswordReset } from '@/services/authService';
+import { requestPasswordHelp } from '@/services/supportService';
 import { Button, IconButton, TextField } from '@/components/ui';
+
+/**
+ * Three outcomes, not two.
+ *
+ * Most accounts sign in at a real email address and get Firebase's own reset
+ * link. But an account whose email was already taken by a relative signs in at
+ * a synthetic `@mobile.…` address, and there is no inbox behind it — a reset
+ * link would be sent into a void. Telling those people "check your email" would
+ * be a lie they would wait on, so they get the third outcome instead: a request
+ * that reaches an admin, who can identify them by name and phone number.
+ */
+type Stage = 'ask' | 'sent' | 'needsHelp' | 'helpSent';
 
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
   const [identifier, setIdentifier] = useState('');
+  const [contact, setContact] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [stage, setStage] = useState<Stage>('ask');
 
   const handleSubmit = async () => {
     const result = validate(recoverySchema, identifier);
@@ -32,13 +46,34 @@ export default function ForgotPasswordScreen() {
       await requestPasswordReset(result.data);
       // Always report success: confirming which addresses exist would let
       // anyone enumerate the platform's users.
-      setSent(true);
+      setStage('sent');
+    } catch (err) {
+      if (err instanceof AppError && err.code === 'auth/no-reset-address') {
+        // Not an error the person can do anything about, so it is not shown as
+        // one. It is a fork in the road.
+        setStage('needsHelp');
+        setContact(identifier.trim());
+      } else {
+        setError(friendlyMessage(err, t));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAskAdmin = async () => {
+    setBusy(true);
+    try {
+      await requestPasswordHelp({ identifier: identifier.trim(), contact: contact.trim() });
+      setStage('helpSent');
     } catch (err) {
       setError(friendlyMessage(err, t));
     } finally {
       setBusy(false);
     }
   };
+
+  const sent = stage === 'sent' || stage === 'helpSent';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -73,7 +108,7 @@ export default function ForgotPasswordScreen() {
             {sent ? (
               <>
                 <Text style={styles.message} accessibilityLiveRegion="polite">
-                  {t('auth.resetEmailSent')}
+                  {t(stage === 'helpSent' ? 'auth.helpRequestSent' : 'auth.resetEmailSent')}
                 </Text>
                 <Button
                   label={t('auth.login')}
@@ -81,6 +116,36 @@ export default function ForgotPasswordScreen() {
                   fullWidth
                   size="lg"
                   style={{ marginTop: spacing.xl }}
+                />
+              </>
+            ) : stage === 'needsHelp' ? (
+              <>
+                <Text style={styles.message} accessibilityLiveRegion="polite">
+                  {t('auth.resetNeedsAdmin')}
+                </Text>
+                <TextField
+                  label={t('auth.contactBackOn')}
+                  value={contact}
+                  onChangeText={(value) => {
+                    setContact(value);
+                    setError(null);
+                  }}
+                  error={error}
+                  icon="call-outline"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  hint={t('auth.contactBackOnHint')}
+                  containerStyle={{ marginTop: spacing.xl, width: '100%' }}
+                  required
+                />
+                <Button
+                  label={t('auth.askAdminForHelp')}
+                  onPress={handleAskAdmin}
+                  loading={busy}
+                  disabled={contact.trim().length === 0}
+                  fullWidth
+                  size="lg"
+                  icon="help-buoy-outline"
                 />
               </>
             ) : (

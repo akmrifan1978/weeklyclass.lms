@@ -443,7 +443,14 @@ export interface CalendarEvent extends BaseDoc {
  * admin, get a reply, be closed — and splitting them would give the admin four
  * inboxes to remember to check.
  */
-export type SupportKind = 'feedback' | 'complaint' | 'question' | 'contact';
+export type SupportKind =
+  | 'feedback'
+  | 'complaint'
+  | 'question'
+  | 'contact'
+  // The one kind that can be filed by somebody who is NOT signed in — that is
+  // the whole point of it. See the rule and supportService.requestPasswordHelp.
+  | 'passwordHelp';
 
 export type SupportStatus = 'open' | 'answered' | 'closed';
 
@@ -451,10 +458,16 @@ export interface SupportRequest extends BaseDoc {
   kind: SupportKind;
   subject: string;
   message: string;
-  /** Who wrote it. Kept denormalised so the inbox needs no second read. */
-  userId: string;
+  /**
+   * Who wrote it. Kept denormalised so the inbox needs no second read.
+   *
+   * Null for a `passwordHelp` request, which by definition comes from somebody
+   * who could not sign in: there is no uid or role to record, and `userName` is
+   * whatever they typed at the login box for an admin to match by hand.
+   */
+  userId: string | null;
   userName: string;
-  userRole: UserRole;
+  userRole: UserRole | null;
   userMobile?: string | null;
   classId?: string | null;
   branchId?: string | null;

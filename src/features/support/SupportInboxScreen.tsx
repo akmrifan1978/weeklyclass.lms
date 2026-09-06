@@ -116,7 +116,13 @@ export function SupportInboxScreen() {
               <View style={styles.fromRow}>
                 <Ionicons name="person-circle-outline" size={16} color={colors.textMuted} />
                 <Text style={styles.from}>
-                  {request.userName} · {t(`admin.role${capitalise(request.userRole)}`)}
+                  {/* A password-help request has no role to show, because it was
+                      filed by somebody who could not sign in. The name is
+                      whatever they typed at the login box, so it is labelled as
+                      unverified rather than dressed up as an account. */}
+                  {request.userRole
+                    ? `${request.userName} · ${t(`admin.role${capitalise(request.userRole)}`)}`
+                    : `${request.userName} · ${t('support.notSignedIn')}`}
                 </Text>
                 {/* The number is right here so a complaint can be answered with a
                     phone call, which is often the only reply that will do. */}

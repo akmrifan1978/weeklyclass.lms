@@ -613,7 +613,29 @@ service cloud.firestore {
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.status == 'open'
                     // Nobody writes their own reply in.
-                    && !request.resource.data.keys().hasAny(['reply', 'repliedBy']);
+                    && request.resource.data.reply == null
+                    && request.resource.data.repliedBy == null;
+
+      // The one exception, and the reason it has to exist: somebody locked out
+      // of their account cannot sign in to ask for help with signing in. Held
+      // to a fixed shape — this kind only, open, unattributed, no reply, short
+      // strings — so the surface is a handful of text fields and nothing else.
+      //
+      // It cannot be rate-limited in rules, so junk rows are possible. They are
+      // readable only by staff, they overwrite nothing, and an admin can delete
+      // them; that is a smaller harm than leaving a locked-out student with no
+      // way to reach anyone.
+      allow create: if request.resource.data.kind == 'passwordHelp'
+                    && request.resource.data.status == 'open'
+                    && request.resource.data.userId == null
+                    && request.resource.data.reply == null
+                    && request.resource.data.repliedBy == null
+                    && request.resource.data.userName is string
+                    && request.resource.data.userName.size() <= 120
+                    && request.resource.data.subject is string
+                    && request.resource.data.subject.size() <= 200
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() <= 400;
 
       // Only staff answer or close. The author cannot edit what they sent,
       // which keeps a complaint from being rewritten after it was acted on.
