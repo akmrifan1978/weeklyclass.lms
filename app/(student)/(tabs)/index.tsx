@@ -217,6 +217,12 @@ export default function StudentHome() {
               onPress={() => router.push('/(student)/results')}
             />
             <QuickAccessTile
+              icon="ticket"
+              label={t('nav.events')}
+              tint={brand.orangeLight}
+              onPress={() => router.push('/(student)/events')}
+            />
+            <QuickAccessTile
               icon="videocam"
               label={t('nav.onlineClasses')}
               tint={brand.red}

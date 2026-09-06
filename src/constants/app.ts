@@ -26,6 +26,7 @@ export const COLLECTIONS = {
   notifications: 'notifications',
   supportRequests: 'supportRequests',
   qaQuestions: 'qaQuestions',
+  eventRegistrations: 'eventRegistrations',
   announcements: 'announcements',
   languages: 'languages',
   settings: 'settings',

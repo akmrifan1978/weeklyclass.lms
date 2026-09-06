@@ -269,6 +269,47 @@ export type AudienceRole = 'all' | 'students' | 'teachers';
  */
 export type MeetingProvider = 'zoom' | 'meet' | 'other';
 
+/**
+ * Whether an event is open for booking, and on what terms.
+ *
+ * `openingSoon` exists because announcing an event before booking opens is the
+ * normal way these are run — people need to know it is coming and put the date
+ * aside. Without it the choice is to hide the event or to let people book before
+ * anyone is ready to take payment.
+ */
+export type RegistrationStatus = 'openingSoon' | 'open' | 'closed';
+
+export interface EventRegistrationSettings {
+  status: RegistrationStatus;
+  /** Null means unlimited; a number is a hard cap the booking honours. */
+  capacity: number | null;
+  /** Zero, or a price per person. `currency` is free text — SAR, LKR, INR. */
+  price: number;
+  currency: string;
+  /** Shown in place of the usual "registration closed" wording. */
+  note?: string | null;
+}
+
+/** One person's booking. Lives in its own collection; see supportService. */
+export interface EventRegistration extends BaseDoc {
+  eventId: string;
+  eventTitle: string;
+  userId: string;
+  userName: string;
+  userMobile?: string | null;
+  userEmail?: string | null;
+  /** Seats taken by this booking — a family books several at once. */
+  seats: number;
+  /** `seats × price`, frozen at booking time so a later price change is not
+   *  applied retrospectively to someone who already paid. */
+  amount: number;
+  currency: string;
+  status: 'booked' | 'cancelled';
+  /** Set by an admin once payment is in hand. */
+  paid?: boolean;
+  notes?: string | null;
+}
+
 export interface CalendarEvent extends BaseDoc {
   title: string;
   description?: string;
@@ -310,6 +351,21 @@ export interface CalendarEvent extends BaseDoc {
   // published session keeps the identity it was announced with.
   logoUrl?: string | null;
   bannerUrl?: string | null;
+
+  // --- Registration -------------------------------------------------------
+  //
+  // Absent on an ordinary calendar entry. An event only takes bookings once
+  // `registration` is set, which keeps a class reminder and a ticketed family
+  // gathering in one collection without one pretending to be the other.
+  registration?: EventRegistrationSettings;
+  /**
+   * How many seats are taken.
+   *
+   * Denormalised onto the event so a list of twenty events costs twenty reads
+   * rather than twenty aggregate queries. It is maintained by the booking
+   * transaction, which is the only thing that may change it.
+   */
+  registeredCount?: number;
   branchId?: string | null;
   classId?: string | null;
   targetAudience: AudienceRole;

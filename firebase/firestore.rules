@@ -395,7 +395,56 @@ service cloud.firestore {
     match /calendarEvents/{eventId} {
       allow read: if isSignedIn();
       allow create: if can('MANAGE_CALENDAR');
-      allow update, delete: if can('MANAGE_CALENDAR');
+      allow delete: if can('MANAGE_CALENDAR');
+
+      // Anyone signed in may change the seat count and nothing else, because
+      // booking a place has to increment it and the person booking is not an
+      // organiser. The field is narrowed to exactly that one, and to a number
+      // that is not negative.
+      //
+      // The honest limit of this rule: it cannot check the count against the
+      // capacity, because that lives in a nested map and the arithmetic belongs
+      // to the booking transaction. Someone determined could therefore make an
+      // event look fuller or emptier than it is. That is a nuisance, not a
+      // breach — no booking is created, no money moves, and an organiser can see
+      // the real total by counting the registrations.
+      allow update: if can('MANAGE_CALENDAR')
+                    || (isSignedIn()
+                        && onlyChanged(['registeredCount', 'updatedAt'])
+                        && request.resource.data.registeredCount is int
+                        && request.resource.data.registeredCount >= 0);
+    }
+
+    // =========================================================================
+    // Event bookings
+    // =========================================================================
+    //
+    // A booking belongs to the person who made it and to whoever runs the
+    // event. Students may create and read their own; only staff see the whole
+    // list, which is what the attendee export is built from.
+
+    match /eventRegistrations/{registrationId} {
+      allow get: if isSignedIn()
+                 && (resource.data.userId == request.auth.uid || isStaff());
+      allow list: if isStaff();
+
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'booked'
+                    && request.resource.data.seats is int
+                    && request.resource.data.seats > 0
+                    // Nobody marks their own booking paid.
+                    && request.resource.data.paid == false;
+
+      // The holder may cancel their own; staff may cancel any and record
+      // payment. Neither can rewrite the amount that was agreed at booking.
+      allow update: if (isSignedIn()
+                        && resource.data.userId == request.auth.uid
+                        && onlyChanged(['status', 'updatedAt'])
+                        && request.resource.data.status == 'cancelled')
+                    || (isStaff() && !changedKeys().hasAny(['amount', 'userId', 'seats']));
+
+      allow delete: if isAdmin();
     }
 
     // =========================================================================

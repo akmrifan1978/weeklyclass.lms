@@ -77,6 +77,7 @@ export default function TeacherHome() {
     { permission: 'VIEW_RESULTS', icon: 'trophy-outline', labelKey: 'nav.results', route: '/(teacher)/results', tint: brand.orange },
     { permission: 'MANAGE_CALENDAR', icon: 'calendar-outline', labelKey: 'nav.calendar', route: '/(teacher)/calendar', tint: brand.slate },
     { permission: 'MANAGE_CALENDAR', icon: 'videocam', labelKey: 'nav.onlineClasses', route: '/(teacher)/online-classes', tint: brand.red },
+    { permission: 'MANAGE_CALENDAR', icon: 'ticket', labelKey: 'nav.events', route: '/(teacher)/events', tint: brand.orangeLight },
     { permission: 'VIEW_STUDENTS', icon: 'chatbubbles', labelKey: 'nav.qa', route: '/(teacher)/qa', tint: brand.navy },
     { permission: 'VIEW_STUDENTS', icon: 'help-buoy', labelKey: 'nav.support', route: '/(teacher)/support', tint: brand.sand },
   ];
