@@ -15,7 +15,6 @@ import { loadDashboardStats } from '@/services/statsService';
 import { listLogs } from '@/services/auditService';
 import { listUsers } from '@/services/userService';
 import { QuickAccessTile } from '@/components/shared/ContentCards';
-import { AppFooter } from '@/components/shared/AppFooter';
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
@@ -226,8 +225,6 @@ export default function AdminDashboard() {
         </Grid>
 
         <IslamicTiles basePath="/(admin)" />
-
-          <AppFooter />
 
         {data?.pending.length ? (
           <>

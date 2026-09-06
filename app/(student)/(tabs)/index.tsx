@@ -25,7 +25,6 @@ import {
   UpcomingEventCard,
   VideoRow,
 } from '@/components/shared/ContentCards';
-import { AppFooter } from '@/components/shared/AppFooter';
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
@@ -250,8 +249,6 @@ export default function StudentHome() {
           </Grid>
 
           <IslamicTiles basePath="/(student)" />
-
-          <AppFooter />
 
           {data?.lessons.length ? (
             <>

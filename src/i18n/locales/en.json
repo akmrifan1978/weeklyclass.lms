@@ -906,9 +906,6 @@
     "translatedSummary": "Summary in {{language}}",
     "source": "Source: {{source}}"
   },
-  "footer": {
-    "copyright": "© {{year}} {{name}}"
-  },
   "dua": {
     "search": "Search duas",
     "sourceNote": "Every dua here is from the Qur'an or from Sahih al-Bukhari, Sahih Muslim or Abu Dawud, and shows its reference so you can check it. The Arabic is the supplication; the transliteration helps you say it and the meaning explains it.",
