@@ -19,7 +19,11 @@ export const emailSchema = z
   .email('validation.emailInvalid');
 
 /**
- * Eight characters, and nothing else prescribed.
+ * Six characters, and nothing else prescribed.
+ *
+ * Six is also Firebase Authentication's own floor, so this is as low as the
+ * minimum can go without the form accepting a password the server then
+ * refuses.
  *
  * The letter-and-digit rule went because composition rules do not buy what they
  * appear to: they rule out a long passphrase somebody can actually remember
@@ -28,7 +32,7 @@ export const emailSchema = z
  * actually costs an attacker something, and Firebase Authentication is what
  * stands between a password and an account regardless.
  */
-export const passwordSchema = z.string().min(8, 'validation.passwordTooShort');
+export const passwordSchema = z.string().min(6, 'validation.passwordTooShort');
 
 export const mobileSchema = z
   .string()
