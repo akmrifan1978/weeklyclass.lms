@@ -158,6 +158,29 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     </ScrollView>
   );
 
+  /**
+   * Logout where it can always be reached.
+   *
+   * It already existed at the foot of the navigation list, which on a full
+   * sidebar means scrolling past twenty items to leave — and on a shared or
+   * borrowed device, the one action somebody wants in a hurry is the one that
+   * should never require a hunt.
+   */
+  const logoutButton = (
+    <Pressable
+      onPress={() => {
+        setMenuOpen(false);
+        setConfirmLogout(true);
+      }}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={t('auth.logout')}
+      style={({ pressed }) => [styles.logoutButton, { opacity: pressed ? 0.6 : 1 }]}
+    >
+      <Ionicons name="log-out-outline" size={20} color={brand.red} />
+    </Pressable>
+  );
+
   const brandBlock = (
     <View style={styles.brandBlock}>
       <View style={styles.brandIcon}>
@@ -188,6 +211,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 {user?.email}
               </Text>
             </View>
+            {logoutButton}
           </View>
         </View>
 
@@ -225,6 +249,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {APP_NAME}
         </Text>
         <Avatar name={user?.fullName ?? '?'} uri={user?.profileImage} size={32} />
+        <Pressable
+          onPress={() => setConfirmLogout(true)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('auth.logout')}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+        >
+          <Ionicons name="log-out-outline" size={22} color={colors.textInverse} />
+        </Pressable>
       </View>
 
       <View style={styles.content}>{children}</View>
@@ -325,6 +358,14 @@ const styles = StyleSheet.create({
   navItemActive: { backgroundColor: 'rgba(237,91,3,0.16)' },
   navLabel: { color: brand.sandLight, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   navLabelActive: { color: brand.orangeLight, fontWeight: fontWeight.semibold },
+  logoutButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
   logoutItem: { marginTop: spacing.md },
   sidebarFooter: {
     flexDirection: 'row',
