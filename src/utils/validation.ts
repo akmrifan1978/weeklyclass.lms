@@ -18,12 +18,17 @@ export const emailSchema = z
   .min(1, 'validation.emailRequired')
   .email('validation.emailInvalid');
 
-/** 8+ chars with at least one letter and one digit — enforced client and rules side. */
-export const passwordSchema = z
-  .string()
-  .min(8, 'validation.passwordTooShort')
-  .regex(/[A-Za-z]/, 'validation.passwordNeedsLetter')
-  .regex(/[0-9]/, 'validation.passwordNeedsNumber');
+/**
+ * Eight characters, and nothing else prescribed.
+ *
+ * The letter-and-digit rule went because composition rules do not buy what they
+ * appear to: they rule out a long passphrase somebody can actually remember
+ * while permitting "Passw0rd", and the predictable response to them is a digit
+ * bolted onto the end of the same weak word. Length is the property that
+ * actually costs an attacker something, and Firebase Authentication is what
+ * stands between a password and an account regardless.
+ */
+export const passwordSchema = z.string().min(8, 'validation.passwordTooShort');
 
 export const mobileSchema = z
   .string()

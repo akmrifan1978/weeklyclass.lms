@@ -62,8 +62,16 @@ export function BranchManager() {
 
   const loadOrg = useCallback(async () => {
     const [countries, organizations] = await Promise.all([
-      listCountries().catch(() => []),
-      listOrganizations().catch(() => []),
+      // Same reasoning as the class form: an empty picker that is really a
+      // failed query sends you looking in the wrong place.
+      listCountries().catch((error) => {
+        console.error('[WeeklyClass] could not list countries:', error);
+        return [];
+      }),
+      listOrganizations().catch((error) => {
+        console.error('[WeeklyClass] could not list organisations:', error);
+        return [];
+      }),
     ]);
     return { countries, organizations };
   }, []);

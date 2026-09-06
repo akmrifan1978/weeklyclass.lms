@@ -40,7 +40,15 @@ export function ClassManager() {
 
   const loadRefs = useCallback(async () => {
     const [branches, teachers] = await Promise.all([
-      listBranches().catch(() => []),
+      // Reported, not swallowed. A query that fails — a missing composite index
+      // is the usual cause, and it fails with a link to create it — produced an
+      // empty picker reading "No results found", which is indistinguishable
+      // from genuinely having no branches and sends you looking in the wrong
+      // place entirely.
+      listBranches().catch((error) => {
+        console.error('[WeeklyClass] could not list branches for the class form:', error);
+        return [];
+      }),
       listUsers({ role: 'teacher', status: 'active', pageSize: 100 })
         .then((p) => p.items)
         .catch(() => []),
