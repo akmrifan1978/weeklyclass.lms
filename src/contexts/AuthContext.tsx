@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { COLLECTIONS, STORAGE_KEYS } from '@/constants/app';
@@ -14,6 +15,7 @@ import { watchDoc } from '@/services/firestore';
 import * as authService from '@/services/authService';
 import * as pushService from '@/services/pushService';
 import { setAnalyticsUser, logEvent, AnalyticsEvents } from '@/firebase/analytics';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { allPermissions } from '@/types/permissions';
 import type { AppUser, Permission, PermissionMap } from '@/types';
 
@@ -148,6 +150,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [stopWatching, user]);
 
+  // Signed in and idle for too long ends the session. `logout` is already
+  // safe to call when nothing is signed in, and the hook only runs while
+  // somebody is.
+  const { markActive } = useSessionTimeout({
+    active: user !== null,
+    onTimeout: () => {
+      void logout();
+    },
+  });
+
   const refresh = useCallback(async () => {
     const firebaseUser = authService.currentFirebaseUser();
     if (!firebaseUser) return;
@@ -201,7 +213,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, initialising, busy, permissions, can, canAny, login, logout, refresh, enablePush]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {/*
+        Capture-phase, and it always returns false: this observes that a touch
+        happened and declines to handle it, so every gesture underneath behaves
+        exactly as it would without this wrapper. The alternative — asking each
+        screen to report activity — would be forgotten by the first screen
+        somebody adds next month.
+      */}
+      <View
+        style={{ flex: 1 }}
+        onStartShouldSetResponderCapture={() => {
+          markActive();
+          return false;
+        }}
+      >
+        {children}
+      </View>
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {

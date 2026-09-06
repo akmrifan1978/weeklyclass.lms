@@ -756,6 +756,22 @@ export interface AppSettings {
   /** New student/teacher signups land in `pending` until an admin approves. */
   requireApproval: boolean;
   /**
+   * Confirms a free event booking the moment it is made, with no admin step.
+   *
+   * Paid bookings are never auto-confirmed, whatever this says. Confirming one
+   * is a statement that the money is expected and the place is theirs, and no
+   * setting should be able to make that claim on an organiser's behalf — see
+   * eventRegistrationService.book.
+   */
+  autoApproveEventBookings?: boolean;
+  /**
+   * Minutes of inactivity before a session is ended, or 0 to never end one.
+   *
+   * The phones this runs on are shared — a family tablet, a classroom device —
+   * so an abandoned session is a real exposure, not a theoretical one.
+   */
+  sessionTimeoutMinutes?: number;
+  /**
    * Which Islamic sections are switched on, platform-wide.
    *
    * The same set is offered to students, teachers and admins alike — these are

@@ -415,6 +415,19 @@ service cloud.firestore {
                         && request.resource.data.registeredCount >= 0);
     }
 
+    /**
+     * Whether the admin has allowed free bookings through without review.
+     *
+     * One extra document read on a booking create, and only on that path. It is
+     * worth it: without reading the setting the rule would have to take the
+     * client's word for whether auto-approval is on, which is exactly the thing
+     * a client should not be trusted about.
+     */
+    function autoApprovesBookings() {
+      return get(/databases/$(database)/documents/settings/app)
+               .data.autoApproveEventBookings == true;
+    }
+
     // =========================================================================
     // Event bookings
     // =========================================================================
@@ -431,15 +444,25 @@ service cloud.firestore {
       allow list: if isStaff()
                   || (isSignedIn() && resource.data.userId == request.auth.uid);
 
-      // A booking is a request. It may only ever be created pending — nobody
-      // issues themselves a confirmed ticket — and nobody marks their own
-      // booking paid.
+      // A booking is a request, and normally it may only ever be created
+      // pending — nobody issues themselves a confirmed ticket. Nobody marks
+      // their own booking paid either, whatever else is true.
+      //
+      // The single exception is a FREE booking while the admin has switched
+      // auto-approval on, which is the organiser saying in advance that anyone
+      // may walk in. Both halves are checked here rather than trusted from the
+      // client: the amount must actually be zero, and the setting must actually
+      // be on. A priced booking can never be self-confirmed, because confirming
+      // one asserts that money was received.
       allow create: if isSignedIn()
                     && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.status == 'pending'
                     && request.resource.data.seats is int
                     && request.resource.data.seats > 0
-                    && request.resource.data.paid == false;
+                    && request.resource.data.paid == false
+                    && (request.resource.data.status == 'pending'
+                        || (request.resource.data.status == 'confirmed'
+                            && request.resource.data.amount == 0
+                            && autoApprovesBookings()));
 
       // The holder may cancel their own booking and nothing else; only staff
       // may confirm one, which is what turns it into a ticket. Neither can

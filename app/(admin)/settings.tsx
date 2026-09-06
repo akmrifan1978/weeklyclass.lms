@@ -280,6 +280,41 @@ function SettingsScreen() {
 
         <Spacer />
 
+        {/* Kept apart from student registration above, because they approve
+            different things: that one decides who may join the platform at all,
+            this one only who gets into a particular event. */}
+        <SectionHeader title={t('settings.eventRegistration')} icon="ticket-outline" />
+        <Card>
+          <ToggleRow
+            label={t('settings.autoApproveBookings')}
+            description={t('settings.autoApproveBookingsHelp')}
+            value={form.autoApproveEventBookings === true}
+            onValueChange={(v) => set('autoApproveEventBookings', v)}
+          />
+        </Card>
+
+        <Spacer />
+
+        <SectionHeader title={t('settings.security')} icon="lock-closed-outline" />
+        <Card>
+          <TextField
+            label={t('settings.sessionTimeout')}
+            value={String(form.sessionTimeoutMinutes ?? 0)}
+            onChangeText={(v) => {
+              // Digits only, and an empty box means zero rather than NaN — a
+              // half-typed number must not read as "log everyone out now".
+              const minutes = Number.parseInt(v.replace(/[^0-9]/g, ''), 10);
+              set('sessionTimeoutMinutes', Number.isFinite(minutes) ? minutes : 0);
+            }}
+            keyboardType="number-pad"
+            icon="time-outline"
+            hint={t('settings.sessionTimeoutHint')}
+            containerStyle={{ marginBottom: 0 }}
+          />
+        </Card>
+
+        <Spacer />
+
         {/*
           One switch per section, platform-wide. These are offered to students,
           teachers and admins alike — they are for the person, not tools tied to

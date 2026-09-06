@@ -594,7 +594,13 @@
     "islamicSections": "Islamic sections",
     "islamicSectionsHint": "Switch these on or off for everyone. They appear the same way on the student, teacher and admin dashboards.",
     "venueLabel": "Venue",
-    "venueHint": "Shown on the sign-in screen, e.g. Jeddah Dawah Center – Tamil Section"
+    "venueHint": "Shown on the sign-in screen, e.g. Jeddah Dawah Center – Tamil Section",
+    "eventRegistration": "Event registration",
+    "autoApproveBookings": "Auto-approve free event bookings",
+    "autoApproveBookingsHelp": "Free bookings are confirmed the moment they are made and the ticket appears straight away. Paid bookings always wait for you, so nobody is confirmed before you have seen the payment.",
+    "security": "Security",
+    "sessionTimeout": "Session timeout (minutes)",
+    "sessionTimeoutHint": "Sign people out after this many minutes without activity. Set 0 to never sign anyone out. Useful where a phone or tablet is shared."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",

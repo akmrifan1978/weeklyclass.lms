@@ -13,6 +13,7 @@ import type {
 } from '@/types';
 
 import { listPage, updateDocById, type Page } from './firestore';
+import { getSettings } from './settingsService';
 import * as audit from './auditService';
 
 /**
@@ -156,6 +157,11 @@ export async function book(
   const eventRef = doc(db, COLLECTIONS.calendarEvents, event.id);
   const bookingRef = doc(db, COLLECTIONS.eventRegistrations, registrationId);
 
+  // Read before the transaction, not inside it: a transaction may be retried,
+  // and a settings read is neither part of the contention nor cheap to repeat.
+  const appSettings = await getSettings().catch(() => null);
+  const autoApprove = appSettings?.autoApproveEventBookings === true;
+
   await runTransaction(db, async (tx) => {
     const fresh = await tx.get(eventRef);
     if (!fresh.exists()) throw new AppError('errors.notFound', 'not-found');
@@ -183,6 +189,7 @@ export async function book(
       ageGroup: p.ageGroup,
       price: priceFor(settings, p.ageGroup),
     }));
+    const amount = participants.reduce((sum, p) => sum + p.price, 0);
 
     tx.set(bookingRef, {
       eventId: event.id,
@@ -195,12 +202,18 @@ export async function book(
       seats,
       // Frozen at booking time. A price raised next week must not silently
       // change what someone already agreed to pay.
-      amount: participants.reduce((sum, p) => sum + p.price, 0),
+      amount,
       currency: settings.currency ?? '',
       reference: reference?.trim() || null,
-      // Requested, not granted. The seats are held from this moment, but there
+      // Requested, not granted — the seats are held from this moment, but there
       // is no ticket until an admin says so.
-      status: 'pending',
+      //
+      // Unless the organiser has asked for free bookings to go through on their
+      // own, which for a talk anyone may walk into is the sensible setting. A
+      // paid booking is never auto-confirmed however this is set: confirming
+      // one says the money is expected and the place is theirs, and no toggle
+      // should make that claim for an organiser who has not seen the payment.
+      status: autoApprove && amount === 0 ? 'confirmed' : 'pending',
       paid: false,
       deleted: false,
       createdAt: serverTimestamp(),

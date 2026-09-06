@@ -54,6 +54,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   availableLanguages: ['en', 'ta', 'si', 'ar'],
   registrationEnabled: true,
   requireApproval: true,
+  // Off: an organiser who set up bookings did so to see who is coming, and
+  // silently confirming everyone would take that decision away from them.
+  autoApproveEventBookings: false,
+  // Off by default. A timeout that logs people out mid-lesson is worse than no
+  // timeout at all unless somebody has actually asked for one.
+  sessionTimeoutMinutes: 0,
   // All on by default. An admin switching one off is a deliberate act; a fresh
   // install finding them all hidden would just look broken.
   islamicFeatures: {

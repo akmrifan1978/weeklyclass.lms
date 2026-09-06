@@ -594,7 +594,13 @@
     "islamicSections": "ඉස්ලාමීය කොටස්",
     "islamicSectionsHint": "Switch these on or off for everyone. They appear the same way on the student, teacher and admin dashboards.",
     "venueLabel": "ස්ථානය",
-    "venueHint": "පිවිසුම් තිරයේ පෙන්වයි, උදා. ජෙඩා දඃවා මධ්‍යස්ථානය – දෙමළ අංශය"
+    "venueHint": "පිවිසුම් තිරයේ පෙන්වයි, උදා. ජෙඩා දඃවා මධ්‍යස්ථානය – දෙමළ අංශය",
+    "eventRegistration": "සිදුවීම් ලියාපදිංචිය",
+    "autoApproveBookings": "නොමිලේ වෙන් කිරීම් ස්වයංක්‍රීයව අනුමත කරන්න",
+    "autoApproveBookingsHelp": "නොමිලේ වෙන් කිරීම් සිදු කළ මොහොතේම තහවුරු වී ප්‍රවේශපත්‍රය වහාම දිස් වේ. ගෙවන වෙන් කිරීම් සැමවිටම ඔබ බලා සිටී; ගෙවීම ඔබ දකින්නට පෙර කිසිවෙකු තහවුරු නොවේ.",
+    "security": "ආරක්ෂාව",
+    "sessionTimeout": "සැසිය කල් ඉකුත්වීම (මිනිත්තු)",
+    "sessionTimeoutHint": "මෙතරම් මිනිත්තු ගණනක් ක්‍රියාකාරකම් නොමැති නම් පිටවීම සිදු කරන්න. කිසිවෙකු පිට නොකිරීමට 0 ලෙස තබන්න. දුරකථනයක් හෝ ටැබ්ලටයක් බෙදාගන්නා තැන්වල ප්‍රයෝජනවත් වේ."
   },
   "confirm": {
     "deleteTitle": "මෙම වාර්තාව මකන්නද?",
