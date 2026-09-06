@@ -996,6 +996,13 @@
     "removeWarning": "Remove this translation? The Arabic original is not affected.",
     "awaitingAdmin": "You can write and edit translations. An admin publishes them.",
     "adminOnly": "Only an administrator can publish a translation.",
-    "nothingToApprove": "There is no translation to publish yet."
+    "nothingToApprove": "There is no translation to publish yet.",
+    "suggestDraft": "Suggest a draft",
+    "draftInserted": "Draft inserted — read it and correct it before saving",
+    "draftNote": "Machine-drafted from the Arabic. Check every line: it is a starting point, not a translation.",
+    "draftPoorQuality": "Machine translation into this language is unreliable — it renders religious terms wrongly. Expect to rewrite rather than edit.",
+    "draftUnavailable": "No machine draft is offered in this language: the engine returns unrelated text for it. Please write the translation yourself.",
+    "draftFailed": "Could not fetch a draft. Please write the translation yourself.",
+    "nothingToTranslate": "There is no Arabic text to translate."
   }
 }

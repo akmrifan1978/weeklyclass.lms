@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { friendlyMessage } from '@/utils/errors';
 import * as videoService from '@/services/videoService';
+import * as translateService from '@/services/translateService';
 import type { LanguageCode, VideoItem } from '@/types';
 import {
   Button,
@@ -50,6 +51,7 @@ export function TranslationManager({
   const [form, setForm] = useState({ title: '', summary: '' });
   const [confirmRemove, setConfirmRemove] = useState<LanguageCode | null>(null);
   const [busy, setBusy] = useState(false);
+  const [drafting, setDrafting] = useState(false);
 
   const isAdmin = user?.role === 'admin';
 
@@ -68,6 +70,28 @@ export function TranslationManager({
       toast.error(friendlyMessage(error, t));
     } finally {
       setBusy(false);
+    }
+  };
+
+  /**
+   * Fills the editor with a machine draft for the person to correct.
+   *
+   * It writes into the form, not to the database. Nothing is saved until they
+   * press Save, and nothing is published until an admin approves — so a rough
+   * rendering can never reach a reader on its own. That is the whole reason
+   * this is safe to offer at all.
+   */
+  const suggest = async () => {
+    if (!editing) return;
+    setDrafting(true);
+    try {
+      const draft = await translateService.draftTranslation(video.title, editing);
+      setForm((p) => ({ ...p, title: draft }));
+      toast.success(t('translation.draftInserted'));
+    } catch (error) {
+      toast.error(friendlyMessage(error, t));
+    } finally {
+      setDrafting(false);
     }
   };
 
@@ -178,6 +202,43 @@ export function TranslationManager({
           {video.title}
         </Text>
 
+        {/*
+          Offered only where a machine draft is worth having. Measured on a
+          plain fatwa question, Arabic to English is accurate, Arabic to Tamil
+          renders "ruling" as "governance" and "yawning" as "sprouting", and
+          Arabic to Sinhala returns unrelated text entirely. So English is
+          offered plainly, Tamil with a warning to rewrite rather than edit, and
+          Sinhala not at all — an engine that returns nonsense gives a
+          translator nothing to work from and plenty to be misled by.
+        */}
+        {editing && translateService.canDraft(editing) ? (
+          <View style={styles.draftBlock}>
+            <Button
+              label={t('translation.suggestDraft')}
+              icon="sparkles-outline"
+              variant="outline"
+              size="sm"
+              loading={drafting}
+              onPress={suggest}
+            />
+            <Text
+              style={
+                translateService.draftQualityFor(editing) === 'poor'
+                  ? styles.draftWarning
+                  : styles.draftNote
+              }
+            >
+              {t(
+                translateService.draftQualityFor(editing) === 'poor'
+                  ? 'translation.draftPoorQuality'
+                  : 'translation.draftNote'
+              )}
+            </Text>
+          </View>
+        ) : editing ? (
+          <Text style={styles.draftNote}>{t('translation.draftUnavailable')}</Text>
+        ) : null}
+
         <TextField
           label={t('translation.fieldTitle')}
           value={form.title}
@@ -258,4 +319,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   saveNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  draftBlock: { marginBottom: spacing.lg, gap: spacing.xs },
+  draftNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  draftWarning: { fontSize: fontSize.xs, color: colors.warning, lineHeight: 16 },
 });
