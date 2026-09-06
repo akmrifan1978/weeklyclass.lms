@@ -24,7 +24,6 @@ export const LANGUAGE_SCOPES = [
   'tajweed',
   'zakat',
   'hadith',
-  'noor',
   'dua',
 ] as const;
 
@@ -102,7 +101,6 @@ export function scopeForSegments(segments: string[]): LanguageScope | null {
   if (segments.includes('tajweed')) return 'tajweed';
   if (segments.includes('zakat')) return 'zakat';
   if (segments.includes('hadith')) return 'hadith';
-  if (segments.includes('noor')) return 'noor';
   if (segments.includes('duas')) return 'dua';
   if (segments.includes('(admin)')) return 'admin';
   if (segments.includes('(teacher)')) return 'teacher';

@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteField,
   getDocs,
   query,
   where,
@@ -11,14 +10,7 @@ import {
 
 import { db } from '@/firebase/config';
 import { COLLECTIONS } from '@/constants/app';
-import { AppError } from '@/utils/errors';
-import type {
-  AppUser,
-  LanguageCode,
-  TranslationEntry,
-  VideoItem,
-  VideoKind,
-} from '@/types';
+import type { AppUser, VideoItem, VideoKind } from '@/types';
 import {
   createDoc,
   getById,
@@ -302,153 +294,4 @@ export function autoThumbnail(url: string, fallback?: string | null): string | n
   );
   if (youtube?.[1]) return `https://img.youtube.com/vi/${youtube[1]}/hqdefault.jpg`;
   return fallback || null;
-}
-
-// ---------------------------------------------------------------------------
-// Translation review
-// ---------------------------------------------------------------------------
-
-/**
- * The pipeline for translating Islamic content:
- *
- *   Arabic original → someone writes a translation → an admin reviews it →
- *   it is published
- *
- * Nothing skips a step. A draft is never shown to a reader, and only an admin
- * moves one to `approved` — because a fatwa translation carries the weight of
- * the ruling it renders, and publishing one nobody qualified has read is the
- * failure this whole design exists to prevent.
- *
- * The Arabic is never touched by any of this. These functions write only inside
- * `translations`, and no path here can alter `title` or `description`.
- */
-
-/** Saves or updates one language's draft. Never publishes it. */
-export async function saveTranslation(
-  videoId: string,
-  language: LanguageCode,
-  entry: { title?: string; summary?: string },
-  actor: AppUser
-): Promise<void> {
-  const existing = await getVideo(videoId);
-  const current = existing?.translations?.[language];
-
-  await updateDocById<VideoItem>(COLLECTIONS.videos, videoId, {
-    [`translations.${language}`]: {
-      title: entry.title?.trim() ?? '',
-      summary: entry.summary?.trim() ?? '',
-      // Editing an approved translation sends it back to draft. A reviewer
-      // approved particular words; changing them afterwards without another
-      // look would let anything through under someone else's approval.
-      status: 'draft' as const,
-      translatedBy: actor.uid,
-      translatedByName: actor.fullName,
-      reviewedBy: null,
-      reviewedByName: null,
-      reviewedAt: null,
-      updatedAt: new Date(),
-    },
-  } as unknown as Partial<VideoItem>);
-
-  await audit.log({
-    actor,
-    action: 'UPDATE',
-    collection: COLLECTIONS.videos,
-    documentId: videoId,
-    summary: `${current ? 'Updated' : 'Added'} ${language} translation draft`,
-  });
-}
-
-/**
- * Publishes a translation. Admin only.
- *
- * Enforced here and in the audit trail rather than in the security rules:
- * `translations` is a nested map, and a rule that reliably diffs one language's
- * status inside it would be considerably harder to read than it is worth. The
- * screen offers the action to admins alone, every approval is logged with who
- * did it, and the Arabic is unreachable from this path either way.
- */
-export async function approveTranslation(
-  videoId: string,
-  language: LanguageCode,
-  actor: AppUser
-): Promise<void> {
-  if (actor.role !== 'admin') {
-    throw new AppError('translation.adminOnly', 'permission-denied');
-  }
-
-  const existing = await getVideo(videoId);
-  const entry = existing?.translations?.[language];
-  if (!entry) throw new AppError('translation.nothingToApprove', 'not-found');
-
-  await updateDocById<VideoItem>(COLLECTIONS.videos, videoId, {
-    [`translations.${language}`]: {
-      ...entry,
-      status: 'approved' as const,
-      reviewedBy: actor.uid,
-      reviewedByName: actor.fullName,
-      reviewedAt: new Date(),
-    },
-  } as unknown as Partial<VideoItem>);
-
-  await audit.log({
-    actor,
-    action: 'UPDATE',
-    collection: COLLECTIONS.videos,
-    documentId: videoId,
-    summary: `Approved the ${language} translation`,
-  });
-}
-
-/** Withdraws a published translation without deleting the words. */
-export async function unapproveTranslation(
-  videoId: string,
-  language: LanguageCode,
-  actor: AppUser
-): Promise<void> {
-  if (actor.role !== 'admin') {
-    throw new AppError('translation.adminOnly', 'permission-denied');
-  }
-  const existing = await getVideo(videoId);
-  const entry = existing?.translations?.[language];
-  if (!entry) return;
-
-  await updateDocById<VideoItem>(COLLECTIONS.videos, videoId, {
-    [`translations.${language}`]: { ...entry, status: 'draft' as const },
-  } as unknown as Partial<VideoItem>);
-
-  await audit.log({
-    actor,
-    action: 'UPDATE',
-    collection: COLLECTIONS.videos,
-    documentId: videoId,
-    summary: `Withdrew the ${language} translation from publication`,
-  });
-}
-
-export async function removeTranslation(
-  videoId: string,
-  language: LanguageCode,
-  actor: AppUser
-): Promise<void> {
-  await updateDocById<VideoItem>(COLLECTIONS.videos, videoId, {
-    [`translations.${language}`]: deleteField(),
-  } as unknown as Partial<VideoItem>);
-
-  await audit.log({
-    actor,
-    action: 'UPDATE',
-    collection: COLLECTIONS.videos,
-    documentId: videoId,
-    summary: `Removed the ${language} translation`,
-  });
-}
-
-/** The translation a READER should see: approved, or nothing at all. */
-export function publishedTranslation(
-  video: VideoItem,
-  language: LanguageCode
-): TranslationEntry | null {
-  const entry = video.translations?.[language];
-  return entry && entry.status === 'approved' ? entry : null;
 }

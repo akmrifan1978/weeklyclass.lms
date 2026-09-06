@@ -170,36 +170,7 @@ export interface Lesson extends BaseDoc {
   status: ContentStatus;
 }
 
-/**
- * `noor` is the Noor ʿalā al-Darb series — a curated set of scholarly Q&A
- * episodes. It shares the videos collection rather than getting its own,
- * because it is the same shape of record (a title, a speaker, a link, a date)
- * and a second collection would need its own rules, indexes and admin screen to
- * say exactly the same things.
- */
-export type VideoKind = 'video' | 'recording' | 'noor';
-
-/**
- * One language's translation of a piece of Islamic content, and where it has
- * got to in review.
- *
- * `status` is the whole point of this type. Without it a translation is either
- * present or absent, and there is no way to write one, sit on it, and have
- * somebody qualified look before a student reads it as though it carried the
- * shaykh's authority.
- */
-export interface TranslationEntry {
-  title?: string;
-  summary?: string;
-  /** `draft` is never shown to readers. Only an admin may set `approved`. */
-  status: 'draft' | 'approved';
-  translatedBy?: string | null;
-  translatedByName?: string | null;
-  reviewedBy?: string | null;
-  reviewedByName?: string | null;
-  reviewedAt?: FireDate | null;
-  updatedAt?: FireDate | null;
-}
+export type VideoKind = 'video' | 'recording';
 
 export interface VideoItem extends BaseDoc {
   title: string;
@@ -244,18 +215,6 @@ export interface VideoItem extends BaseDoc {
    */
   isLive?: boolean;
   kind: VideoKind;
-  /**
-   * Per-language translations, each with its own review state.
-   *
-   * The pipeline is: Arabic original → someone writes a translation → an admin
-   * reviews it → it is published. Only an `approved` entry is ever shown to a
-   * reader; a `draft` is visible to staff alone, marked as unpublished.
-   *
-   * Machine translation is deliberately not used: these are scholarly rulings,
-   * and a translation that is merely plausible is worse than none. A language
-   * with no approved entry shows the Arabic original by itself.
-   */
-  translations?: Partial<Record<LanguageCode, TranslationEntry>>;
   /**
    * Where imported content came from. binbaz.org.sa permits copying "on
    * condition that the source is cited", so for anything imported from there
@@ -689,7 +648,6 @@ export type IslamicFeature =
   | 'tajweed'
   | 'zakat'
   | 'hadith'
-  | 'noor'
   | 'dua';
 
 export interface DashboardStats {

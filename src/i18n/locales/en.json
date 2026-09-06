@@ -894,20 +894,6 @@
   "offline": {
     "banner": "You are offline — showing saved content"
   },
-  "noor": {
-    "title": "Noor ala al-Darb",
-    "subtitle": "Scholarly answers",
-    "search": "Search episodes",
-    "listen": "Listen",
-    "none": "No episodes yet",
-    "noneHelp": "Episodes appear here once an administrator adds them.",
-    "noTranslation": "No translation has been added for this language yet.",
-    "addEpisode": "Add episode",
-    "translationFor": "Translation ({{language}})",
-    "translatedTitle": "Title in {{language}}",
-    "translatedSummary": "Summary in {{language}}",
-    "source": "Source: {{source}}"
-  },
   "dua": {
     "search": "Search duas",
     "sourceNote": "Every dua here is from the Qur'an or from Sahih al-Bukhari, Sahih Muslim or Abu Dawud, and shows its reference so you can check it. The Arabic is the supplication; the transliteration helps you say it and the meaning explains it.",
@@ -976,33 +962,5 @@
     "howItWorks": "Which languages are offered is managed here and takes effect immediately. The interface translations themselves ship with the app, so a newly added language shows an English interface until src/i18n/locales/<code>.json is added and the app is rebuilt. Qur'an, Hadith and Duas are unaffected: a language with no approved translation shows the Arabic original alone.",
     "deleteWarning": "Remove {{name}}? Disabling it is reversible; removing it is not.",
     "inUse": "Some accounts still use this language. Disable it instead, or move those accounts to another language first."
-  },
-  "translation": {
-    "manage": "Translations",
-    "pipelineHint": "Arabic original → translation → admin review → published. Readers only ever see an approved translation.",
-    "statusNone": "Not translated",
-    "statusDraft": "Draft — awaiting review, not shown to readers",
-    "statusApproved": "Approved by {{name}}",
-    "approve": "Approve and publish",
-    "approved": "Translation published",
-    "withdraw": "Withdraw from publication",
-    "withdrawn": "Withdrawn — readers now see the Arabic only",
-    "editTitle": "Write the translation",
-    "fieldTitle": "Translated question",
-    "fieldTitleHint": "The question in this language. The Arabic above is never changed.",
-    "fieldSummary": "Translated answer or summary",
-    "saveNote": "Saving stores this as a draft. An admin must approve it before anyone reads it, and editing an approved translation returns it to draft.",
-    "savedAsDraft": "Saved as a draft, awaiting admin review",
-    "removeWarning": "Remove this translation? The Arabic original is not affected.",
-    "awaitingAdmin": "You can write and edit translations. An admin publishes them.",
-    "adminOnly": "Only an administrator can publish a translation.",
-    "nothingToApprove": "There is no translation to publish yet.",
-    "suggestDraft": "Suggest a draft",
-    "draftInserted": "Draft inserted — read it and correct it before saving",
-    "draftNote": "Machine-drafted from the Arabic. Check every line: it is a starting point, not a translation.",
-    "draftPoorQuality": "Machine translation into this language is unreliable — it renders religious terms wrongly. Expect to rewrite rather than edit.",
-    "draftUnavailable": "No machine draft is offered in this language: the engine returns unrelated text for it. Please write the translation yourself.",
-    "draftFailed": "Could not fetch a draft. Please write the translation yourself.",
-    "nothingToTranslate": "There is no Arabic text to translate."
   }
 }

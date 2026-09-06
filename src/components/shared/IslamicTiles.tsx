@@ -73,13 +73,6 @@ const TILES: Tile[] = [
     tint: brand.navy,
   },
   {
-    feature: 'noor',
-    icon: 'radio-outline',
-    labelKey: 'noor.title',
-    path: '/noor',
-    tint: brand.orange,
-  },
-  {
     feature: 'dua',
     icon: 'sparkles-outline',
     labelKey: 'nav.duas',
