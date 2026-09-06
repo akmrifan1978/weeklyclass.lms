@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,7 +14,8 @@ import {
   saveEvent,
 } from '@/services/calendarService';
 import { listBranches, listClasses } from '@/services/orgService';
-import { getSettings } from '@/services/settingsService';
+import { getSettings, watchSettings } from '@/services/settingsService';
+import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import type {
   AudienceRole,
   CalendarEvent,
@@ -102,6 +103,32 @@ const EMPTY: EventForm = {
 };
 
 export function CalendarManager({ classScope }: { classScope?: string[] }) {
+  // Built here rather than in a module-scope StyleSheet: this file had none
+  // before, and reading theme tokens while the module is still initialising is
+  // the one moment they are not reliably there.
+  const PRESET_ROW = {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  };
+  const PRESET_CHIP = {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+  };
+  const PRESET_TEXT = {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  };
+
+  const [eventNames, setEventNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    return watchSettings((settings) => setEventNames(settings.eventNames ?? []));
+  }, []);
   const { t } = useTranslation();
   const { user, can } = useAuth();
   const [mode, setMode] = useState<'upcoming' | 'past'>('upcoming');
@@ -307,6 +334,25 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
             icon="calendar-outline"
             required
           />
+          {/* Presets, not a dropdown replacing the field. A recurring event is
+              tapped once and still editable afterwards, which a Select would
+              take away from the one-off events that share this form. */}
+          {eventNames.length > 0 ? (
+            <View style={PRESET_ROW}>
+              {eventNames.map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => set('title', name)}
+                  style={PRESET_CHIP}
+                  accessibilityRole="button"
+                >
+                  <Text style={PRESET_TEXT} numberOfLines={1}>
+                    {name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           <TextField
             label={t('common.description')}
             value={form.description}

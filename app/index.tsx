@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -67,8 +67,20 @@ export default function SplashScreen() {
       >
         <View style={styles.inner}>
           <View style={styles.brandBlock}>
+            {/* The organisation's own mark when they have set one. The book is
+                a placeholder for a platform nobody has branded yet, and it
+                should give way the moment somebody uploads a logo. */}
             <View style={styles.logo}>
-              <Ionicons name="book" size={38} color={brand.orange} />
+              {settings?.logoUrl ? (
+                <Image
+                  source={{ uri: settings.logoUrl }}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                  accessibilityLabel={settings?.appName?.trim() || APP_NAME}
+                />
+              ) : (
+                <Ionicons name="book" size={38} color={brand.orange} />
+              )}
             </View>
             {/*
               Read from Settings, not from the bundled constants: an
@@ -198,8 +210,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
+    overflow: 'hidden',
     ...shadow.lg,
   },
+  // Inset, so a square logo does not sit corner-to-corner in a rounded tile.
+  logoImage: { width: 64, height: 64 },
   appName: {
     fontSize: fontSize.display,
     fontWeight: fontWeight.heavy,

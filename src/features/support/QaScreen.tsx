@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import { relativeTime } from '@/utils/date';
 import * as support from '@/services/supportService';
+import { watchSettings } from '@/services/settingsService';
 import { AyahAudio } from '@/features/islamic/AyahAudio';
 import { VoiceRecorder } from './VoiceRecorder';
 import type { QaQuestion } from '@/types';
@@ -37,6 +38,11 @@ import {
  * would make it useless for the moment it exists to serve.
  */
 export function QaScreen({ eventId }: { eventId?: string | null }) {
+  const [scholar, setScholar] = useState('');
+
+  useEffect(() => {
+    return watchSettings((settings) => setScholar(settings.qaScholarName?.trim() ?? ''));
+  }, []);
   const { t } = useTranslation();
   const toast = useToast();
   const { user, can } = useAuth();
@@ -130,7 +136,13 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
 
   return (
     <>
-      <AppHeader title={t('nav.qa')} showBack />
+      {/* Named when an admin has said who answers. Students ask more readily
+          of a person than of a feature. */}
+      <AppHeader
+        title={t('nav.qa')}
+        subtitle={scholar ? t('qa.withScholar', { name: scholar }) : undefined}
+        showBack
+      />
       <Screen refreshing={refreshing} onRefresh={refresh}>
         <Card style={styles.askCard}>
           <Text style={styles.askTitle}>{t('qa.askTitle')}</Text>

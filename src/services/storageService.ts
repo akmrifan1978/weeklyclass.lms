@@ -112,7 +112,7 @@ async function uploadToCloudinary(params: {
 
   params.onProgress?.(100);
   return {
-    url: payload.secure_url,
+    url: optimisedUrl(payload.secure_url, params.kind),
     // Cloudinary is addressed by URL, not by a Storage path; nothing to delete
     // through storageService.remove().
     path: '',
@@ -195,6 +195,90 @@ export function pathFor(kind: UploadKind, ownerId: string, fileName: string): st
 }
 
 /**
+ * The longest edge an image is allowed to keep, per use.
+ *
+ * A phone camera produces something around 4000px wide and several megabytes.
+ * None of these pictures is ever displayed larger than a phone screen, so the
+ * extra pixels cost upload time, storage and the viewer's data allowance while
+ * being visibly worth nothing.
+ */
+const MAX_EDGE: Record<UploadKind, number> = {
+  avatar: 512,
+  thumbnail: 900,
+  article: 1600,
+  branding: 1200,
+  // Deliberately generous: a material may be a photographed page of a book, and
+  // text stops being readable long before a photograph starts to look wrong.
+  material: 2200,
+};
+
+/**
+ * Shrinks an image before it is uploaded, and leaves everything else alone.
+ *
+ * This is why a 12 MB photograph no longer fails against a 3 MB limit: it is
+ * resized down to something the app will actually display and re-encoded as
+ * JPEG at 80%, which for a photograph is indistinguishable at these sizes and
+ * usually an order of magnitude smaller.
+ *
+ * PDFs and other documents pass through untouched. Compressing one properly
+ * means re-encoding the streams inside it, which needs a library far larger
+ * than everything it would save, and a PDF re-encoded badly loses the text
+ * layer that makes it searchable — a much worse outcome than a big file.
+ *
+ * Failure is not fatal. If the image cannot be read or manipulated, the
+ * original is uploaded and the existing size limit judges it, exactly as
+ * before.
+ */
+async function shrinkIfImage(
+  uri: string,
+  kind: UploadKind,
+  contentType: string
+): Promise<string> {
+  if (!contentType.startsWith('image/')) return uri;
+  // Vectors have no pixels to throw away, and rasterising one would be a loss.
+  if (contentType === 'image/svg+xml') return uri;
+
+  try {
+    const ImageManipulator = await import('expo-image-manipulator');
+    const context = ImageManipulator.ImageManipulator.manipulate(uri);
+    // A single width bound preserves the aspect ratio, and expo-image-manipulator
+    // will not enlarge a picture that is already smaller than the bound.
+    context.resize({ width: MAX_EDGE[kind] });
+
+    const rendered = await context.renderAsync();
+    const result = await rendered.saveAsync({
+      compress: 0.8,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+    return result.uri;
+  } catch {
+    return uri;
+  }
+}
+
+/**
+ * Asks Cloudinary to serve a smaller version than it stores.
+ *
+ * `f_auto` picks WebP or AVIF when the viewer's browser takes it, `q_auto`
+ * drops quality to the point just before the eye notices, and `c_limit` caps
+ * the dimensions without ever enlarging. Together they typically halve what
+ * goes over the wire again, on top of the resize above, and cost nothing —
+ * Cloudinary does the work and keeps the original untouched behind the URL.
+ *
+ * Only image deliveries are rewritten. A PDF is served from the same host under
+ * a path these parameters do not apply to, and injecting them would produce a
+ * URL that fetches nothing.
+ */
+function optimisedUrl(url: string, kind: UploadKind): string {
+  const marker = '/image/upload/';
+  if (!url.includes('res.cloudinary.com') || !url.includes(marker)) return url;
+  // Already carrying a transformation — leave it be rather than stack a second.
+  if (/\/image\/upload\/[a-z]{1,3}_/.test(url)) return url;
+
+  return url.replace(marker, `${marker}f_auto,q_auto,c_limit,w_${MAX_EDGE[kind]}/`);
+}
+
+/**
  * Uploads a local file (an `expo-image-picker` or `expo-document-picker` uri).
  * `onProgress` receives 0-100.
  */
@@ -209,11 +293,15 @@ export async function upload(params: {
 }): Promise<UploadResult> {
   const contentType = params.contentType ?? 'application/octet-stream';
 
+  // Shrunk before anything else looks at it, so the size limit is applied to
+  // what will actually be sent rather than to what came off the camera.
+  const uri = await shrinkIfImage(params.uri, params.kind, contentType);
+
   // Cloudinary first when it is configured — it is the only path that works on
   // a free Firebase project.
   if (uploadsConfigured()) {
     return uploadToCloudinary({
-      uri: params.uri,
+      uri,
       fileName: params.fileName,
       kind: params.kind,
       contentType,
@@ -221,7 +309,7 @@ export async function upload(params: {
     });
   }
 
-  const response = await fetch(params.uri);
+  const response = await fetch(uri);
   const blob = await response.blob();
 
   const limit = LIMITS[params.kind];

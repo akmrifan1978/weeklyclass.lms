@@ -165,7 +165,8 @@
     "selectCorrectAnswer": "Mark the correct answer",
     "declarationRequired": "Please accept the declaration to continue.",
     "mobileTaken": "An account already uses this mobile number.",
-    "countryCodeLength": "Use exactly two letters, e.g. LK."
+    "countryCodeLength": "Use exactly two letters, e.g. LK.",
+    "classRequired": "Please choose your class"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -616,7 +617,24 @@
     "clearing": "Clearing {{name}}…",
     "resetDone": "Reset complete. {{count}} records removed.",
     "resetCaveats": "Sign-in accounts themselves are not removed, because that needs a server this app does not have. Deleted people can still sign in but will find no profile, and their email and mobile stay claimed until you remove the account in the Firebase console. Uploaded files stay in storage and become unreachable.",
-    "resetPartial": "Removed {{count}} records, but these could not be cleared: {{names}}"
+    "resetPartial": "Removed {{count}} records, but these could not be cleared: {{names}}",
+    "ticker": "Scrolling footer ticker",
+    "tickerEnabled": "Show scrolling ticker above the bottom menu",
+    "tickerText": "Ticker text",
+    "tickerHint": "Scrolls across the bottom of every page. Add announcements here anytime — no app update needed. Write it in as many languages as you like, separated however you prefer.",
+    "liveQa": "Live Q&A",
+    "scholarName": "Scholar / answerer name",
+    "scholarNameHint": "Shown as \"Live Q&A with [name]\". Change it whenever the scholar changes.",
+    "requireClassId": "Require Class ID during registration",
+    "requireClassIdHelp": "When off, students can register without a Class ID and an admin assigns the class afterwards. When on, they must enter one to register.",
+    "classGroups": "Class groups",
+    "classGroupsHint": "Groups offered when registering a student and when setting assignments.",
+    "classGroupsPlaceholder": "e.g. Children, Teenagers, Adults…",
+    "noClassGroups": "No groups yet.",
+    "eventNames": "Event names",
+    "eventNamesHint": "Presets offered when creating an event, so a recurring one is typed once.",
+    "eventNamesPlaceholder": "Enter event name",
+    "noEventNames": "No event names yet."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -905,7 +923,8 @@
     "voiceAttached": "{{seconds}}s attached",
     "spokenQuestion": "Spoken question · {{seconds}}s",
     "spokenAnswer": "Spoken answer · {{seconds}}s",
-    "microphoneDenied": "Microphone access was not granted."
+    "microphoneDenied": "Microphone access was not granted.",
+    "withScholar": "with {{name}}"
   },
   "hadith": {
     "authenticityNote": "Sahih al-Bukhari and Sahih Muslim are the two collections whose authenticity is least disputed. Within the other books individual narrations carry different gradings, which are not shown here — each one lists its book and number so you can check it.",

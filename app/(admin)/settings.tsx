@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { DangerZone } from '@/features/settings/DangerZone';
+import { ListEditor } from '@/features/settings/ListEditor';
 import { useToast } from '@/contexts/ToastContext';
 import { DEFAULT_SETTINGS, ISLAMIC_FEATURES } from '@/constants/app';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
@@ -276,6 +277,76 @@ function SettingsScreen() {
             description={t('auth.registrationPendingApproval')}
             value={form.requireApproval}
             onValueChange={(v) => set('requireApproval', v)}
+          />
+          <Divider />
+          <ToggleRow
+            label={t('settings.requireClassId')}
+            description={t('settings.requireClassIdHelp')}
+            value={form.requireClassId === true}
+            onValueChange={(v) => set('requireClassId', v)}
+          />
+        </Card>
+
+        <Spacer />
+
+        {/* The one setting that reaches every screen in the app, so it is worth
+            its own section rather than a line in a list of switches. */}
+        <SectionHeader title={t('settings.ticker')} icon="megaphone-outline" />
+        <Card>
+          <ToggleRow
+            label={t('settings.tickerEnabled')}
+            value={form.tickerEnabled === true}
+            onValueChange={(v) => set('tickerEnabled', v)}
+          />
+          <Divider />
+          <TextField
+            label={t('settings.tickerText')}
+            value={form.tickerText ?? ''}
+            onChangeText={(v) => set('tickerText', v)}
+            multiline
+            icon="text-outline"
+            hint={t('settings.tickerHint')}
+            containerStyle={{ marginBottom: 0 }}
+          />
+        </Card>
+
+        <Spacer />
+
+        <SectionHeader title={t('settings.liveQa')} icon="chatbubbles-outline" />
+        <Card>
+          <TextField
+            label={t('settings.scholarName')}
+            value={form.qaScholarName ?? ''}
+            onChangeText={(v) => set('qaScholarName', v)}
+            icon="person-outline"
+            hint={t('settings.scholarNameHint')}
+            containerStyle={{ marginBottom: 0 }}
+          />
+        </Card>
+
+        <Spacer />
+
+        <SectionHeader title={t('settings.classGroups')} icon="people-circle-outline" />
+        <Card>
+          <Text style={styles.sectionHint}>{t('settings.classGroupsHint')}</Text>
+          <ListEditor
+            values={form.classGroups ?? []}
+            placeholder={t('settings.classGroupsPlaceholder')}
+            emptyLabel={t('settings.noClassGroups')}
+            onChange={(next) => set('classGroups', next)}
+          />
+        </Card>
+
+        <Spacer />
+
+        <SectionHeader title={t('settings.eventNames')} icon="pricetags-outline" />
+        <Card>
+          <Text style={styles.sectionHint}>{t('settings.eventNamesHint')}</Text>
+          <ListEditor
+            values={form.eventNames ?? []}
+            placeholder={t('settings.eventNamesPlaceholder')}
+            emptyLabel={t('settings.noEventNames')}
+            onChange={(next) => set('eventNames', next)}
           />
         </Card>
 

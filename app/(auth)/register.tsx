@@ -110,6 +110,7 @@ export default function RegisterScreen() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [classRequired, setClassRequired] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +122,7 @@ export default function RegisterScreen() {
       ]);
       if (cancelled) return;
       setRegistrationOpen(settings.registrationEnabled);
+      setClassRequired(settings.requireClassId === true);
       setCountries(countryRows);
       setBranches(branchRows);
     })();
@@ -190,6 +192,15 @@ export default function RegisterScreen() {
 
     if (!declarationAccepted) {
       setErrors({ declaration: 'validation.declarationRequired' });
+      return;
+    }
+
+    // Checked here rather than in the schema, because whether it is required at
+    // all is a setting the schema cannot see. No placeholder is invented when
+    // it is missing: a made-up class id points at a class that does not exist,
+    // and every report grouped by class then quietly disagrees with itself.
+    if (classRequired && role === 'student' && !form.classId) {
+      setErrors({ classId: 'validation.classRequired' });
       return;
     }
 
@@ -458,7 +469,9 @@ export default function RegisterScreen() {
                     value={form.classId}
                     options={classOptions}
                     onChange={(v) => set('classId', v)}
-                    allowClear
+                    error={errors.classId}
+                    required={classRequired}
+                    allowClear={!classRequired}
                   />
                 ) : null}
 

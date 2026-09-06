@@ -57,6 +57,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   // Off: an organiser who set up bookings did so to see who is coming, and
   // silently confirming everyone would take that decision away from them.
   autoApproveEventBookings: false,
+  tickerEnabled: false,
+  tickerText: '',
+  qaScholarName: '',
+  // Off: an id the student has not been given yet is a wall in front of the
+  // first screen they ever see.
+  requireClassId: false,
+  classGroups: ['Children', 'Teenagers', 'Adults'],
+  eventNames: [],
   // Off by default. A timeout that logs people out mid-lesson is worse than no
   // timeout at all unless somebody has actually asked for one.
   sessionTimeoutMinutes: 0,

@@ -765,6 +765,33 @@ export interface AppSettings {
    */
   autoApproveEventBookings?: boolean;
   /**
+   * A line of text scrolling above the bottom menu on every screen.
+   *
+   * Its point is that it needs no release: an announcement, a term date, a
+   * closure, typed here and live on every phone the next time the app opens.
+   */
+  tickerEnabled?: boolean;
+  tickerText?: string;
+  /**
+   * Who answers in Live Q&A, shown as "Live Q&A with …".
+   *
+   * A setting rather than a constant because the scholar changes and the app
+   * should not need a release when they do.
+   */
+  qaScholarName?: string;
+  /**
+   * Whether a student must supply a class id to register.
+   *
+   * Off where classes are assigned afterwards by an admin, which is most
+   * places — asking somebody for an id they have not been given yet is a wall
+   * in front of the first screen they ever see.
+   */
+  requireClassId?: boolean;
+  /** Named groups offered when registering and when setting assignments. */
+  classGroups?: string[];
+  /** Event name presets, so recurring events are typed once. */
+  eventNames?: string[];
+  /**
    * Minutes of inactivity before a session is ended, or 0 to never end one.
    *
    * The phones this runs on are shared — a family tablet, a classroom device —

@@ -26,6 +26,7 @@ import {
 } from '@/constants/theme';
 import { initials } from '@/utils/format';
 import { useResponsive } from '@/hooks/useResponsive';
+import { FooterTicker } from '@/components/shared/FooterTicker';
 
 /** Page container: safe area, background, and a max width on large screens. */
 export function Screen({
@@ -76,6 +77,12 @@ export function Screen({
       ) : (
         <View style={styles.flex}>{inner}</View>
       )}
+      {/* Outside the scroll view, so it sits still at the bottom of the content
+          area — which is the strip directly above the bottom menu. Rendering it
+          here rather than in each layout is what makes "every page" true, and
+          keeps it true for pages added later. It draws nothing when the admin
+          has not switched it on. */}
+      <FooterTicker />
     </SafeAreaView>
   );
 }
