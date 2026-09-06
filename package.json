@@ -61,7 +61,8 @@
     "firebase:rules": "firebase deploy --only firestore:rules",
     "firebase:indexes": "firebase deploy --only firestore:indexes",
     "firebase:deploy": "firebase deploy --only firestore:rules,firestore:indexes",
-    "emulators": "firebase emulators:start"
+    "emulators": "firebase emulators:start",
+    "deploy:web": "expo export --platform web && firebase deploy --only hosting"
   },
   "private": true
 }
