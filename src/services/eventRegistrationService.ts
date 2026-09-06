@@ -69,6 +69,38 @@ export function quote(
   return participants.reduce((sum, p) => sum + priceFor(settings, p.ageGroup), 0);
 }
 
+/**
+ * The code printed on the ticket.
+ *
+ * Derived from the booking id rather than stored, so it needs no second write
+ * and no uniqueness check: the id is already unique, and the same booking
+ * therefore always shows the same code — on the holder's phone, on the door
+ * list, and on the exported sheet.
+ *
+ * Six characters from a 32-symbol alphabet with the letters that read as digits
+ * left out, because this gets copied by hand and I/O/0/1 are where that goes
+ * wrong.
+ */
+const CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+export function ticketCode(registrationId: string): string {
+  // FNV-1a. Not for security — only to spread ids that share a long prefix,
+  // which every booking for the same event does.
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < registrationId.length; i += 1) {
+    hash ^= registrationId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+
+  let code = '';
+  for (let i = 0; i < 6; i += 1) {
+    code += CODE_ALPHABET[hash % CODE_ALPHABET.length];
+    hash = Math.floor(hash / CODE_ALPHABET.length) + Math.imul(hash, 31);
+    hash >>>= 0;
+  }
+  return code;
+}
+
 /** Seats left, or null when the event has no cap. */
 export function seatsRemaining(event: CalendarEvent): number | null {
   const capacity = event.registration?.capacity ?? null;
@@ -90,7 +122,7 @@ export function bookingBlockedReason(
   if (!registration) return 'event.notBookable';
   if (registration.status === 'openingSoon') return 'event.openingSoon';
   if (registration.status === 'closed') return 'event.registrationClosed';
-  if (existing && existing.status === 'booked') return 'event.alreadyBooked';
+  if (existing && existing.status !== 'cancelled') return 'event.alreadyBooked';
   if (isFull(event)) return 'event.full';
   return null;
 }
@@ -134,7 +166,7 @@ export async function book(
 
     const existing = await tx.get(bookingRef);
     const alreadyBooked =
-      existing.exists() && (existing.data() as EventRegistration).status === 'booked';
+      existing.exists() && (existing.data() as EventRegistration).status !== 'cancelled';
     if (alreadyBooked) throw new AppError('event.alreadyBooked', 'already-exists');
 
     if (capacity != null && taken + seats > capacity) {
@@ -166,7 +198,9 @@ export async function book(
       amount: participants.reduce((sum, p) => sum + p.price, 0),
       currency: settings.currency ?? '',
       reference: reference?.trim() || null,
-      status: 'booked',
+      // Requested, not granted. The seats are held from this moment, but there
+      // is no ticket until an admin says so.
+      status: 'pending',
       paid: false,
       deleted: false,
       createdAt: serverTimestamp(),
@@ -188,6 +222,47 @@ export async function book(
     .catch(() => undefined);
 
   return registrationId;
+}
+
+/**
+ * Confirms a booking, which is what turns it into a ticket.
+ *
+ * No transaction: the seats were taken when the booking was made, so confirming
+ * changes nothing that two people could race over. It is a decision being
+ * recorded, not a resource being allocated.
+ */
+export async function confirmBooking(
+  registration: EventRegistration,
+  actor: AppUser
+): Promise<void> {
+  if (registration.status === 'cancelled') {
+    throw new AppError('event.cannotConfirmCancelled', 'failed-precondition');
+  }
+
+  await updateDocById<EventRegistration>(COLLECTIONS.eventRegistrations, registration.id, {
+    status: 'confirmed',
+    confirmedAt: serverTimestamp(),
+    confirmedBy: actor.uid,
+  });
+
+  // The ticket is worthless if nobody knows it exists. Best effort: a
+  // notification that fails to send must not undo a confirmation that already
+  // happened, so the admin is not told it failed either — the booking is
+  // confirmed, which is what they asked for.
+  await notify(
+    registration,
+    actor,
+    'Booking confirmed',
+    `Your place at "${registration.eventTitle}" is confirmed. Ticket ${ticketCode(registration.id)}.`
+  );
+
+  await audit.log({
+    actor,
+    action: 'UPDATE',
+    collection: COLLECTIONS.eventRegistrations,
+    documentId: registration.id,
+    summary: `Confirmed ${registration.userName}'s booking for "${registration.eventTitle}"`,
+  });
 }
 
 /**
@@ -220,6 +295,17 @@ export async function cancel(
     }
   });
 
+  // Only when somebody else cancelled it. A person who cancels their own
+  // booking does not need to be told they did.
+  if (actor.uid !== registration.userId) {
+    await notify(
+      registration,
+      actor,
+      'Booking cancelled',
+      `Your booking for "${registration.eventTitle}" has been cancelled by the organisers.`
+    );
+  }
+
   await audit.log({
     actor,
     action: 'UPDATE',
@@ -227,6 +313,30 @@ export async function cancel(
     documentId: registration.id,
     summary: `Cancelled ${registration.userName}'s booking for "${registration.eventTitle}"`,
   });
+}
+
+/** Tells the booker what just happened to their booking. Never throws. */
+async function notify(
+  registration: EventRegistration,
+  actor: AppUser,
+  title: string,
+  message: string
+): Promise<void> {
+  try {
+    const notifications = await import('./notificationService');
+    await notifications.send(
+      {
+        title,
+        message,
+        category: 'event_reminder',
+        targetRole: 'user',
+        userId: registration.userId,
+      },
+      actor
+    );
+  } catch {
+    // Swallowed on purpose — see the call sites.
+  }
 }
 
 /** Marks a booking as paid. Admin bookkeeping, not a payment gateway. */
@@ -261,6 +371,11 @@ export function toCsv(rows: EventRegistration[]): string {
   // door needs every name; a row saying "Rifan, 4 seats" makes them ask who the
   // other three are.
   const header = [
+    // Ticket and event lead, because this sheet is now also produced across
+    // every event at once, where "which event is this row" is the first
+    // question a reader has.
+    'Ticket',
+    'Event',
     'Booked by',
     'Mobile',
     'Email',
@@ -296,6 +411,8 @@ export function toCsv(rows: EventRegistration[]): string {
 
     return people.map((person, index) =>
       [
+        ticketCode(row.id),
+        row.eventTitle,
         row.userName,
         // Contact details on the first line only, so a family reads as a block
         // rather than repeating the same number four times.

@@ -51,6 +51,9 @@ export const ADMIN_NAV: NavItem[] = [
   { labelKey: 'nav.articles', route: '/(admin)/articles', icon: 'newspaper-outline', permission: 'MANAGE_ARTICLES', group: 'content' },
   { labelKey: 'nav.materials', route: '/(admin)/materials', icon: 'folder-open-outline', permission: 'UPLOAD_MATERIAL', group: 'content' },
   { labelKey: 'nav.calendar', route: '/(admin)/calendar', icon: 'calendar-outline', permission: 'MANAGE_CALENDAR', group: 'content' },
+  // Separate from Calendar: the calendar is where an event is scheduled, this
+  // is where its bookings are confirmed and its attendee sheet comes from.
+  { labelKey: 'nav.events', route: '/(admin)/events', icon: 'ticket-outline', permission: 'MANAGE_CALENDAR', group: 'content' },
 
   { labelKey: 'nav.attendance', route: '/(admin)/attendance', icon: 'checkbox-outline', permission: 'VIEW_ATTENDANCE', group: 'academic' },
   { labelKey: 'nav.quizzes', route: '/(admin)/quizzes', icon: 'help-circle-outline', permission: 'CREATE_QUIZ', group: 'academic' },

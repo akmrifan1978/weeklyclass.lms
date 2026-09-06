@@ -351,11 +351,23 @@ export interface EventRegistration extends BaseDoc {
   /** Whatever `referenceLabel` asked for, if anything. */
   reference?: string | null;
   currency: string;
-  status: 'booked' | 'cancelled';
+  /**
+   * A booking is requested, not granted.
+   *
+   * `pending` still holds the seats — an organiser deciding overnight must not
+   * find the event oversold by morning — but it is not yet a ticket. Only once
+   * an admin confirms does the booker get something to show at the door.
+   */
+  status: BookingStatus;
+  /** When an admin confirmed it, and who. Absent while pending. */
+  confirmedAt?: unknown;
+  confirmedBy?: string | null;
   /** Set by an admin once payment is in hand. */
   paid?: boolean;
   notes?: string | null;
 }
+
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
 export interface CalendarEvent extends BaseDoc {
   title: string;

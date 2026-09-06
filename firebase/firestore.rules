@@ -431,21 +431,28 @@ service cloud.firestore {
       allow list: if isStaff()
                   || (isSignedIn() && resource.data.userId == request.auth.uid);
 
+      // A booking is a request. It may only ever be created pending — nobody
+      // issues themselves a confirmed ticket — and nobody marks their own
+      // booking paid.
       allow create: if isSignedIn()
                     && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.status == 'booked'
+                    && request.resource.data.status == 'pending'
                     && request.resource.data.seats is int
                     && request.resource.data.seats > 0
-                    // Nobody marks their own booking paid.
                     && request.resource.data.paid == false;
 
-      // The holder may cancel their own; staff may cancel any and record
-      // payment. Neither can rewrite the amount that was agreed at booking.
+      // The holder may cancel their own booking and nothing else; only staff
+      // may confirm one, which is what turns it into a ticket. Neither can
+      // rewrite the amount or the party agreed at booking.
       allow update: if (isSignedIn()
                         && resource.data.userId == request.auth.uid
                         && onlyChanged(['status', 'updatedAt'])
                         && request.resource.data.status == 'cancelled')
-                    || (isStaff() && !changedKeys().hasAny(['amount', 'userId', 'seats', 'participants']));
+                    || (isStaff()
+                        && !changedKeys().hasAny(['amount', 'userId', 'seats', 'participants'])
+                        // A cancelled booking stays cancelled: reinstating it
+                        // would hand back a seat the count has already released.
+                        && resource.data.status != 'cancelled');
 
       allow delete: if isAdmin();
     }

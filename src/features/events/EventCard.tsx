@@ -33,14 +33,17 @@ export function EventCard({
   const remaining = registrations.seatsRemaining(event);
   const full = registrations.isFull(event);
 
-  const statusTone =
+  // One colour, two jobs: it fills the dot and tints the text. Handing the same
+  // style to both painted the label green on green and swallowed it, so the
+  // colour is carried as a value and applied to the right property each time.
+  const statusColor =
     registration?.status === 'open'
       ? full
-        ? styles.statusFull
-        : styles.statusOpen
+        ? colors.danger
+        : colors.success
       : registration?.status === 'closed'
-        ? styles.statusClosed
-        : styles.statusSoon;
+        ? colors.textMuted
+        : colors.warning;
 
   return (
     <View style={styles.card}>
@@ -69,8 +72,8 @@ export function EventCard({
 
         {registration ? (
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, statusTone]} />
-            <Text style={[styles.statusLabel, statusTone]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusLabel, { color: statusColor }]}>
               {t(
                 full && registration.status === 'open'
                   ? 'event.statusFull'
@@ -203,10 +206,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
-  statusSoon: { backgroundColor: colors.text, color: colors.text },
-  statusOpen: { backgroundColor: colors.success, color: colors.success },
-  statusClosed: { backgroundColor: colors.textMuted, color: colors.textMuted },
-  statusFull: { backgroundColor: colors.danger, color: colors.danger },
   statusNote: { fontSize: fontSize.xs, color: colors.textMuted, marginLeft: spacing.sm },
   description: {
     fontSize: fontSize.sm,
