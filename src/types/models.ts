@@ -279,15 +279,53 @@ export type MeetingProvider = 'zoom' | 'meet' | 'other';
  */
 export type RegistrationStatus = 'openingSoon' | 'open' | 'closed';
 
+/**
+ * Age bands, because a family books together and a coach seat for a babe in
+ * arms is not the same product as one for an adult.
+ */
+export type AgeGroup = 'infant' | 'child' | 'teenage' | 'adult';
+
+export type Gender = 'male' | 'female';
+
+export const AGE_GROUPS: AgeGroup[] = ['infant', 'child', 'teenage', 'adult'];
+
 export interface EventRegistrationSettings {
   status: RegistrationStatus;
   /** Null means unlimited; a number is a hard cap the booking honours. */
   capacity: number | null;
-  /** Zero, or a price per person. `currency` is free text — SAR, LKR, INR. */
+  /**
+   * The default price per person. Used for any age group with no price of its
+   * own, and as the only price when the organiser has not set bands.
+   */
   price: number;
+  /**
+   * Price per age band. Absent groups fall back to `price`, so an organiser who
+   * only wants to make infants free sets that one number and nothing else.
+   */
+  pricesByAgeGroup?: Partial<Record<AgeGroup, number>>;
   currency: string;
+  /**
+   * Label for an extra reference the organiser needs from each booking — a
+   * Nusuk number for an Umrah trip, a passport number for a coach crossing a
+   * border. Absent means the field is not shown at all.
+   */
+  referenceLabel?: string | null;
   /** Shown in place of the usual "registration closed" wording. */
   note?: string | null;
+}
+
+/**
+ * One named person on a booking.
+ *
+ * Stored rather than counted, because an organiser chartering a bus needs the
+ * names, and a headcount cannot be turned back into one.
+ */
+export interface EventParticipant {
+  name: string;
+  gender: Gender;
+  ageGroup: AgeGroup;
+  /** What this person was charged, frozen at booking time. */
+  price: number;
 }
 
 /** One person's booking. Lives in its own collection; see supportService. */
@@ -298,11 +336,20 @@ export interface EventRegistration extends BaseDoc {
   userName: string;
   userMobile?: string | null;
   userEmail?: string | null;
-  /** Seats taken by this booking — a family books several at once. */
+  /**
+   * Everyone on this booking, the person who made it included.
+   *
+   * The first entry is always the booker, so a list of attendees reads in the
+   * order a family would present itself at the door.
+   */
+  participants: EventParticipant[];
+  /** Seats taken — the number of participants, kept for querying and sorting. */
   seats: number;
-  /** `seats × price`, frozen at booking time so a later price change is not
-   *  applied retrospectively to someone who already paid. */
+  /** The sum of the participants' prices, frozen at booking time so a later
+   *  price change is not applied retrospectively to someone who already paid. */
   amount: number;
+  /** Whatever `referenceLabel` asked for, if anything. */
+  reference?: string | null;
   currency: string;
   status: 'booked' | 'cancelled';
   /** Set by an admin once payment is in hand. */

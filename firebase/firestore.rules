@@ -426,7 +426,10 @@ service cloud.firestore {
     match /eventRegistrations/{registrationId} {
       allow get: if isSignedIn()
                  && (resource.data.userId == request.auth.uid || isStaff());
-      allow list: if isStaff();
+      // Evaluated per document, so a student's query filtered to their own uid
+      // passes while an unfiltered one is refused.
+      allow list: if isStaff()
+                  || (isSignedIn() && resource.data.userId == request.auth.uid);
 
       allow create: if isSignedIn()
                     && request.resource.data.userId == request.auth.uid
@@ -442,7 +445,7 @@ service cloud.firestore {
                         && resource.data.userId == request.auth.uid
                         && onlyChanged(['status', 'updatedAt'])
                         && request.resource.data.status == 'cancelled')
-                    || (isStaff() && !changedKeys().hasAny(['amount', 'userId', 'seats']));
+                    || (isStaff() && !changedKeys().hasAny(['amount', 'userId', 'seats', 'participants']));
 
       allow delete: if isAdmin();
     }

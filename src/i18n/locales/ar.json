@@ -1004,6 +1004,21 @@
     "price": "السعر للفرد",
     "priceHint": "اتركه 0 لفعالية مجانية",
     "currency": "العملة",
-    "statusLabel": "حالة التسجيل"
+    "statusLabel": "حالة التسجيل",
+    "age_infant": "رضيع",
+    "age_child": "طفل",
+    "age_teenage": "مراهق",
+    "age_adult": "بالغ",
+    "mainParticipant": "المشارك الرئيسي (أنت)",
+    "familyMembers": "أفراد الأسرة",
+    "familyHint": "أضف من يأتي معك. لكل شخص اسم وجنس وفئة عمرية.",
+    "totalSeats": "إجمالي الأماكن",
+    "totalFee": "إجمالي الرسوم",
+    "confirmBooking": "تأكيد الحجز",
+    "referenceOptional": "اختياري",
+    "bandedPricing": "سعر مختلف حسب الفئة العمرية",
+    "bandedPricingHint": "حدد سعرًا لكل فئة عمرية. اترك الحقل فارغًا ليُطبَّق السعر أعلاه.",
+    "referenceLabelField": "حقل المرجع",
+    "referenceLabelHint": "مثل \"مرجع نسك\". اتركه فارغًا لعدم طلب شيء."
   }
 }

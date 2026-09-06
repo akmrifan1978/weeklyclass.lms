@@ -11,15 +11,14 @@ import * as calendar from '@/services/calendarService';
 import * as bookings from '@/services/eventRegistrationService';
 import type { CalendarEvent, EventRegistration } from '@/types';
 import { EventCard } from './EventCard';
+import { BookingSheet, type PartyMember } from './BookingSheet';
 import {
   AppHeader,
   Button,
   ConfirmDialog,
   EmptyState,
-  FormSheet,
   Screen,
   SkeletonList,
-  TextField,
 } from '@/components/ui';
 
 /**
@@ -38,7 +37,6 @@ export function EventsScreen({ basePath }: { basePath: string }) {
   const isOrganiser = can('MANAGE_CALENDAR');
 
   const [booking, setBooking] = useState<CalendarEvent | null>(null);
-  const [seats, setSeats] = useState('1');
   const [confirmDelete, setConfirmDelete] = useState<CalendarEvent | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -63,14 +61,13 @@ export function EventsScreen({ basePath }: { basePath: string }) {
   const myBookingFor = (event: CalendarEvent) =>
     data?.mine.find((m) => m.eventId === event.id && m.status === 'booked') ?? null;
 
-  const submitBooking = async () => {
+  const submitBooking = async (party: PartyMember[], reference: string) => {
     if (!booking || !user) return;
     setBusy(true);
     try {
-      await bookings.book(booking, Number(seats) || 1, user);
+      await bookings.book(booking, party, user, reference);
       toast.success(t('event.booked'));
       setBooking(null);
-      setSeats('1');
       void reload();
     } catch (err) {
       toast.error(friendlyMessage(err, t));
@@ -200,10 +197,7 @@ export function EventsScreen({ basePath }: { basePath: string }) {
                         label={t('event.book')}
                         icon="ticket-outline"
                         size="sm"
-                        onPress={() => {
-                          setBooking(event);
-                          setSeats('1');
-                        }}
+                        onPress={() => setBooking(event)}
                       />
                     )}
                   </>
@@ -214,32 +208,16 @@ export function EventsScreen({ basePath }: { basePath: string }) {
         )}
       </Screen>
 
-      <FormSheet
+      {/* Keyed on the event so the party list starts empty each time rather
+          than carrying the previous event's family into the next one. */}
+      <BookingSheet
+        key={booking?.id ?? 'none'}
+        event={booking}
         visible={Boolean(booking)}
-        title={booking?.title ?? t('event.book')}
-        onClose={() => setBooking(null)}
-        onSubmit={submitBooking}
         submitting={busy}
-      >
-        <TextField
-          label={t('event.seats')}
-          value={seats}
-          onChangeText={(v) => setSeats(v.replace(/[^0-9]/g, ''))}
-          keyboardType="number-pad"
-          icon="people-outline"
-          hint={t('event.seatsHint')}
-          required
-        />
-        {booking?.registration && booking.registration.price > 0 ? (
-          <Text style={styles.total}>
-            {t('event.totalDue', {
-              amount: (Number(seats) || 0) * booking.registration.price,
-              currency: booking.registration.currency,
-            })}
-          </Text>
-        ) : null}
-        <Text style={styles.payNote}>{t('event.payNote')}</Text>
-      </FormSheet>
+        onClose={() => setBooking(null)}
+        onConfirm={submitBooking}
+      />
 
       <ConfirmDialog
         visible={Boolean(confirmDelete)}

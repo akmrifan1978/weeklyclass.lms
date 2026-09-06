@@ -3,7 +3,14 @@ import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { COLLECTIONS } from '@/constants/app';
 import { AppError } from '@/utils/errors';
-import type { AppUser, CalendarEvent, EventRegistration } from '@/types';
+import type {
+  AgeGroup,
+  AppUser,
+  CalendarEvent,
+  EventParticipant,
+  EventRegistration,
+  EventRegistrationSettings,
+} from '@/types';
 
 import { listPage, updateDocById, type Page } from './firestore';
 import * as audit from './auditService';
@@ -36,6 +43,30 @@ export function listRegistrations(
     direction: 'desc',
     pageSize: options.pageSize ?? 200,
   });
+}
+
+/**
+ * What one person of this age is charged.
+ *
+ * A band with no price of its own falls back to the event's base price, so an
+ * organiser who only wants infants free sets that single number rather than
+ * four. Returning the base price for an unknown band is the safe direction: it
+ * charges rather than silently admitting someone free.
+ */
+export function priceFor(
+  settings: EventRegistrationSettings,
+  ageGroup: AgeGroup
+): number {
+  const banded = settings.pricesByAgeGroup?.[ageGroup];
+  return typeof banded === 'number' ? banded : (settings.price ?? 0);
+}
+
+/** The total for a party, at the prices in force now. */
+export function quote(
+  settings: EventRegistrationSettings,
+  participants: { ageGroup: AgeGroup }[]
+): number {
+  return participants.reduce((sum, p) => sum + priceFor(settings, p.ageGroup), 0);
 }
 
 /** Seats left, or null when the event has no cap. */
@@ -73,10 +104,13 @@ export function bookingBlockedReason(
  */
 export async function book(
   event: CalendarEvent,
-  seats: number,
-  user: AppUser
+  party: { name: string; gender: EventParticipant['gender']; ageGroup: AgeGroup }[],
+  user: AppUser,
+  reference?: string | null
 ): Promise<string> {
-  if (seats < 1) throw new AppError('event.seatsRequired', 'invalid-argument');
+  const named = party.filter((p) => p.name.trim().length > 0);
+  if (named.length < 1) throw new AppError('event.seatsRequired', 'invalid-argument');
+  const seats = named.length;
 
   const registration = event.registration;
   if (!registration || registration.status !== 'open') {
@@ -107,6 +141,17 @@ export async function book(
       throw new AppError('event.notEnoughSeats', 'failed-precondition');
     }
 
+    // Priced against the event as it is NOW, not as the screen last saw it.
+    // Someone sitting on the booking sheet while the organiser changes the
+    // price should be charged what is actually being asked.
+    const settings = current.registration!;
+    const participants: EventParticipant[] = named.map((p) => ({
+      name: p.name.trim(),
+      gender: p.gender,
+      ageGroup: p.ageGroup,
+      price: priceFor(settings, p.ageGroup),
+    }));
+
     tx.set(bookingRef, {
       eventId: event.id,
       eventTitle: event.title,
@@ -114,11 +159,13 @@ export async function book(
       userName: user.fullName,
       userMobile: user.mobile ?? null,
       userEmail: user.email ?? null,
+      participants,
       seats,
       // Frozen at booking time. A price raised next week must not silently
       // change what someone already agreed to pay.
-      amount: seats * (current.registration?.price ?? 0),
-      currency: current.registration?.currency ?? '',
+      amount: participants.reduce((sum, p) => sum + p.price, 0),
+      currency: settings.currency ?? '',
+      reference: reference?.trim() || null,
       status: 'booked',
       paid: false,
       deleted: false,
@@ -136,7 +183,7 @@ export async function book(
       action: 'CREATE',
       collection: COLLECTIONS.eventRegistrations,
       documentId: registrationId,
-      summary: `${user.fullName} booked ${seats} seat(s) for "${event.title}"`,
+      summary: `${user.fullName} booked ${named.length} place(s) for "${event.title}"`,
     })
     .catch(() => undefined);
 
@@ -210,12 +257,18 @@ export async function setPaid(
  * a file that opens the same way.
  */
 export function toCsv(rows: EventRegistration[]): string {
+  // One row per PERSON, not per booking. An organiser printing a list at the
+  // door needs every name; a row saying "Rifan, 4 seats" makes them ask who the
+  // other three are.
   const header = [
-    'Name',
+    'Booked by',
     'Mobile',
     'Email',
-    'Seats',
-    'Amount',
+    'Reference',
+    'Participant',
+    'Gender',
+    'Age group',
+    'Price',
     'Currency',
     'Paid',
     'Status',
@@ -227,21 +280,41 @@ export function toCsv(rows: EventRegistration[]): string {
   const escape = (value: unknown): string =>
     `"${String(value ?? '').replace(/"/g, '""')}"`;
 
-  const lines = rows.map((row) =>
-    [
-      row.userName,
-      row.userMobile ?? '',
-      row.userEmail ?? '',
-      row.seats,
-      row.amount,
-      row.currency,
-      row.paid ? 'Yes' : 'No',
-      row.status,
-      toDateString(row.createdAt),
-    ]
-      .map(escape)
-      .join(',')
-  );
+  const lines = rows.flatMap((row) => {
+    // A booking made before participants were recorded has none; it still needs
+    // a row, so it contributes one line naming the booker alone.
+    const people: EventParticipant[] = row.participants?.length
+      ? row.participants
+      : [
+          {
+            name: row.userName,
+            gender: 'male',
+            ageGroup: 'adult',
+            price: row.amount,
+          },
+        ];
+
+    return people.map((person, index) =>
+      [
+        row.userName,
+        // Contact details on the first line only, so a family reads as a block
+        // rather than repeating the same number four times.
+        index === 0 ? (row.userMobile ?? '') : '',
+        index === 0 ? (row.userEmail ?? '') : '',
+        index === 0 ? (row.reference ?? '') : '',
+        person.name,
+        person.gender,
+        person.ageGroup,
+        person.price,
+        row.currency,
+        index === 0 ? (row.paid ? 'Yes' : 'No') : '',
+        index === 0 ? row.status : '',
+        index === 0 ? toDateString(row.createdAt) : '',
+      ]
+        .map(escape)
+        .join(',')
+    );
+  });
 
   // A BOM, so Excel reads the file as UTF-8 and Arabic and Tamil names survive
   // instead of arriving as mojibake.

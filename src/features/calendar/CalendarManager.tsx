@@ -19,8 +19,10 @@ import type {
   AudienceRole,
   CalendarEvent,
   MeetingProvider,
+  AgeGroup,
   RegistrationStatus,
 } from '@/types';
+import { AGE_GROUPS } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
 import { AdminRow } from '@/features/AdminRow';
@@ -62,6 +64,13 @@ interface EventForm {
   capacity: string;
   price: string;
   currency: string;
+
+  // Per-age-group pricing. Off by default: one price for everybody is the
+  // common case, and four boxes on every event would be four chances to leave
+  // one blank.
+  bandedPricing: boolean;
+  prices: Record<AgeGroup, string>;
+  referenceLabel: string;
 }
 
 const EMPTY: EventForm = {
@@ -87,6 +96,9 @@ const EMPTY: EventForm = {
   capacity: '',
   price: '',
   currency: 'SAR',
+  bandedPricing: false,
+  prices: { infant: '', child: '', teenage: '', adult: '' },
+  referenceLabel: '',
 };
 
 export function CalendarManager({ classScope }: { classScope?: string[] }) {
@@ -203,6 +215,9 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
         price: event.registration?.price ? String(event.registration.price) : '',
 
         currency: event.registration?.currency ?? 'SAR',
+        bandedPricing: Boolean(event.registration?.pricesByAgeGroup),
+        prices: bandsToForm(event.registration?.pricesByAgeGroup),
+        referenceLabel: event.registration?.referenceLabel ?? '',
         status: event.status,
       })}
       validate={(form) => {
@@ -247,6 +262,13 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
                   capacity: form.capacity.trim() ? Number(form.capacity) : null,
                   price: Number(form.price) || 0,
                   currency: form.currency.trim() || 'SAR',
+                  // Undefined rather than an empty map when banded pricing is
+                  // off, so `priceFor` falls straight through to the base price
+                  // instead of reading four zeroes as "free for everyone".
+                  pricesByAgeGroup: form.bandedPricing
+                    ? bandsFromForm(form.prices)
+                    : undefined,
+                  referenceLabel: form.referenceLabel.trim() || null,
                 }
               : undefined,
             teacherId: user.role === 'teacher' ? user.uid : (existing?.teacherId ?? null),
@@ -447,6 +469,50 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
                   containerStyle={{ flex: 1 }}
                 />
               </View>
+
+              {/*
+                A different price per age band. Children and infants usually pay
+                less or nothing, and an organiser who cannot say so here ends up
+                collecting the difference by hand at the door.
+              */}
+              <ToggleRow
+                label={t('event.bandedPricing')}
+                description={t('event.bandedPricingHint')}
+                value={form.bandedPricing}
+                onValueChange={(v) => set('bandedPricing', v)}
+              />
+
+              {form.bandedPricing ? (
+                <View style={{ gap: 0 }}>
+                  {AGE_GROUPS.map((group) => (
+                    <TextField
+                      key={group}
+                      label={t(`event.age_${group}`)}
+                      value={form.prices[group]}
+                      onChangeText={(v) =>
+                        set('prices', {
+                          ...form.prices,
+                          [group]: v.replace(/[^0-9.]/g, ''),
+                        })
+                      }
+                      keyboardType="decimal-pad"
+                      icon="pricetag-outline"
+                      // Blank means "same as the base price", which is how an
+                      // organiser sets only the infant price without having to
+                      // retype the other three.
+                      placeholder={form.price || '0'}
+                    />
+                  ))}
+                </View>
+              ) : null}
+
+              <TextField
+                label={t('event.referenceLabelField')}
+                value={form.referenceLabel}
+                onChangeText={(v) => set('referenceLabel', v)}
+                icon="card-outline"
+                hint={t('event.referenceLabelHint')}
+              />
             </>
           ) : null}
 
@@ -474,4 +540,32 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
       )}
     />
   );
+}
+
+/** The saved per-band prices as form strings; blank where no band price is set. */
+function bandsToForm(
+  bands: Partial<Record<AgeGroup, number>> | undefined
+): Record<AgeGroup, string> {
+  const out = {} as Record<AgeGroup, string>;
+  for (const group of AGE_GROUPS) {
+    const value = bands?.[group];
+    out[group] = typeof value === 'number' ? String(value) : '';
+  }
+  return out;
+}
+
+/**
+ * The form strings back as prices, dropping the blanks.
+ *
+ * A blank band is left out of the map entirely rather than stored as 0, because
+ * `priceFor` treats a missing band as "charge the base price" — storing a zero
+ * would let everyone in that band in free.
+ */
+function bandsFromForm(prices: Record<AgeGroup, string>): Partial<Record<AgeGroup, number>> {
+  const out: Partial<Record<AgeGroup, number>> = {};
+  for (const group of AGE_GROUPS) {
+    const raw = prices[group]?.trim();
+    if (raw) out[group] = Number(raw) || 0;
+  }
+  return out;
 }

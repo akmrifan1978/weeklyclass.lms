@@ -1004,6 +1004,21 @@
     "price": "Price per person",
     "priceHint": "Leave at 0 for a free event",
     "currency": "Currency",
-    "statusLabel": "Registration status"
+    "statusLabel": "Registration status",
+    "age_infant": "Infant",
+    "age_child": "Child",
+    "age_teenage": "Teenager",
+    "age_adult": "Adult",
+    "mainParticipant": "Main participant (you)",
+    "familyMembers": "Family members",
+    "familyHint": "Add anyone coming with you. Each person needs a name, gender and age group.",
+    "totalSeats": "Total seats",
+    "totalFee": "Total fee",
+    "confirmBooking": "Confirm booking",
+    "referenceOptional": "Optional",
+    "bandedPricing": "Different price by age group",
+    "bandedPricingHint": "Set a price for each age group. Leave one empty to charge the price above.",
+    "referenceLabelField": "Reference field",
+    "referenceLabelHint": "For example \"Nusuk Reference\". Leave empty to ask for nothing."
   }
 }
