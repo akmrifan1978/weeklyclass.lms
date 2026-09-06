@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { DangerZone } from '@/features/settings/DangerZone';
 import { useToast } from '@/contexts/ToastContext';
 import { DEFAULT_SETTINGS, ISLAMIC_FEATURES } from '@/constants/app';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
@@ -351,6 +352,12 @@ function SettingsScreen() {
           disabled={!dirty}
           onPress={handleSave}
         />
+
+        <Spacer size={spacing.xxxl} />
+
+        {/* Last, and after the save button: nothing here is a setting, and it
+            should not sit anywhere a thumb travels on the way to Save. */}
+        <DangerZone />
 
         <Spacer size={spacing.xxxl} />
       </AsyncBoundary>
