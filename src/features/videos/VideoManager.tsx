@@ -102,6 +102,18 @@ export function VideoManager({
     [classes]
   );
 
+  /**
+   * The branch a class belongs to.
+   *
+   * A recording assigned to a class is, by definition, for that class's branch,
+   * so the branch is read from the class rather than asked for a second time.
+   * Two fields that must agree are two fields that will eventually disagree.
+   */
+  const branchForClass = useMemo(
+    () => new Map((classes ?? []).map((c) => [c.id, c.branchId ?? null])),
+    [classes]
+  );
+
   const fetchPage = useCallback(
     async (cursor: Cursor, search: string) => {
       const page = await listVideos({ kind, cursor, pageSize: 20 });
@@ -186,6 +198,11 @@ export function VideoManager({
             duration: form.duration ? Number(form.duration) : undefined,
             date: form.date ? new Date(form.date) : new Date(),
             classId: form.classId || null,
+            // Denormalised from the class so `listVideos({ branchId })` — which
+            // has always accepted the filter — finally has something to filter
+            // on. A recording with no class stays branch-less, which is what
+            // makes it visible to everyone.
+            branchId: form.classId ? (branchForClass.get(form.classId) ?? null) : null,
             language: form.language,
             status: form.status,
             isFeatured: form.isFeatured,

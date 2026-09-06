@@ -60,6 +60,16 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
     () => (classes ?? []).map((c) => ({ value: c.id, label: c.name })),
     [classes]
   );
+
+  /**
+   * The branch a class belongs to, so the record can carry it without anyone
+   * being asked for it twice. Two fields that must agree are two fields that
+   * will eventually disagree.
+   */
+  const branchForClass = useMemo(
+    () => new Map((classes ?? []).map((c) => [c.id, c.branchId ?? null])),
+    [classes]
+  );
   const classNameFor = useCallback(
     (id: string) => (classes ?? []).find((c) => c.id === id)?.name ?? id,
     [classes]
@@ -131,6 +141,9 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
             title: form.title.trim(),
             description: form.description.trim(),
             classId: form.classId,
+            branchId: form.classId
+              ? (branchForClass.get(form.classId) ?? null)
+              : null,
             timeLimit: Number(form.timeLimit) || 0,
             passMark: Number(form.passMark) || 50,
             maxAttempts: Number(form.maxAttempts) || 0,

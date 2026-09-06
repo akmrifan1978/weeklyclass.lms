@@ -69,6 +69,16 @@ export function MaterialManager({ classScope }: { classScope?: string[] }) {
     [classes]
   );
 
+  /**
+   * The branch a class belongs to, so the record can carry it without anyone
+   * being asked for it twice. Two fields that must agree are two fields that
+   * will eventually disagree.
+   */
+  const branchForClass = useMemo(
+    () => new Map((classes ?? []).map((c) => [c.id, c.branchId ?? null])),
+    [classes]
+  );
+
   const fetchPage = useCallback(
     async (cursor: Cursor, search: string) => {
       const page = await listMaterials({ cursor, pageSize: 20 });
@@ -157,6 +167,9 @@ export function MaterialManager({ classScope }: { classScope?: string[] }) {
             storagePath: form.storagePath || null,
             size: form.size ? Number(form.size) : undefined,
             classId: form.classId || null,
+            branchId: form.classId
+              ? (branchForClass.get(form.classId) ?? null)
+              : null,
             language: form.language,
             status: form.status,
           },
