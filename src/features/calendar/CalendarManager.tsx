@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,11 +15,24 @@ import {
 } from '@/services/calendarService';
 import { listBranches, listClasses } from '@/services/orgService';
 import { getSettings } from '@/services/settingsService';
-import type { AudienceRole, CalendarEvent, MeetingProvider } from '@/types';
+import type {
+  AudienceRole,
+  CalendarEvent,
+  MeetingProvider,
+  RegistrationStatus,
+} from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
 import { AdminRow } from '@/features/AdminRow';
-import { ChipGroup, DateField, Select, TextField, TimeField, type Option } from '@/components/ui';
+import {
+  ChipGroup,
+  DateField,
+  Select,
+  TextField,
+  TimeField,
+  ToggleRow,
+  type Option,
+} from '@/components/ui';
 import { ImageField } from '@/components/shared/ImageField';
 
 interface EventForm {
@@ -39,6 +53,15 @@ interface EventForm {
   classId: string;
   targetAudience: AudienceRole;
   status: CalendarEvent['status'];
+
+  // Registration. Off by default: most calendar entries are a class reminder,
+  // not a ticketed event, and defaulting to "takes bookings" would put a Book
+  // button on every lesson.
+  takesBookings: boolean;
+  registrationStatus: RegistrationStatus;
+  capacity: string;
+  price: string;
+  currency: string;
 }
 
 const EMPTY: EventForm = {
@@ -59,6 +82,11 @@ const EMPTY: EventForm = {
   classId: '',
   targetAudience: 'all',
   status: 'scheduled',
+  takesBookings: false,
+  registrationStatus: 'openingSoon',
+  capacity: '',
+  price: '',
+  currency: 'SAR',
 };
 
 export function CalendarManager({ classScope }: { classScope?: string[] }) {
@@ -159,6 +187,22 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
         branchId: event.branchId ?? '',
         classId: event.classId ?? '',
         targetAudience: event.targetAudience,
+
+        takesBookings: Boolean(event.registration),
+
+        registrationStatus: event.registration?.status ?? 'openingSoon',
+
+        capacity:
+
+          event.registration?.capacity != null
+
+            ? String(event.registration.capacity)
+
+            : '',
+
+        price: event.registration?.price ? String(event.registration.price) : '',
+
+        currency: event.registration?.currency ?? 'SAR',
         status: event.status,
       })}
       validate={(form) => {
@@ -192,6 +236,19 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
             classId: form.classId || null,
             targetAudience: form.targetAudience,
             status: form.status,
+            // `null` rather than an empty object when bookings are off, so the
+            // Events screen can tell a ticketed event from a class reminder by
+            // the presence of the field alone.
+            registration: form.takesBookings
+              ? {
+                  status: form.registrationStatus,
+                  // Empty means no limit, which is different from a limit of
+                  // zero — one accepts everybody, the other nobody.
+                  capacity: form.capacity.trim() ? Number(form.capacity) : null,
+                  price: Number(form.price) || 0,
+                  currency: form.currency.trim() || 'SAR',
+                }
+              : undefined,
             teacherId: user.role === 'teacher' ? user.uid : (existing?.teacherId ?? null),
           },
           user,
@@ -340,6 +397,59 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
             placeholder={t('common.all')}
             allowClear
           />
+          {/*
+            Registration turns a calendar entry into a bookable event. Kept in
+            one block rather than scattered among the scheduling fields, because
+            an organiser either is taking bookings or is not.
+          */}
+          <ToggleRow
+            label={t('event.enableRegistration')}
+            value={form.takesBookings}
+            onValueChange={(v) => set('takesBookings', v)}
+          />
+
+          {form.takesBookings ? (
+            <>
+              <Select<RegistrationStatus>
+                label={t('event.statusLabel')}
+                value={form.registrationStatus}
+                options={[
+                  { value: 'openingSoon', label: t('event.status_openingSoon') },
+                  { value: 'open', label: t('event.status_open') },
+                  { value: 'closed', label: t('event.status_closed') },
+                ]}
+                onChange={(v) => set('registrationStatus', v)}
+                required
+              />
+              <TextField
+                label={t('event.capacity')}
+                value={form.capacity}
+                onChangeText={(v) => set('capacity', v.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+                icon="people-outline"
+                hint={t('event.capacityHint')}
+              />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TextField
+                  label={t('event.price')}
+                  value={form.price}
+                  onChangeText={(v) => set('price', v.replace(/[^0-9.]/g, ''))}
+                  keyboardType="decimal-pad"
+                  icon="pricetag-outline"
+                  hint={t('event.priceHint')}
+                  containerStyle={{ flex: 2 }}
+                />
+                <TextField
+                  label={t('event.currency')}
+                  value={form.currency}
+                  onChangeText={(v) => set('currency', v.toUpperCase().slice(0, 5))}
+                  autoCapitalize="characters"
+                  containerStyle={{ flex: 1 }}
+                />
+              </View>
+            </>
+          ) : null}
+
           <Select<AudienceRole>
             label={t('calendar.targetAudience')}
             value={form.targetAudience}
