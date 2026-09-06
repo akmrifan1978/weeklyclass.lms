@@ -13,6 +13,7 @@ import { formatDate } from '@/utils/date';
 import * as videoService from '@/services/videoService';
 import { listVideosForStudent } from '@/services/videoService';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
+import { AyahAudio } from './AyahAudio';
 import { TranslationManager } from './TranslationManager';
 import type { LanguageCode, VideoItem } from '@/types';
 import {
@@ -212,25 +213,41 @@ function EpisodeCard({
             {episode.title}
           </Text>
 
-          {translated && approved?.summary ? (
+          {/*
+            Either field counts. These fatwas have no written answer — the
+            answer IS the recording — so a translated question with an empty
+            summary is the normal shape, and requiring both would have hidden
+            every translation of this archive.
+          */}
+          {translated ? (
             <View style={styles.translationBlock}>
               <Text style={styles.translationLabel}>
                 {t('scripture.approvedTranslation', { language })}
               </Text>
-              <Text style={styles.summary}>{approved.summary}</Text>
+              {approved?.title ? (
+                <Text style={styles.summary}>{approved.title}</Text>
+              ) : null}
+              {approved?.summary ? (
+                <Text style={[styles.summary, { marginTop: spacing.sm }]}>
+                  {approved.summary}
+                </Text>
+              ) : null}
             </View>
           ) : (
             <Text style={styles.noSummary}>{t('scripture.noApprovedTranslation')}</Text>
           )}
 
+          {/*
+            Played in place, not opened. `Linking.openURL` sent the listener out
+            to a bare MP3 page in a new browser tab with no way back to the app —
+            which is a poor thing to do to someone who only wanted to hear an
+            answer, and worse on a phone where the app may be unloaded behind it.
+          */}
           {episode.videoUrl ? (
-            <Button
-              label={t('noor.listen')}
-              icon="play-circle-outline"
-              size="sm"
-              onPress={() => void Linking.openURL(episode.videoUrl)}
-              style={{ marginTop: spacing.md }}
-            />
+            <View style={styles.playRow}>
+              <AyahAudio url={episode.videoUrl} size={38} />
+              <Text style={styles.playLabel}>{t('noor.listen')}</Text>
+            </View>
           ) : null}
 
           {/*
@@ -311,6 +328,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.divider,
   },
+  playRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  playLabel: { fontSize: fontSize.sm, color: colors.text, fontWeight: fontWeight.medium },
   translationLabel: {
     fontSize: fontSize.xs,
     color: colors.textMuted,

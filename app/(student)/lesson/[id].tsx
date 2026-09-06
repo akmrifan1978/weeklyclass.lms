@@ -11,6 +11,7 @@ import { getLesson, listMaterials } from '@/services/contentService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import { MaterialRow } from '@/components/shared/ContentCards';
 import { VideoPlayer } from '@/components/shared/VideoPlayer';
+import { AyahAudio } from '@/features/islamic/AyahAudio';
 import {
   AppHeader,
   AsyncBoundary,
@@ -102,14 +103,16 @@ export default function LessonDetail() {
                   <Spacer />
                   <SectionHeader title={t('lesson.attachments')} icon="attach-outline" />
                   <View style={{ gap: spacing.md }}>
+                    {/* Audio plays in place. Opening it sent the student to a
+                        bare media page in another tab with no way back to the
+                        lesson they were part-way through. A PDF is different —
+                        it genuinely belongs in a viewer — so that one still
+                        opens outside. */}
                     {lesson.audioUrl ? (
-                      <Button
-                        label={t('lesson.audio')}
-                        icon="headset-outline"
-                        variant="outline"
-                        fullWidth
-                        onPress={() => Linking.openURL(lesson.audioUrl!).catch(() => undefined)}
-                      />
+                      <View style={styles.audioRow}>
+                        <AyahAudio url={lesson.audioUrl} size={38} />
+                        <Text style={styles.audioLabel}>{t('lesson.audio')}</Text>
+                      </View>
                     ) : null}
                     {lesson.pdfUrl ? (
                       <Button
@@ -153,6 +156,8 @@ export default function LessonDetail() {
 }
 
 const styles = StyleSheet.create({
+  audioRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  audioLabel: { fontSize: fontSize.sm, color: colors.text, fontWeight: fontWeight.medium },
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   description: {
