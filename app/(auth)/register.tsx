@@ -413,8 +413,10 @@ export default function RegisterScreen() {
               error={errors.email}
               // A household shares one inbox, so the same address may appear on
               // several accounts. The mobile number is what has to be unique.
+              //
+              // No longer required: the asterisk had to go with the rule behind
+              // it, or the form would demand something the validator does not.
               hint={t('auth.sharedEmailNote')}
-              required
             />
 
             <TextField
@@ -501,7 +503,6 @@ export default function RegisterScreen() {
                 onChangeText={(v) => set('qualification', v)}
                 error={errors.qualification}
                 icon="ribbon-outline"
-                required
               />
             )}
 

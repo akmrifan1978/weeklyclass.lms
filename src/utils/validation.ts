@@ -57,7 +57,16 @@ export const loginSchema = z.object({
 const baseRegistration = {
   fullName: fullNameSchema,
   username: usernameSchema,
-  email: emailSchema,
+  /**
+   * Optional, and still validated when given.
+   *
+   * Plenty of teachers and older students have no address, and demanding one
+   * turned a contact detail into a barrier to having an account at all. An
+   * account without one signs in at a mobile-derived address instead — see
+   * authService.register — at the cost of not being able to receive a password
+   * reset, which the profile says plainly.
+   */
+  email: z.union([z.literal(''), emailSchema]),
   mobile: mobileSchema,
   country: z.string().trim().min(1, 'validation.countryRequired'),
   language: z.enum(languageCodes),
@@ -81,7 +90,10 @@ export const studentRegistrationSchema = z
 export const teacherRegistrationSchema = z
   .object({
     ...baseRegistration,
-    qualification: z.string().trim().min(2, 'validation.qualificationRequired'),
+    // Optional: an admin adding a teacher in a hurry knows who they are and can
+    // fill in the credential later, and a blank field is honest where a typed
+    // placeholder is not.
+    qualification: z.string().trim().optional(),
     branchId: z.string().trim().optional().nullable(),
   })
   .refine((data) => data.password === data.confirmPassword, {

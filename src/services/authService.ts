@@ -575,6 +575,16 @@ export async function register(
   const username = normaliseUsername(input.username);
   const email = input.email.trim().toLowerCase();
 
+  // No address given at all. Plenty of teachers and older students simply do
+  // not have one, and demanding it was turning a contact detail into a barrier
+  // to having an account. The mobile-derived address already exists for the
+  // case where an address is taken, and serves exactly as well here.
+  //
+  // The cost is stated rather than hidden: an account with no real inbox cannot
+  // be sent a password reset, which is what the recovery flow and the profile's
+  // sign-in section are for.
+  const signInAddress = email || authEmailForMobile(input.mobile);
+
   // The mobile number is the unique identity, so check it before anything is
   // created. The transaction in claimIdentity is still the real guard against a
   // race; this exists to fail early with a message that says what is wrong,
@@ -595,11 +605,11 @@ export async function register(
   // Firebase up front whether an address is taken is exactly the account
   // enumeration its email-enumeration protection disables, so the answer cannot
   // be relied on — the failure itself is the only trustworthy signal.
-  step('2/6 creating auth account', email);
-  let authEmail = email;
+  step('2/6 creating auth account', signInAddress);
+  let authEmail = signInAddress;
   let credential;
   try {
-    credential = await createUserWithEmailAndPassword(auth, email, input.password);
+    credential = await createUserWithEmailAndPassword(auth, signInAddress, input.password);
   } catch (error) {
     if ((error as { code?: string })?.code !== 'auth/email-already-in-use') throw error;
     authEmail = authEmailForMobile(input.mobile);

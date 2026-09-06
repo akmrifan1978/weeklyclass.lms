@@ -689,7 +689,7 @@ function UserForm({
         onChangeText={(v) => set('email', v)}
         error={errors.email}
         editable={!isEdit}
-        required
+        hint={!isEdit ? t('auth.emailOptionalHint') : undefined}
       />
       <TextField
         label={t('auth.mobile')}
@@ -757,7 +757,6 @@ function UserForm({
           onChangeText={(v) => set('qualification', v)}
           error={errors.qualification}
           icon="ribbon-outline"
-          required={!isEdit}
         />
       )}
 

@@ -221,6 +221,12 @@ export async function claimIdentity(params: {
   // transaction that denial would roll back a perfectly valid registration; out
   // here it costs nothing, because "forgot username" falls back to the mobile
   // number, which is the identifier that is actually unique.
+  // An account with no address indexes nothing. Hashing the empty string would
+  // give every emailless account the same row, so the first one to register
+  // would "own" an address that does not exist and the rest would collide with
+  // it — a lookup table for a thing nobody can look up.
+  if (!email) return;
+
   try {
     await setDoc(doc(db, EMAIL_LOOKUP, await hashEmail(email)), {
       username,
