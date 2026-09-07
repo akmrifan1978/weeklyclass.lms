@@ -236,7 +236,8 @@
     "myProgress": "My progress",
     "duas": "Duas",
     "events": "Events",
-    "notes": "Notes"
+    "notes": "Notes",
+    "seerah": "Seerah"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -1191,5 +1192,25 @@
     "title": "Install the app",
     "body": "Add WeeklyClass to your home screen and open it like any other app.",
     "action": "Install"
+  },
+  "seerah": {
+    "lead": "The life of the Prophet صلى الله عليه وسلم, in order. Written by our teachers.",
+    "search": "Search the chapters",
+    "addChapter": "Add chapter",
+    "editChapter": "Edit chapter",
+    "chapterTitle": "Chapter title",
+    "period": "Part",
+    "periodHint": "Groups chapters together, e.g. \"Before prophethood\", \"Makkah\", \"Madinah\". Leave blank if you are not grouping them.",
+    "order": "Chapter number",
+    "orderHint": "Decides the reading order. Leave gaps if you plan to add chapters in between.",
+    "body": "Chapter text",
+    "author": "Written or translated by",
+    "authorHint": "Credited under the chapter. Name the translator where these are somebody else’s words.",
+    "source": "Source",
+    "sourceHint": "The book or lecture this is drawn from, where there is one.",
+    "deleteConfirm": "Delete \"{{title}}\"?",
+    "empty": "No chapters yet",
+    "emptyHelp": "Your teachers have not added the Seerah chapters yet.",
+    "emptyAdmin": "Add the chapters in your own words or your own translation. Nothing is bundled with the app — the published Seerah works belong to their authors."
   }
 }
