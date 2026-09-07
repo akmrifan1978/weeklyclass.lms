@@ -453,8 +453,22 @@ service cloud.firestore {
     // list, which is what the attendee export is built from.
 
     match /eventRegistrations/{registrationId} {
+      // `resource == null` FIRST, and it is not a nicety.
+      //
+      // The booking id is derived from the event and the person, so before a
+      // booking exists the app reads that exact path to ask "have I already
+      // booked?" — inside the transaction, which is the only place the question
+      // can be asked safely. Reading a document that does not exist evaluates
+      // `resource.data` on null, which throws, and a rule that throws is a
+      // denial. So every FIRST booking was refused by its own duplicate check,
+      // with no error surfaced beyond a permission failure on a read.
+      //
+      // Allowing the read of a missing document reveals nothing: the answer is
+      // "there is nothing here", which the caller already suspected.
       allow get: if isSignedIn()
-                 && (resource.data.userId == request.auth.uid || isStaff());
+                 && (resource == null
+                     || resource.data.userId == request.auth.uid
+                     || isStaff());
       // Evaluated per document, so a student's query filtered to their own uid
       // passes while an unfiltered one is refused.
       allow list: if isStaff()

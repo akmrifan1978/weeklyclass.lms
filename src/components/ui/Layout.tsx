@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   Platform,
@@ -26,6 +26,7 @@ import {
 } from '@/constants/theme';
 import { initials } from '@/utils/format';
 import { useResponsive } from '@/hooks/useResponsive';
+import { watchSettings } from '@/services/settingsService';
 import { FooterTicker } from '@/components/shared/FooterTicker';
 
 /** Page container: safe area, background, and a max width on large screens. */
@@ -122,6 +123,13 @@ export function AppHeader({
           </Pressable>
         ) : null}
 
+        {/* The organisation's mark, on every screen that carries this header —
+            which is every screen, for every role. It comes from settings, so an
+            organisation that uploads a logo sees it everywhere without a
+            release, and nothing is drawn at all until one is set: a placeholder
+            in the corner of every page is worse than an empty corner. */}
+        <HeaderLogo />
+
         <View style={styles.headerText}>
           <Text style={styles.headerTitle} numberOfLines={1} accessibilityRole="header">
             {title}
@@ -136,6 +144,35 @@ export function AppHeader({
         {right ? <View style={styles.headerRight}>{right}</View> : null}
       </View>
     </View>
+  );
+}
+
+/**
+ * The logo in the corner.
+ *
+ * A live settings listener rather than a one-off read, so changing the logo
+ * updates every open screen rather than waiting for a restart. Failures are
+ * silent by design — a header that refuses to draw because a logo could not be
+ * fetched would take the page title down with it.
+ */
+function HeaderLogo() {
+  const [uri, setUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    return watchSettings((settings) => setUri(settings.logoUrl ?? null));
+  }, []);
+
+  if (!uri) return null;
+  return (
+    <Image
+      source={{ uri }}
+      style={styles.headerLogo}
+      resizeMode="contain"
+      // Decorative: the title beside it already names the screen, and the app
+      // name is not what somebody navigating by screen reader is looking for.
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    />
   );
 }
 
@@ -217,6 +254,13 @@ const styles = StyleSheet.create({
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   backButton: { marginLeft: -spacing.sm },
+  headerLogo: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    marginRight: spacing.sm,
+    backgroundColor: colors.surface,
+  },
   headerText: { flex: 1 },
   headerTitle: {
     color: colors.textInverse,
