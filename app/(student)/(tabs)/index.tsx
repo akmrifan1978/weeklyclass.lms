@@ -28,6 +28,7 @@ import {
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
+import { UpcomingClasses } from '@/components/shared/UpcomingClasses';
 import {
   Avatar,
   Card,
@@ -57,9 +58,14 @@ export default function StudentHome() {
 
   const load = useCallback(async () => {
     if (!user) return null;
-    const [event, liveVideo, featuredVideo, article, lessons, recordings, announcements] =
+    const [event, upcoming, liveVideo, featuredVideo, article, lessons, recordings, announcements] =
       await Promise.all([
       nextEventFor(user).catch(() => null),
+      // Already fetched for the reminder scheduler and then discarded. Kept
+      // now, because the same list is what the photographs are drawn from.
+      listUpcoming({ classId: user.classId ?? undefined, pageSize: 6 })
+        .then((page) => page.items)
+        .catch(() => []),
       getLiveVideo().catch(() => null),
       getFeaturedVideo().catch(() => null),
       getLatestArticle().catch(() => null),
@@ -69,7 +75,7 @@ export default function StudentHome() {
       listVideosForStudent(user.classId, 'recording', 3).catch(() => []),
       announcementsFor(user, 3).catch(() => []),
     ]);
-    return { event, liveVideo, featuredVideo, article, lessons, recordings, announcements };
+    return { event, upcoming, liveVideo, featuredVideo, article, lessons, recordings, announcements };
   }, [user]);
 
   const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, user?.classId]);
@@ -144,6 +150,16 @@ export default function StudentHome() {
               </View>
             </Card>
           )}
+
+          {(data?.upcoming?.length ?? 0) > 0 ? (
+            <>
+              <Spacer size={spacing.xxl} />
+              <UpcomingClasses
+                events={data!.upcoming}
+                onPress={() => router.push('/(student)/(tabs)/calendar')}
+              />
+            </>
+          ) : null}
 
           {data?.liveVideo ? (
             <>

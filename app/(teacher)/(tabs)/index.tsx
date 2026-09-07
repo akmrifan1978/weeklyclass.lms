@@ -10,7 +10,7 @@ import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme'
 import { useAsync } from '@/hooks/useAsync';
 import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { useTeacherScope } from '@/hooks/useTeacherScope';
-import { nextEventFor } from '@/services/calendarService';
+import { listUpcoming, nextEventFor } from '@/services/calendarService';
 import { loadTeacherStats } from '@/services/statsService';
 import { announcementsFor } from '@/services/notificationService';
 import type { Permission } from '@/types';
@@ -22,6 +22,7 @@ import {
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
+import { UpcomingClasses } from '@/components/shared/UpcomingClasses';
 import {
   Avatar,
   Card,
@@ -52,7 +53,7 @@ export default function TeacherHome() {
 
   const load = useCallback(async () => {
     if (!user) return null;
-    const [stats, event, announcements] = await Promise.all([
+    const [stats, event, upcoming, announcements] = await Promise.all([
       loadTeacherStats(classIds).catch(() => ({
         classes: classIds.length,
         students: 0,
@@ -60,9 +61,12 @@ export default function TeacherHome() {
         quizzes: 0,
       })),
       nextEventFor(user).catch(() => null),
+      listUpcoming({ pageSize: 6 })
+        .then((page) => page.items)
+        .catch(() => []),
       announcementsFor(user, 3).catch(() => []),
     ]);
-    return { stats, event, announcements };
+    return { stats, event, upcoming, announcements };
   }, [user, classIds.join(',')]);
 
   const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, classIds.join(',')], {
@@ -166,6 +170,16 @@ export default function TeacherHome() {
             not teaching tools an admin grants access to — they are for the
             person, and every teacher should be able to reach them.
           */}
+          {(data?.upcoming?.length ?? 0) > 0 ? (
+            <>
+              <Spacer size={spacing.xxl} />
+              <UpcomingClasses
+                events={data!.upcoming}
+                onPress={() => router.push('/(teacher)/(tabs)/calendar' as never)}
+              />
+            </>
+          ) : null}
+
           <Spacer size={spacing.xxl} />
           <SectionHeader title={t('dashboard.quickAccess')} icon="grid-outline" />
           <Grid minItemWidth={105} gap={spacing.md}>

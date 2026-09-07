@@ -273,7 +273,8 @@
     "addVideo": "வீடியோவைச் சேர்",
     "addArticle": "கட்டுரையைச் சேர்",
     "addEvent": "நிகழ்வைச் சேர்",
-    "sendNotification": "அறிவிப்பு அனுப்பு"
+    "sendNotification": "அறிவிப்பு அனுப்பு",
+    "upcomingClasses": "வரவிருக்கும் வகுப்புகள்"
   },
   "calendar": {
     "title": "நாட்காட்டி",

@@ -273,7 +273,8 @@
     "addVideo": "إضافة فيديو",
     "addArticle": "إضافة مقال",
     "addEvent": "إضافة فعالية",
-    "sendNotification": "إرسال إشعار"
+    "sendNotification": "إرسال إشعار",
+    "upcomingClasses": "الحلقات القادمة"
   },
   "calendar": {
     "title": "التقويم",

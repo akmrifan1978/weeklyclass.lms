@@ -273,7 +273,8 @@
     "addVideo": "Add video",
     "addArticle": "Add article",
     "addEvent": "Add event",
-    "sendNotification": "Send notification"
+    "sendNotification": "Send notification",
+    "upcomingClasses": "Upcoming classes"
   },
   "calendar": {
     "title": "Calendar",

@@ -273,7 +273,8 @@
     "addVideo": "වීඩියෝවක් එකතු කරන්න",
     "addArticle": "ලිපියක් එකතු කරන්න",
     "addEvent": "වැඩසටහනක් එකතු කරන්න",
-    "sendNotification": "දැනුම්දීමක් යවන්න"
+    "sendNotification": "දැනුම්දීමක් යවන්න",
+    "upcomingClasses": "ඉදිරි පන්ති"
   },
   "calendar": {
     "title": "දින දර්ශනය",
