@@ -36,6 +36,17 @@ export function DangerZone() {
   const [typed, setTyped] = useState('');
   const [counting, setCounting] = useState(false);
   const [progress, setProgress] = useState<resetService.ResetProgress | null>(null);
+  const [imported, setImported] = useState<number | null>(null);
+  const [purgingImported, setPurgingImported] = useState(false);
+
+  // Counted when the section is first shown, so the button can say how many
+  // rather than making somebody press it to find out.
+  React.useEffect(() => {
+    resetService
+      .countImported()
+      .then(setImported)
+      .catch(() => setImported(null));
+  }, []);
 
   const open = async (next: resetService.ResetLevel) => {
     setLevel(next);
@@ -100,6 +111,39 @@ export function DangerZone() {
           fullWidth
           onPress={() => void open('data')}
         />
+
+        {/* Offered above the two big resets because it is the one somebody
+            actually wants: a precise removal of content the school never
+            uploaded, rather than a reset of everything. */}
+        {imported && imported > 0 ? (
+          <>
+            <View style={styles.rule} />
+            <Text style={styles.itemTitle}>{t('settings.removeImported')}</Text>
+            <Text style={styles.itemBody}>
+              {t('settings.removeImportedHelp', { count: imported })}
+            </Text>
+            <Button
+              label={t('settings.removeImportedAction', { count: imported })}
+              icon="trash-bin-outline"
+              variant="danger"
+              fullWidth
+              loading={purgingImported}
+              onPress={async () => {
+                if (!user) return;
+                setPurgingImported(true);
+                try {
+                  const removed = await resetService.purgeImported(user);
+                  setImported(0);
+                  toast.success(t('settings.removeImportedDone', { count: removed }));
+                } catch (err) {
+                  toast.error(friendlyMessage(err, t));
+                } finally {
+                  setPurgingImported(false);
+                }
+              }}
+            />
+          </>
+        ) : null}
 
         <View style={styles.rule} />
 

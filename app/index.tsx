@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as calendarService from '@/services/calendarService';
+import { InstallPrompt } from '@/components/shared/InstallPrompt';
 import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -85,6 +86,10 @@ export default function SplashScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.inner}>
+          {/* Above everything, on the one screen every visitor sees. It draws
+              nothing at all until the browser says an install is possible. */}
+          <InstallPrompt />
+
           <View style={styles.brandBlock}>
             {/* The organisation's own mark when they have set one. The book is
                 a placeholder for a platform nobody has branded yet, and it

@@ -190,4 +190,31 @@ export const unstable_settings = {
 // Web needs an explicit document title before the router mounts a screen.
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   document.title = 'WeeklyClass LMS';
+
+  // The manifest is what tells a browser this can be installed, and it has to
+  // be linked from the document rather than merely present in the deploy.
+  if (!document.querySelector('link[rel="manifest"]')) {
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = '/manifest.json';
+    document.head.appendChild(link);
+  }
+
+  // And a service worker is the other half of the browser's test.
+  //
+  // Waiting for `load` was wrong: this module is itself part of the bundle the
+  // load event waits for, so by the time it runs that event has usually already
+  // fired and the listener was never called. The worker never registered and
+  // the browser never offered an install. Register now when the document is
+  // already done, and on load only when it genuinely has not happened yet.
+  //
+  // Silent throughout — a failure here costs an install prompt and nothing
+  // else, and the app works identically without one.
+  if ('serviceWorker' in navigator) {
+    const register = () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+    };
+    if (document.readyState === 'complete') register();
+    else window.addEventListener('load', register, { once: true });
+  }
 }

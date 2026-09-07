@@ -202,6 +202,68 @@ export async function reset(
   return { removed, failed };
 }
 
+/**
+ * The imported talk library.
+ *
+ * Several hundred recordings were brought in from an outside collection and
+ * stored under the kind `noor` — a kind nothing else in this codebase creates.
+ * That makes them precisely identifiable, which is the only reason removing
+ * them can be offered as a single action rather than as "delete all videos".
+ *
+ * Nothing the school uploaded is touched: an ordinary recording is `video` or
+ * `recording`, never this.
+ */
+const IMPORTED_KIND = 'noor';
+
+/** How many imported talks are in the library right now. */
+export async function countImported(): Promise<number> {
+  const snap = await getDocs(
+    query(collection(db, COLLECTIONS.videos), where('kind', '==', IMPORTED_KIND))
+  ).catch(() => null);
+  return snap?.size ?? 0;
+}
+
+/**
+ * Removes the imported library and nothing else.
+ *
+ * Hard delete rather than the soft delete used elsewhere. These were never the
+ * school's own work, nobody is going to want one back, and several hundred
+ * hidden rows would sit in every future count and export pretending not to be
+ * there.
+ */
+export async function purgeImported(actor: AppUser): Promise<number> {
+  if (actor.role !== 'admin') {
+    throw new AppError('errors.permissionDenied', 'permission-denied');
+  }
+
+  let removed = 0;
+  for (;;) {
+    const snap = await getDocs(
+      query(collection(db, COLLECTIONS.videos), where('kind', '==', IMPORTED_KIND), limit(400))
+    );
+    if (snap.empty) break;
+
+    const batch = writeBatch(db);
+    snap.docs.forEach((document) => batch.delete(document.ref));
+    await batch.commit();
+
+    removed += snap.size;
+    if (snap.size < 400) break;
+  }
+
+  await audit
+    .log({
+      actor,
+      action: 'DELETE',
+      collection: COLLECTIONS.videos,
+      documentId: IMPORTED_KIND,
+      summary: `${actor.fullName} removed the imported talk library — ${removed} recordings`,
+    })
+    .catch(() => undefined);
+
+  return removed;
+}
+
 /** Deletes every document in a collection, 400 at a time. */
 async function purge(path: string): Promise<number> {
   let removed = 0;

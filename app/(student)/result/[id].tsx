@@ -1,14 +1,21 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '@/contexts/LanguageContext';
+import * as translateService from '@/services/translateService';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import type { LanguageCode } from '@/types';
 import { useAsync } from '@/hooks/useAsync';
 import { formatDateTime } from '@/utils/date';
-import { getResult, listQuestions, listQuestionsWithAnswers } from '@/services/quizService';
+import {
+  getQuiz,
+  getResult,
+  listQuestions,
+  listQuestionsWithAnswers,
+} from '@/services/quizService';
 import {
   AppHeader,
   AsyncBoundary,
@@ -34,6 +41,7 @@ import { COLLECTIONS } from '@/constants/app';
 export default function ResultDetail() {
   const { t } = useTranslation();
   const { language } = useLanguage();
+
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -42,7 +50,7 @@ export default function ResultDetail() {
     const result = await getResult(id);
     if (!result) return null;
 
-    const [attempt, questions] = await Promise.all([
+    const [attempt, questions, quiz] = await Promise.all([
       getById<QuizAttempt>(COLLECTIONS.quizAttempts, result.attemptId),
       // Falls back to questions without the key if the rules deny it, so the
       // score is still shown even when review is unavailable.
@@ -51,14 +59,55 @@ export default function ResultDetail() {
           rows.map((row) => ({ ...row, correctIndex: -1 }))
         )
       ),
+      // Only for its language. A failure here costs the translate button and
+      // nothing else, so it must not take the results page down with it.
+      getQuiz(result.quizId).catch(() => null),
     ]);
 
-    return { result, attempt, questions };
+    return { result, attempt, questions, quizLanguage: quiz?.language ?? null };
   }, [id]);
 
   const { data, loading, error, reload } = useAsync(load, [id]);
   const result = data?.result;
   const passed = result?.passed ?? false;
+
+  const [glosses, setGlosses] = useState<
+    Record<string, { text?: string; loading?: boolean }>
+  >({});
+
+  /**
+   * The language the assignment was written in.
+   *
+   * Fetched with the result rather than assumed: translating Tamil questions
+   * "from English" produces confident nonsense, and the reader has no way to
+   * tell that is what happened.
+   */
+  const sourceLanguage = (data?.quizLanguage ?? 'en') as LanguageCode;
+  const canTranslate = sourceLanguage !== language;
+
+  const translateQuestion = async (question: {
+    id?: string;
+    text: string;
+    options: string[];
+  }) => {
+    const key = question.id;
+    if (!key) return;
+    setGlosses((g) => ({ ...g, [key]: { loading: true } }));
+    try {
+      const source = [question.text, ...question.options].join('. ');
+      const text = await translateService.translate(
+        source,
+        sourceLanguage,
+        language as LanguageCode
+      );
+      setGlosses((g) => ({ ...g, [key]: { text } }));
+    } catch {
+      // Silent: the original is on screen and readable, and an error message
+      // where a convenience should be only adds noise to a results page.
+      setGlosses((g) => ({ ...g, [key]: {} }));
+    }
+  };
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -161,9 +210,33 @@ export default function ResultDetail() {
                                     : colors.danger
                               }
                             />
-                            <Text style={styles.reviewQuestion}>
-                              {index + 1}. {question.text}
-                            </Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.reviewQuestion}>
+                                {index + 1}. {question.text}
+                              </Text>
+                              {/* The same rough reading offered while sitting
+                                  the assignment. Reviewing what you got wrong
+                                  in a language you cannot read teaches nobody
+                                  anything, which is the entire point of a
+                                  review screen. */}
+                              {question.id && glosses[question.id]?.text ? (
+                                <Text style={styles.reviewGloss}>
+                                  {glosses[question.id!]?.text}
+                                </Text>
+                              ) : question.id && glosses[question.id]?.loading ? (
+                                <Text style={styles.reviewGlossNote}>
+                                  {t('scripture.translating')}
+                                </Text>
+                              ) : canTranslate && question.id ? (
+                                <Text
+                                  onPress={() => void translateQuestion(question)}
+                                  accessibilityRole="button"
+                                  style={styles.reviewGlossLink}
+                                >
+                                  {t('quiz.translateQuestion')}
+                                </Text>
+                              ) : null}
+                            </View>
                           </View>
 
                           <View style={styles.reviewAnswers}>
@@ -242,6 +315,22 @@ function Stat({
 }
 
 const styles = StyleSheet.create({
+  reviewGloss: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 19,
+    marginTop: 6,
+    paddingLeft: spacing.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+  },
+  reviewGlossNote: { fontSize: 11, color: colors.textMuted, marginTop: 6 },
+  reviewGlossLink: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+    marginTop: 6,
+  },
   scoreCard: { alignItems: 'center', paddingVertical: spacing.xxl },
   scoreCircle: {
     width: 130,

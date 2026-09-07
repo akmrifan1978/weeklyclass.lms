@@ -646,7 +646,11 @@
     "eventNamesPlaceholder": "Enter event name",
     "noEventNames": "No event names yet.",
     "requireBookingApproval": "Review every booking myself",
-    "requireBookingApprovalHelp": "Off: a booking with seats available is confirmed at once and the ticket appears straight away, while a booking made when the event is full waits as a request for you to accept or decline. On: nothing is confirmed until you say so."
+    "requireBookingApprovalHelp": "Off: a booking with seats available is confirmed at once and the ticket appears straight away, while a booking made when the event is full waits as a request for you to accept or decline. On: nothing is confirmed until you say so.",
+    "removeImported": "Remove the imported talk library",
+    "removeImportedHelp": "{{count}} recordings were brought in from an outside collection and were never uploaded by anyone here. Removing them touches nothing the school made.",
+    "removeImportedAction": "Remove {{count}} imported recordings",
+    "removeImportedDone": "Removed {{count}} imported recordings."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -1182,5 +1186,10 @@
     "emptyHelp": "Once talks or articles are published they will appear here.",
     "joinTitle": "Want the rest?",
     "joinBody": "Weekly lessons, assignments, results and your class materials come with an account."
+  },
+  "install": {
+    "title": "Install the app",
+    "body": "Add WeeklyClass to your home screen and open it like any other app.",
+    "action": "Install"
   }
 }
