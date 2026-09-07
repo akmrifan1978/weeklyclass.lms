@@ -62,7 +62,8 @@
     "firebase:indexes": "firebase deploy --only firestore:indexes",
     "firebase:deploy": "firebase deploy --only firestore:rules,firestore:indexes",
     "emulators": "firebase emulators:start",
-    "deploy:web": "expo export --platform web && firebase deploy --only hosting"
+    "deploy:web": "expo export --platform web && firebase deploy --only hosting",
+    "reset-link": "node scripts/reset-link.js --key ./serviceAccount.json --user"
   },
   "private": true
 }
