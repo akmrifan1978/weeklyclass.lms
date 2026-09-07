@@ -1,3 +1,4 @@
+import type { AgeGroup } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 import type { FireDate } from '@/types';
 
@@ -141,4 +142,34 @@ export function monthLabel(isoMonth: string, locale = 'en'): string {
   const [y, m] = isoMonth.split('-').map(Number);
   if (!y || !m) return isoMonth;
   return new Date(y, m - 1, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+}
+
+/**
+ * The age band somebody falls into, from their date of birth.
+ *
+ * The boundaries are the ones an organiser laying tables actually uses: an
+ * infant sits on a lap, a child needs a seat and a smaller meal, a teenager
+ * eats like an adult and is charged like one somewhere between. They are
+ * deliberately stated here once rather than guessed at each booking form.
+ *
+ * Null when there is no usable date — the caller decides what to do about it,
+ * and defaulting silently to `adult` would quietly charge a four-year-old the
+ * full price.
+ */
+export function ageGroupFromDateOfBirth(dateOfBirth?: string | null): AgeGroup | null {
+  if (!dateOfBirth) return null;
+  const born = new Date(dateOfBirth);
+  if (Number.isNaN(born.getTime())) return null;
+
+  const now = new Date();
+  let years = now.getFullYear() - born.getFullYear();
+  // Their birthday has not come round yet this year.
+  const monthDiff = now.getMonth() - born.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < born.getDate())) years -= 1;
+
+  if (years < 0) return null;
+  if (years < 3) return 'infant';
+  if (years < 13) return 'child';
+  if (years < 18) return 'teenage';
+  return 'adult';
 }

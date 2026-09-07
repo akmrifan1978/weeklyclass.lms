@@ -500,25 +500,23 @@ service cloud.firestore {
                             && eventHasRoom(request.resource.data.eventId,
                                             request.resource.data.seats)));
 
-      // Three quite different writes share this rule.
+      // Two writes share this rule, and self-cancelling is deliberately not one
+      // of them.
       //
-      // 1. The holder cancels their own booking, and nothing else. Nobody
-      //    accepts or declines their own request — that is the point of it
-      //    being a request.
+      // Once a booking is made, only staff may change it. An organiser has
+      // counted the seats, laid the tables and possibly taken the money, and a
+      // place given up silently at midnight is a place they find empty on the
+      // night. Somebody who cannot come now asks, which is the conversation
+      // that was happening anyway.
       //
-      // 2. The holder books AGAIN after cancelling or being declined. The id is
+      // 1. The holder books AGAIN after staff cancelled or declined. The id is
       //    derived from the event and the person, so a second booking lands on
       //    the same document and Firestore sees an update rather than a create.
-      //    Without this, cancelling once locked somebody out of the event
-      //    permanently — the button was there and the write was always refused.
-      //    It is held to exactly the conditions a create is held to.
+      //    Without this, one cancellation locked somebody out of the event
+      //    permanently. It is held to exactly the conditions a create is.
       //
-      // 3. Staff confirm, decline, or record payment.
+      // 2. Staff confirm, decline, cancel, or record payment.
       allow update: if (isSignedIn()
-                        && resource.data.userId == request.auth.uid
-                        && onlyChanged(['status', 'updatedAt'])
-                        && request.resource.data.status == 'cancelled')
-                    || (isSignedIn()
                         && resource.data.userId == request.auth.uid
                         && request.resource.data.userId == request.auth.uid
                         && (resource.data.status == 'cancelled'

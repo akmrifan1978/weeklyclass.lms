@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import { ageGroupFromDateOfBirth } from '@/utils/date';
 import * as bookings from '@/services/eventRegistrationService';
 import { AGE_GROUPS, type AgeGroup, type CalendarEvent, type Gender } from '@/types';
 import {
@@ -51,7 +52,6 @@ export function BookingSheet({
   const { t } = useTranslation();
   const { user } = useAuth();
 
-  const [selfAge, setSelfAge] = useState<AgeGroup>('adult');
   const [family, setFamily] = useState<PartyMember[]>([]);
   const [reference, setReference] = useState('');
 
@@ -70,20 +70,25 @@ export function BookingSheet({
   );
 
   /**
-   * The booker's own gender, taken from their profile rather than asked for.
+   * Both of the booker's own details come from their profile, and neither is
+   * asked for again here.
    *
-   * They already told the platform once, and asking again on a form they are
-   * filling in for four other people is asking them to repeat themselves. It is
-   * shown, though, and not silently applied — an organiser seating a hall acts
-   * on this, so the person supplying it should be able to see what was supplied
-   * and go and correct their profile if it is wrong.
+   * The gender is not shown at all: it changes nothing about the price or the
+   * seat, and putting a field on the form invites somebody to wonder whether
+   * they should change it. It still travels with the booking, because an
+   * organiser seating a hall needs it.
    *
-   * Falls back to male only when the profile carries nothing, which is the case
-   * for teachers and admins: the field is collected at student registration and
-   * nowhere else.
+   * The age band is shown but fixed, because it DOES change the price — so the
+   * booker should see which band they are being charged in — and it is derived
+   * from their date of birth rather than chosen, which removes the only way
+   * that price could be got wrong on purpose.
    */
   const selfGender: Gender = (user?.gender as Gender) ?? 'male';
-  const genderFromProfile = Boolean(user?.gender);
+  const derivedAge = ageGroupFromDateOfBirth(user?.dateOfBirth);
+  // No date of birth on file — teachers and admins have none — so the adult
+  // band stands in. It charges rather than admits free, which is the safe
+  // direction for a value nobody supplied.
+  const selfAge: AgeGroup = derivedAge ?? 'adult';
 
   // The booker is always the first participant; the family rows follow.
   const party: PartyMember[] = [
@@ -139,25 +144,15 @@ export function BookingSheet({
         <Text style={styles.selfName} numberOfLines={1}>
           {user?.fullName}
         </Text>
-        {/* Read-only, and shown rather than hidden: it is taken from the
-            profile, and the only way to know that is to be able to see it. */}
-        <View style={styles.genderChip}>
-          <Ionicons
-            name={selfGender === 'female' ? 'woman-outline' : 'man-outline'}
-            size={13}
-            color={colors.textSecondary}
-          />
-          <Text style={styles.genderText}>{t(`auth.${selfGender}`)}</Text>
+        {/* A chip rather than a disabled dropdown: a control that looks like it
+            opens and does not is worse than something that never claimed to. */}
+        <View style={styles.ageChip}>
+          <Text style={styles.ageText}>{t(`event.age_${selfAge}`)}</Text>
+          <Text style={styles.agePrice}>{priceLabel(selfAge)}</Text>
         </View>
-        <Select<AgeGroup>
-          value={selfAge}
-          options={ageOptions}
-          onChange={setSelfAge}
-          containerStyle={{ flex: 1, marginBottom: 0 }}
-        />
       </View>
-      {genderFromProfile ? null : (
-        <Text style={styles.genderNote}>{t('event.genderAssumed')}</Text>
+      {derivedAge ? null : (
+        <Text style={styles.ageNote}>{t('event.ageAssumed')}</Text>
       )}
 
       {settings?.referenceLabel ? (
@@ -265,17 +260,16 @@ function hasBandedPrices(settings: NonNullable<CalendarEvent['registration']>): 
 }
 
 const styles = StyleSheet.create({
-  genderChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  ageChip: {
+    alignItems: 'flex-end',
     backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
-  genderText: { fontSize: fontSize.xs, color: colors.textSecondary },
-  genderNote: {
+  ageText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text },
+  agePrice: { fontSize: 11, color: colors.textSecondary },
+  ageNote: {
     fontSize: 11,
     color: colors.textMuted,
     marginTop: 4,

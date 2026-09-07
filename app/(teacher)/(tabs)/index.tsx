@@ -21,6 +21,7 @@ import {
 } from '@/components/shared/ContentCards';
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
+import { LogoutButton } from '@/components/shared/LogoutButton';
 import {
   Avatar,
   Card,
@@ -100,6 +101,10 @@ export default function TeacherHome() {
           tint={colors.textSecondary}
         />
         <Avatar name={user?.fullName ?? '?'} uri={user?.profileImage} size={48} />
+
+        {/* Beside the avatar, on the screen everybody lands on. A shared
+            phone needs a way out that is not behind two taps. */}
+        <LogoutButton tint={brand.red} />
       </View>
 
       <Spacer />

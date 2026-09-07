@@ -1095,7 +1095,7 @@
     "ticketConfirmed": "CONFIRMED",
     "ticketCode": "TICKET CODE",
     "ticketHolders": "Admitted on this ticket",
-    "ticketNote": "Show this ticket at the entrance. The code is checked against the organiser’s list.",
+    "ticketNote": "Show this ticket at the entrance. The code is checked against the organiser’s list. To change or cancel this booking, please speak to the organisers.",
     "viewTicket": "View ticket",
     "awaitingConfirmation": "Awaiting confirmation ({{seats}} place(s))",
     "payment": "Payment",
@@ -1126,7 +1126,7 @@
     "bookingRejected": "Your request for this event was not accepted.",
     "cannotRejectConfirmed": "Cancel a confirmed booking instead — declining it would leave the seat held.",
     "awaitingDecision": "Waiting for the organiser ({{seats}} place(s))",
-    "genderAssumed": "Your profile has no gender recorded, so male is assumed. Change it in your profile if that is wrong."
+    "ageAssumed": "Your profile has no date of birth, so the adult rate is used. Add it in your profile if that is wrong."
   },
   "notes": {
     "new": "New note",
