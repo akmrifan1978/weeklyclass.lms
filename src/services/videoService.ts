@@ -60,6 +60,39 @@ export function listVideos(options: VideoQuery = {}): Promise<Page<VideoItem>> {
 }
 
 /**
+ * What a guest may watch: published, shared with everybody, newest first.
+ *
+ * Every filter here is load-bearing rather than cosmetic. The rules allow a
+ * signed-out read only for a document that is published, unscoped and not
+ * deleted, so a query that asked for anything wider would be refused outright
+ * rather than quietly trimmed.
+ */
+export function listPublicVideos(pageSize = 12): Promise<Page<VideoItem>> {
+  return listPage<VideoItem>(COLLECTIONS.videos, {
+    // Deliberately NOT filtered by kind. The library holds imported collections
+    // under kinds this code does not enumerate — `noor` among them — and a
+    // guest asking "what is new" means everything published and shared, not
+    // whichever kinds happened to be named in a type when this was written.
+    //
+    // And deliberately NOT filtered by `classId == null`, though that is
+    // exactly what the rule requires. Firestore refuses a list query that
+    // filters a field against null when the rule reads `resource.data`, so
+    // asking for it directly is denied outright. The rule still enforces it per
+    // document, which means the failure direction is safe: if a class-scoped
+    // video is ever published, this query starts being refused and a guest sees
+    // nothing, rather than seeing something they should not. The filter below
+    // keeps the client honest in the meantime.
+    filters: [['status', '==', 'published']],
+    orderByField: 'date',
+    direction: 'desc',
+    pageSize,
+  }).then((page) => ({
+    ...page,
+    items: page.items.filter((item) => !item.classId),
+  }));
+}
+
+/**
  * Videos a student can see: published items for their class plus items with no
  * class restriction. Firestore cannot OR across fields in one query, so this is
  * two small reads merged client-side.

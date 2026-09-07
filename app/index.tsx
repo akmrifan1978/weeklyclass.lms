@@ -166,6 +166,13 @@ export default function SplashScreen() {
               icon="information-circle-outline"
               onPress={() => router.push('/(auth)/about')}
             />
+            {/* A way in that asks for nothing. Somebody weighing this up can
+                watch what has been released before handing over a number. */}
+            <LinkButton
+              label={t('guest.enter')}
+              icon="eye-outline"
+              onPress={() => router.push('/(auth)/guest')}
+            />
           </View>
 
           {/* After the programme description, deliberately: somebody has just

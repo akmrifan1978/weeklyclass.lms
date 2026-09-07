@@ -377,7 +377,22 @@ service cloud.firestore {
     }
 
     match /videos/{videoId} {
-      allow read: if isStaff()
+      // A guest — nobody signed in at all — may read a PUBLISHED recording that
+      // belongs to no particular class. That is the shop window: somebody
+      // deciding whether this platform is for them can watch what has just been
+      // released without first handing over a phone number.
+      //
+      // Evaluated per document, so a query filtered to published shared videos
+      // passes and one asking for anything wider is refused. A draft, and
+      // anything scoped to a class, stays behind a sign-in.
+      function isPubliclyVisible() {
+        return resource.data.get('status', 'draft') == 'published'
+          && resource.data.get('deleted', false) == false
+          && !('classId' in resource.data.keys() && resource.data.classId != null);
+      }
+
+      allow read: if isPubliclyVisible()
+                  || isStaff()
                   || (isStudent() && inMyClassOrShared(resource.data.get('classId', null)));
 
       allow create: if can('UPLOAD_VIDEO');
@@ -387,7 +402,12 @@ service cloud.firestore {
     }
 
     match /articles/{articleId} {
-      allow read: if isSignedIn();
+      // Same shop window as videos: a published article is readable by anybody,
+      // a draft by nobody without an account. Articles carry no class scoping,
+      // so being published is the whole of the test.
+      allow read: if isSignedIn()
+                  || (resource.data.get('status', 'draft') == 'published'
+                      && resource.data.get('deleted', false) == false);
       allow write: if can('MANAGE_ARTICLES');
     }
 

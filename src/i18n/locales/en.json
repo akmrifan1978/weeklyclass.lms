@@ -1173,5 +1173,14 @@
     "commitmentTitle": "Our Commitment",
     "commitmentBody1": "We believe that Islamic learning is a lifelong journey. Through the Weekly Class – JDC Tamil Section, we hope to make that journey easier, more engaging, and beneficial for everyone.",
     "commitmentBody2": "Our goal is not simply to teach lessons, but to inspire a love for knowledge, strengthen faith, and encourage positive change in our daily lives."
+  },
+  "guest": {
+    "title": "Browse as a guest",
+    "enter": "Look around first",
+    "lead": "Newly released talks, recordings and articles, open to everyone. Lessons, assignments and class materials need an account.",
+    "empty": "Nothing published yet",
+    "emptyHelp": "Once talks or articles are published they will appear here.",
+    "joinTitle": "Want the rest?",
+    "joinBody": "Weekly lessons, assignments, results and your class materials come with an account."
   }
 }

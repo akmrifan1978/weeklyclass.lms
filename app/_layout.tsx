@@ -59,7 +59,16 @@ function RoleGate({ children }: { children: React.ReactNode }) {
      * fired the redirect before the route had settled. The page appeared and
      * then threw the reader out again.
      */
-    if (pathname === '/about' || pathname.endsWith('/about')) return;
+    // The two public reading screens. Everything else under `(auth)` is a way
+    // in, and somebody already signed in has no business on those.
+    if (
+      pathname === '/about' ||
+      pathname.endsWith('/about') ||
+      pathname === '/guest' ||
+      pathname.endsWith('/guest')
+    ) {
+      return;
+    }
 
     if (!user) {
       // Signed out but sitting in a protected area.
