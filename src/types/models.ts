@@ -818,6 +818,16 @@ export interface AppSettings {
   /** Event name presets, so recurring events are typed once. */
   eventNames?: string[];
   /**
+   * A contact address given to the translation service, which raises the free
+   * daily allowance roughly tenfold.
+   *
+   * Optional, and everything works without it — there is simply less translated
+   * per day before the limit is reached. It is a setting rather than a constant
+   * because it is the organisation's own address being handed to a third party,
+   * which is theirs to decide rather than ours.
+   */
+  translationContactEmail?: string;
+  /**
    * Minutes of inactivity before a session is ended, or 0 to never end one.
    *
    * The phones this runs on are shared — a family tablet, a classroom device —

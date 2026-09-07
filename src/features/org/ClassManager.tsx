@@ -167,11 +167,14 @@ export function ClassManager() {
             icon="library-outline"
             required
           />
+          {/* This is the id a student is given and types at registration, so
+              it is labelled as that rather than as "Title" — which is what it
+              said, and which explained nothing to whoever had to fill it in. */}
           <TextField
-            label={t('common.title')}
+            label={t('auth.classId')}
             value={form.code}
             onChangeText={(v) => set('code', v.toUpperCase())}
-            hint="Short code, e.g. WK-A1"
+            hint={t('auth.classIdHint')}
             autoCapitalize="characters"
           />
           <TextField

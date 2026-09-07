@@ -204,6 +204,26 @@ export default function RegisterScreen() {
     [branches, countries]
   );
 
+  const [classCode, setClassCode] = useState('');
+
+  /**
+   * Classes that actually have an id somebody could be given.
+   *
+   * A school which has not filled the codes in gets the picker instead — an
+   * input that can never match anything would block registration entirely, and
+   * that is a worse outcome than an unfamiliar control.
+   */
+  const codedClasses = useMemo(
+    () => classes.filter((c) => (c.code ?? '').trim().length > 0),
+    [classes]
+  );
+  const matchedClass = useMemo(
+    () =>
+      codedClasses.find((c) => (c.code ?? '').toUpperCase() === classCode.trim().toUpperCase()) ??
+      null,
+    [codedClasses, classCode]
+  );
+
   const classOptions = useMemo<Option[]>(
     () => classes.map((c) => ({ value: c.id, label: c.name, description: c.schedule })),
     [classes]
@@ -483,17 +503,58 @@ export default function RegisterScreen() {
             {/* Directly after nationality, and above branch, because a student
                 is told which class they are joining before they are told
                 anything about branches — and asking in the order somebody was
-                told is what stops them guessing. */}
-            {role === 'student' && classOptions.length ? (
+                told is what stops them guessing.
+                
+                Typed rather than picked, because the id is the thing a student
+                is actually given: "join JDC-A1" is a sentence somebody can be
+                told over the phone, and a list of class names is not.
+                
+                Where no class has an id yet the list is offered instead. A
+                school that has not set them up must still be able to register
+                students, and an input matching nothing would stop that. */}
+            {role === 'student' && codedClasses.length > 0 ? (
+              <>
+                <TextField
+                  label={t('auth.classIdEnter')}
+                  value={classCode}
+                  onChangeText={(value) => {
+                    const next = value.toUpperCase();
+                    setClassCode(next);
+                    const match = codedClasses.find(
+                      (c) => (c.code ?? '').toUpperCase() === next.trim()
+                    );
+                    set('classId', match?.id ?? '');
+                    // The class carries its branch, so a matched id answers the
+                    // branch question too.
+                    if (match?.branchId) set('branchId', match.branchId);
+                  }}
+                  error={errors.classId}
+                  icon="key-outline"
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  hint={t('auth.classIdEnterHint')}
+                  required={classRequired}
+                />
+                {/* Named back straight away. Somebody typing a code they were
+                    read out needs to see they landed in the right class, and
+                    the only way to know is to be told which one. */}
+                {classCode.trim() ? (
+                  matchedClass ? (
+                    <Text style={styles.classMatched}>
+                      {t('auth.classIdMatched', { name: matchedClass.name })}
+                    </Text>
+                  ) : (
+                    <Text style={styles.classUnknown}>{t('auth.classIdUnknown')}</Text>
+                  )
+                ) : null}
+              </>
+            ) : role === 'student' && classOptions.length ? (
               <Select
                 label={t('auth.class')}
                 value={form.classId}
                 options={classOptions}
                 onChange={(v) => {
                   set('classId', v);
-                  // A class belongs to one branch, so picking the class answers
-                  // the branch question too. Left blank when the class has no
-                  // branch, rather than guessed at.
                   const chosen = classes.find((c) => c.id === v);
                   if (chosen?.branchId) set('branchId', chosen.branchId);
                 }}
@@ -642,6 +703,18 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
+  classMatched: {
+    fontSize: fontSize.xs,
+    color: colors.success,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  classUnknown: {
+    fontSize: fontSize.xs,
+    color: colors.warning,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   container: { flex: 1, backgroundColor: brand.navyDeep },
   flex: { flex: 1 },
   scroll: { flexGrow: 1, padding: spacing.lg, paddingBottom: spacing.huge },

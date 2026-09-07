@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
+import * as translateService from '@/services/translateService';
 import { DangerZone } from '@/features/settings/DangerZone';
 import { ListEditor } from '@/features/settings/ListEditor';
 import { useToast } from '@/contexts/ToastContext';
@@ -80,6 +81,9 @@ function SettingsScreen() {
     setBusy(true);
     try {
       await updateSettings(form, user);
+      // The translator holds the address in memory; drop it so the next
+      // translation picks up what was just saved.
+      translateService.clearContactAddress();
       toast.success(t('settings.settingsSaved'));
       setDirty(false);
     } catch (err) {
@@ -363,6 +367,22 @@ function SettingsScreen() {
             description={t('settings.requireBookingApprovalHelp')}
             value={form.requireBookingApproval === true}
             onValueChange={(v) => set('requireBookingApproval', v)}
+          />
+        </Card>
+
+        <Spacer />
+
+        <SectionHeader title={t('settings.translation')} icon="language-outline" />
+        <Card>
+          <TextField
+            label={t('settings.translationEmail')}
+            value={form.translationContactEmail ?? ''}
+            onChangeText={(v) => set('translationContactEmail', v)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            icon="mail-outline"
+            hint={t('settings.translationEmailHint')}
+            containerStyle={{ marginBottom: 0 }}
           />
         </Card>
 

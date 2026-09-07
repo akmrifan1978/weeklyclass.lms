@@ -137,7 +137,13 @@
     "askAdminForHelp": "اطلب مساعدة المشرف",
     "sameEmail": "هذا هو عنوان دخولك الحالي بالفعل.",
     "emailOptionalHint": "اختياري. بدونه لا يمكن إرسال إعادة تعيين كلمة المرور لهذا الشخص، ويحتاج إلى مساعدة مشرف للدخول.",
-    "nationality": "الجنسية"
+    "nationality": "الجنسية",
+    "classId": "رقم الفصل",
+    "classIdHint": "الرمز الذي تعطيه للطلاب ليكتبوه عند التسجيل، مثل JDC-A1.",
+    "classIdEnter": "رقم الفصل",
+    "classIdEnterHint": "الرمز الذي أعطاك إياه معلمك، مثل JDC-A1.",
+    "classIdUnknown": "لا يوجد فصل بهذا الرقم. راجعه مع معلمك.",
+    "classIdMatched": "الانضمام إلى {{name}}"
   },
   "validation": {
     "identifierRequired": "أدخل بريدك الإلكتروني أو اسم المستخدم",
@@ -652,7 +658,10 @@
     "removeImported": "إزالة مكتبة الدروس المستوردة",
     "removeImportedHelp": "أُدخل {{count}} تسجيلًا من مجموعة خارجية ولم يرفعها أحد هنا. إزالتها لا تمس شيئًا من إنتاج المدرسة.",
     "removeImportedAction": "أزل {{count}} تسجيلًا مستوردًا",
-    "removeImportedDone": "أُزيل {{count}} تسجيلًا مستوردًا."
+    "removeImportedDone": "أُزيل {{count}} تسجيلًا مستوردًا.",
+    "translation": "الترجمة",
+    "translationEmail": "بريد التواصل مع خدمة الترجمة",
+    "translationEmailHint": "اختياري. يسمح المترجم المجاني بنحو 5,000 حرف يوميًا بدونه ونحو 50,000 معه. يُرسل بريدك إلى MyMemory مع كل طلب ولا يُستخدم إلا لرفع هذا الحد."
   },
   "confirm": {
     "deleteTitle": "حذف هذا السجل؟",

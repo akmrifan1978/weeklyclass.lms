@@ -137,6 +137,23 @@ export default function QuizPlayer() {
   const sourceLanguage = (data?.quiz.language ?? 'en') as LanguageCode;
   const canTranslate = Boolean(question) && sourceLanguage !== language;
 
+  /**
+   * Translated as the question appears, not on a tap.
+   *
+   * Somebody who has set the app to Tamil has already said which language they
+   * read; asking them to say it again per question was making them work for
+   * something they had asked for. Cached results cost nothing, so moving
+   * through a paper a second time spends no allowance at all.
+   */
+  useEffect(() => {
+    if (!question || !canTranslate) return;
+    if (glosses[question.id]) return;
+    void translateQuestion();
+    // Keyed on the question, so paging forward translates the next one and
+    // paging back reuses what is already held.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question?.id, canTranslate]);
+
   const translateQuestion = async () => {
     if (!question) return;
     const id = question.id;

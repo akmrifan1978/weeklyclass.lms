@@ -137,7 +137,13 @@
     "askAdminForHelp": "Ask an admin for help",
     "sameEmail": "That is already your sign-in address.",
     "emailOptionalHint": "Optional. Without one, this person cannot be sent a password reset and an admin has to help them back in.",
-    "nationality": "Nationality"
+    "nationality": "Nationality",
+    "classId": "Class ID",
+    "classIdHint": "The code you give students to type at registration, e.g. JDC-A1.",
+    "classIdEnter": "Class ID",
+    "classIdEnterHint": "The code your teacher gave you, e.g. JDC-A1.",
+    "classIdUnknown": "No class has that ID. Check it with your teacher.",
+    "classIdMatched": "Joining {{name}}"
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
@@ -652,7 +658,10 @@
     "removeImported": "Remove the imported talk library",
     "removeImportedHelp": "{{count}} recordings were brought in from an outside collection and were never uploaded by anyone here. Removing them touches nothing the school made.",
     "removeImportedAction": "Remove {{count}} imported recordings",
-    "removeImportedDone": "Removed {{count}} imported recordings."
+    "removeImportedDone": "Removed {{count}} imported recordings.",
+    "translation": "Translation",
+    "translationEmail": "Contact email for the translation service",
+    "translationEmailHint": "Optional. The free translator allows about 5,000 characters a day without one and about 50,000 with it. Your address is sent to MyMemory with each request and is used only to raise that limit."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",

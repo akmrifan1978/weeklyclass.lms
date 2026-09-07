@@ -17,10 +17,17 @@ import type { LanguageCode } from '@/types';
  * revelation, and that is not a thing to generate.
  *
  * MyMemory is the service, because it is free, needs no key, and returns
- * Tamil of usable quality. The anonymous quota is about 5,000 characters a
- * day per address, which is why nothing here translates ahead of time: a
- * reader translates the hadith in front of them, and it is then cached for
- * good.
+ * Tamil of usable quality.
+ *
+ * Its quota is the whole design constraint. Anonymous, it allows roughly 5,000
+ * characters a day per address — enough for a handful of passages and nothing
+ * more. Naming a contact address raises that to roughly 50,000, ten times as
+ * much, which is the difference between "translate this one thing on request"
+ * and "translate what is on screen as you read".
+ *
+ * That address is an admin setting rather than a constant, because it is the
+ * organisation's address being given to a third party and that is theirs to
+ * decide. Blank is fine and everything still works — just less of it per day.
  */
 
 const ENDPOINT = 'https://api.mymemory.translated.net/get';
@@ -87,6 +94,31 @@ function chunk(text: string): string[] {
   return out;
 }
 
+/**
+ * The contact address MyMemory raises the daily allowance for.
+ *
+ * Read once and held, rather than fetched per chunk: a long passage is several
+ * requests and the setting cannot change between them.
+ */
+let contactAddress: string | null = null;
+
+async function loadContactAddress(): Promise<string> {
+  if (contactAddress !== null) return contactAddress;
+  try {
+    const { getSettings } = await import('./settingsService');
+    const settings = await getSettings();
+    contactAddress = settings.translationContactEmail?.trim() ?? '';
+  } catch {
+    contactAddress = '';
+  }
+  return contactAddress;
+}
+
+/** Forgets the cached address, so saving a new one takes effect at once. */
+export function clearContactAddress(): void {
+  contactAddress = null;
+}
+
 async function translateChunk(
   text: string,
   from: LanguageCode,
@@ -96,7 +128,10 @@ async function translateChunk(
   const deadline = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const url = `${ENDPOINT}?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+    const contact = await loadContactAddress();
+    const url =
+      `${ENDPOINT}?q=${encodeURIComponent(text)}&langpair=${from}|${to}` +
+      (contact ? `&de=${encodeURIComponent(contact)}` : '');
     const response = await fetch(url, { signal: controller.signal });
     const payload = (await response.json()) as {
       responseStatus?: number | string;
