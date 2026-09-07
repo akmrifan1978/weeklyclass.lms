@@ -139,6 +139,14 @@ export default function SplashScreen() {
               icon="key-outline"
               onPress={() => router.push('/(auth)/forgot-password')}
             />
+            {/* Readable before signing in, on purpose: somebody deciding whether
+                to register is exactly the person who needs to know what the
+                programme is. */}
+            <LinkButton
+              label={t('about.title')}
+              icon="information-circle-outline"
+              onPress={() => router.push('/(auth)/about')}
+            />
           </View>
 
           <View style={styles.languageBlock}>

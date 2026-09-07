@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Platform, View } from 'react-native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
@@ -30,6 +30,7 @@ function RoleGate({ children }: { children: React.ReactNode }) {
   const { user, initialising } = useAuth();
   const { ready: languageReady } = useLanguage();
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
 
   const booting = initialising || !languageReady;
@@ -43,6 +44,22 @@ function RoleGate({ children }: { children: React.ReactNode }) {
 
     const group = segments[0];
     const inPublicArea = group === undefined || group === '(auth)';
+
+    /**
+     * The one public screen a signed-in person is NOT bounced off.
+     *
+     * Everything else under `(auth)` is a way in — sign in, register, recover a
+     * password — and somebody already signed in has no business on any of them.
+     * The programme's mission is not a way in; it is something to read, and
+     * bouncing a student who taps it back to their dashboard would make it
+     * unreadable to precisely the people who joined because of it.
+     *
+     * Matched on the pathname rather than the segments: mid-navigation the
+     * segment list is briefly empty, which read as "on a public screen" and
+     * fired the redirect before the route had settled. The page appeared and
+     * then threw the reader out again.
+     */
+    if (pathname === '/about' || pathname.endsWith('/about')) return;
 
     if (!user) {
       // Signed out but sitting in a protected area.
@@ -62,7 +79,7 @@ function RoleGate({ children }: { children: React.ReactNode }) {
     if (inPublicArea || (group?.startsWith('(') && group !== expectedGroup)) {
       router.replace(home);
     }
-  }, [booting, user, segments, router]);
+  }, [booting, user, segments, pathname, router]);
 
   if (booting) {
     return (

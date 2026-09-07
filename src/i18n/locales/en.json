@@ -1141,5 +1141,28 @@
     "pin": "Pin",
     "unpin": "Unpin",
     "deleteConfirm": "Delete this note?"
+  },
+  "about": {
+    "title": "About the Program",
+    "programTitle": "About the Program",
+    "programBody1": "Islamic knowledge is an important part of every Muslim’s life. Learning and understanding the Qur’an and authentic Sunnah helps us strengthen our faith, improve our worship, develop good character, and live our lives according to Islamic guidance.",
+    "programBody2": "The Weekly Class – JDC Tamil Section is designed to provide a simple, structured, and accessible way for individuals and families to learn about Islam. Through regular weekly classes, we aim to help students build a strong foundation in Islamic knowledge and continue learning at every stage of life.",
+    "programBody3": "Our lessons will be based on the Qur’an and authentic Sunnah and presented in a clear, practical, and easy-to-understand way. We encourage students not only to gain knowledge but also to understand it, benefit from it, and apply it in their daily lives.",
+    "visionTitle": "Our Vision",
+    "visionBody": "To make authentic Islamic knowledge accessible, meaningful, and beneficial to everyone in our community through a structured and engaging weekly learning program.",
+    "missionTitle": "Our Mission",
+    "missionIntro": "We aim to:",
+    "mission1": "Provide authentic Islamic knowledge based on the Qur’an and Sunnah.",
+    "mission2": "Help beginners and continuing students build a strong foundation in Islamic knowledge.",
+    "mission3": "Make Islamic learning simple, clear, practical, and accessible.",
+    "mission4": "Develop understanding in important areas such as Aqeedah, Qur’an, Tafsir, Hadith, Fiqh, Seerah, and Islamic manners and character.",
+    "mission5": "Encourage students to put their knowledge into practice in their daily lives.",
+    "mission6": "Create learning opportunities for children, teenagers, adults, and families.",
+    "mission7": "Provide both in-person and online learning opportunities.",
+    "mission8": "Encourage continuous learning through weekly lessons, activities, revision, quizzes, and assessments.",
+    "mission9": "Create a welcoming learning environment where students can learn, ask questions, and grow in their understanding of Islam.",
+    "commitmentTitle": "Our Commitment",
+    "commitmentBody1": "We believe that Islamic learning is a lifelong journey. Through the Weekly Class – JDC Tamil Section, we hope to make that journey easier, more engaging, and beneficial for everyone.",
+    "commitmentBody2": "Our goal is not simply to teach lessons, but to inspire a love for knowledge, strengthen faith, and encourage positive change in our daily lives."
   }
 }
