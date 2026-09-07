@@ -34,7 +34,6 @@ export const COLLECTIONS = {
   counters: 'counters',
   notes: 'notes',
   publicSchedule: 'publicSchedule',
-  seerahChapters: 'seerahChapters',
 } as const;
 
 /** `settings/{APP_SETTINGS_DOC}` holds the single global settings document. */
@@ -81,7 +80,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     zakat: true,
     hadith: true,
     dua: true,
-    seerah: true,
   },
 };
 
@@ -94,7 +92,6 @@ export const ISLAMIC_FEATURES = [
   'zakat',
   'hadith',
   'dua',
-  'seerah',
 ] as const;
 
 export interface LanguageOption {

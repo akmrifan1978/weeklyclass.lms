@@ -401,13 +401,6 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // The Seerah chapters this organisation writes. Readable by anybody signed
-    // in; written by whoever may write articles, since it is the same act.
-    match /seerahChapters/{chapterId} {
-      allow read: if isSignedIn();
-      allow write: if can('MANAGE_ARTICLES');
-    }
-
     match /articles/{articleId} {
       // Same shop window as videos: a published article is readable by anybody,
       // a draft by nobody without an account. Articles carry no class scoping,

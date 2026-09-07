@@ -855,41 +855,7 @@ export type IslamicFeature =
   | 'tajweed'
   | 'zakat'
   | 'hadith'
-  | 'dua'
-  | 'seerah';
-
-/**
- * One chapter of the Seerah, written by this organisation.
- *
- * Deliberately NOT bundled with the app the way the duʿāʾ collection is. The
- * well-known Seerah works are somebody's copyright, and a summary of the
- * Prophet's ﷺ life is not something to generate and present as fact — so the
- * text here is whatever the people running the platform wrote or translated
- * themselves, and the app only ever stores and shows it.
- *
- * `author` is on the chapter rather than assumed from the account, because a
- * chapter is often a translation of somebody else's words and the person who
- * should be credited is not the person who typed it in.
- */
-export interface SeerahChapter extends BaseDoc {
-  /** Position in the narrative. Sorted on, not displayed. */
-  order: number;
-  title: string;
-  /** The chapter itself. Plain text; paragraphs separated by blank lines. */
-  body: string;
-  /**
-   * Which part of the life this belongs to, used to group the list. Free text
-   * rather than an enum: an organisation may divide the Seerah differently
-   * from the next one, and the app has no business insisting.
-   */
-  period?: string | null;
-  /** Named so a reader can weigh it, and so a translator gets their credit. */
-  author?: string | null;
-  /** Where it was taken from, when it is drawn from a published work. */
-  source?: string | null;
-  language: LanguageCode;
-  status: ContentStatus;
-}
+  | 'dua';
 
 /**
  * A private note, belonging to exactly one person.
