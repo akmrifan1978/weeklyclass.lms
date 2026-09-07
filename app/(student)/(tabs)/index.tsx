@@ -180,6 +180,14 @@ export default function StudentHome() {
           <Spacer size={spacing.xxl} />
           <SectionHeader title={t('dashboard.quickAccess')} icon="grid-outline" />
           <Grid minItemWidth={100} gap={spacing.md}>
+            {/* First, because this is the one somebody reaches for
+                mid-lesson, when the thought is about to be lost. */}
+            <QuickAccessTile
+              icon="create-outline"
+              label={t('nav.notes')}
+              tint={brand.slate}
+              onPress={() => router.push('/(student)/notes')}
+            />
             <QuickAccessTile
               icon="book-outline"
               label={t('nav.lessons')}

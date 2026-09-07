@@ -235,7 +235,8 @@
     "hadith": "Hadith",
     "myProgress": "My progress",
     "duas": "Duas",
-    "events": "Events"
+    "events": "Events",
+    "notes": "Notes"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -1115,5 +1116,19 @@
     "cancelled": "Booking cancelled.",
     "exportAll": "All participants sheet",
     "cannotConfirmCancelled": "A cancelled booking cannot be confirmed."
+  },
+  "notes": {
+    "new": "New note",
+    "edit": "Edit note",
+    "title": "Title",
+    "titleHint": "Optional. Leave it blank and the note is listed by its first words.",
+    "body": "Note",
+    "search": "Search your notes",
+    "untitled": "Untitled note",
+    "empty": "No notes yet",
+    "emptyHelp": "Somewhere to write things down during a lesson. Only you can read these — not your teacher, not an admin.",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "deleteConfirm": "Delete this note?"
   }
 }

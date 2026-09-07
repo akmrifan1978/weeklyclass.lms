@@ -67,6 +67,8 @@ export const ADMIN_NAV: NavItem[] = [
   { labelKey: 'nav.languages', route: '/(admin)/languages', icon: 'language-outline', permission: 'MANAGE_LANGUAGES', group: 'system' },
   { labelKey: 'nav.settings', route: '/(admin)/settings', icon: 'settings-outline', permission: 'MANAGE_SETTINGS', group: 'system' },
   { labelKey: 'nav.auditLogs', route: '/(admin)/audit', icon: 'document-text-outline', permission: 'MANAGE_SETTINGS', group: 'system' },
+  // No permission gate: a notebook belongs to the person, not to a role.
+  { labelKey: 'nav.notes', route: '/(admin)/notes', icon: 'create-outline', group: 'system' },
   { labelKey: 'nav.profile', route: '/(admin)/profile', icon: 'person-outline', group: 'system' },
 ];
 

@@ -624,6 +624,39 @@ service cloud.firestore {
     // collection, and only staff may reply. The author can read their own back
     // to see the reply, which is the whole point of writing in.
 
+    // =========================================================================
+    // Private notes
+    // =========================================================================
+    //
+    // The only collection in this file an admin cannot read. That is the whole
+    // point of it: a notebook somebody's teacher can open is not a notebook,
+    // and a promise of privacy kept only by the app having no screen for it is
+    // not a promise. `isAdmin()` is deliberately absent from every rule here.
+    //
+    // Delete is soft, through an update, so the row survives a mistimed tap.
+    // Hard delete is refused outright — a purge belongs to the owner's account
+    // being removed, not to a stray call.
+    match /notes/{noteId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Per-document, so a query filtered to the caller's own uid passes and an
+      // unfiltered one is refused.
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() <= 200
+                    && request.resource.data.body is string
+                    && request.resource.data.body.size() <= 20000;
+
+      // The owner cannot hand a note to somebody else by rewriting the uid.
+      allow update: if isSignedIn()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow delete: if false;
+    }
+
     match /supportRequests/{requestId} {
       allow get: if isSignedIn()
                  && (resource.data.userId == request.auth.uid || isStaff());

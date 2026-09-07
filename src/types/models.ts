@@ -821,6 +821,22 @@ export type IslamicFeature =
   | 'hadith'
   | 'dua';
 
+/**
+ * A private note, belonging to exactly one person.
+ *
+ * Not shared, not visible to staff, and not part of any report. Somebody
+ * listening to a lesson wants somewhere to write "ask about this" without
+ * composing a message to anybody — the value is that nobody else reads it, and
+ * the rules enforce that rather than the screen.
+ */
+export interface Note extends BaseDoc {
+  userId: string;
+  title: string;
+  body: string;
+  /** Kept at the top of the list until unpinned. */
+  pinned?: boolean;
+}
+
 export interface DashboardStats {
   totalStudents: number;
   activeStudents: number;

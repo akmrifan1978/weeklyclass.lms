@@ -164,6 +164,15 @@ export default function TeacherHome() {
           <Spacer size={spacing.xxl} />
           <SectionHeader title={t('dashboard.quickAccess')} icon="grid-outline" />
           <Grid minItemWidth={105} gap={spacing.md}>
+            {/* Outside the permission-filtered list on purpose: a notebook
+                belongs to the person, not to a role, so there is no permission
+                that could withhold it. */}
+            <QuickAccessTile
+              icon="create-outline"
+              label={t('nav.notes')}
+              tint={brand.slate}
+              onPress={() => router.push('/(teacher)/notes')}
+            />
             {visibleTiles.map((tile) => (
               <QuickAccessTile
                 key={tile.route}

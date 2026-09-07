@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import {
   type DuaCategory,
 } from '@/constants/duas';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
+import * as translateService from '@/services/translateService';
 import { ScriptureText } from './ScriptureText';
 import {
   AppHeader,
@@ -51,15 +52,48 @@ export function DuaScreen({ headerTint }: { headerTint?: string }) {
   const [search, setSearch] = useState('');
 
   // English is currently the only language with a written, checked meaning for
-  // every supplication. In any other, the Arabic stands alone.
+  // every supplication.
   const meaningApproved = hasApprovedMeaning(language);
+
+  /**
+   * Where the reader's language has no written meaning, the English one is
+   * shown and named as English — the Arabic used to stand alone, which left a
+   * Tamil reader with the supplication and no idea what they were saying.
+   *
+   * Arabic readers are the exception: the duʿāʾ is the Arabic, so a second
+   * language underneath would be clutter rather than help.
+   */
+  const showEnglishMeaning = !meaningApproved && language !== 'ar';
+
+  const [glosses, setGlosses] = useState<
+    Record<string, { text?: string; loading?: boolean; error?: string }>
+  >({});
+
+  const requestGloss = useCallback(
+    async (id: string, english: string) => {
+      setGlosses((g) => ({ ...g, [id]: { loading: true } }));
+      try {
+        const text = await translateService.translate(english, 'en', language);
+        setGlosses((g) => ({ ...g, [id]: { text } }));
+      } catch (err) {
+        const reason =
+          err instanceof translateService.TranslationUnavailable ? err.reason : 'network';
+        setGlosses((g) => ({ ...g, [id]: { error: t(`scripture.translateFailed_${reason}`) } }));
+      }
+    },
+    [language, t]
+  );
 
   const grouped = useMemo(() => {
     const matching = DUAS.filter((dua) =>
       matchesSearch(
         search,
         t(dua.titleKey),
-        meaningApproved ? t(dua.meaningKey) : undefined,
+        meaningApproved
+          ? t(dua.meaningKey)
+          : language !== 'ar'
+            ? t(dua.meaningKey, { lng: 'en' })
+            : undefined,
         dua.transliteration,
         dua.arabic,
         dua.reference
@@ -69,7 +103,7 @@ export function DuaScreen({ headerTint }: { headerTint?: string }) {
       category,
       duas: matching.filter((dua) => dua.category === category),
     })).filter((group) => group.duas.length > 0);
-  }, [search, t, meaningApproved]);
+  }, [search, t, meaningApproved, language]);
 
   return (
     <>
@@ -118,6 +152,23 @@ export function DuaScreen({ headerTint }: { headerTint?: string }) {
                     translation={
                       meaningApproved
                         ? { text: t(dua.meaningKey), language }
+                        : showEnglishMeaning
+                          ? // Read from the English bundle explicitly rather
+                            // than relying on the fallback chain, so this says
+                            // what it means: the English text, labelled English.
+                            { text: t(dua.meaningKey, { lng: 'en' }), language: 'en' }
+                          : null
+                    }
+                    machine={
+                      showEnglishMeaning
+                        ? {
+                            text: glosses[dua.id]?.text ?? null,
+                            language,
+                            loading: glosses[dua.id]?.loading,
+                            error: glosses[dua.id]?.error,
+                            onRequest: () =>
+                              void requestGloss(dua.id, t(dua.meaningKey, { lng: 'en' })),
+                          }
                         : null
                     }
                   />

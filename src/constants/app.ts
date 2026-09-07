@@ -32,6 +32,7 @@ export const COLLECTIONS = {
   settings: 'settings',
   auditLogs: 'auditLogs',
   counters: 'counters',
+  notes: 'notes',
 } as const;
 
 /** `settings/{APP_SETTINGS_DOC}` holds the single global settings document. */
