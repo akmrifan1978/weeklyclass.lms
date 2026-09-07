@@ -1,6 +1,8 @@
 import { COLLECTIONS } from '@/constants/app';
 import { combineDateTime, toISODate } from '@/utils/date';
 import type { AppUser, CalendarEvent, MeetingProvider } from '@/types';
+import { db } from '@/firebase/config';
+import { doc, deleteDoc, setDoc } from 'firebase/firestore';
 import {
   createDoc,
   getById,
@@ -149,6 +151,56 @@ export function getEvent(id: string): Promise<CalendarEvent | null> {
   return getById<CalendarEvent>(COLLECTIONS.calendarEvents, id);
 }
 
+/**
+ * The class schedule, as much of it as a stranger may see.
+ *
+ * The sign-in screen advertises the upcoming classes, and a signed-out visitor
+ * cannot read `calendarEvents` — nor should they. A calendar entry carries the
+ * meeting link, and Firestore rules grant or refuse a whole document: there is
+ * no way to publish the title while withholding the URL. Anyone with the link
+ * can walk into the class.
+ *
+ * So a deliberately thin copy is kept alongside it, containing only what a
+ * poster would say — what, when, where, and the picture. No link, no class id,
+ * no audience, no attendee count. That copy is world-readable and the real
+ * entry stays closed.
+ *
+ * Only CLASSES are mirrored. An entry with `registration` is a ticketed event
+ * and belongs on the events screen behind a sign-in, where the seat count and
+ * the booking live.
+ */
+async function syncPublicSchedule(id: string, event: Partial<CalendarEvent>): Promise<void> {
+  const isClass = !event.registration;
+  const path = `${COLLECTIONS.publicSchedule}/${id}`;
+
+  try {
+    if (!isClass) {
+      // It used to be a class and has become a ticketed event: withdraw the
+      // public copy rather than leave a stale one advertising it.
+      await deleteDoc(doc(db, COLLECTIONS.publicSchedule, id));
+      return;
+    }
+
+    await setDoc(doc(db, COLLECTIONS.publicSchedule, id), {
+      title: event.title ?? '',
+      date: event.date ?? '',
+      startTime: event.startTime ?? '',
+      endTime: event.endTime ?? '',
+      venue: event.venue ?? null,
+      location: event.location ?? null,
+      topic: event.topic ?? null,
+      speaker: event.speaker ?? null,
+      bannerUrl: event.bannerUrl ?? null,
+      startsAt: combineDateTime(event.date ?? '', event.startTime ?? ''),
+      deleted: false,
+    });
+  } catch (error) {
+    // Never fails the save. The calendar entry is the record that matters; the
+    // advertisement is a convenience, and losing it must not lose the class.
+    console.warn(`[WeeklyClass] could not update ${path}:`, error);
+  }
+}
+
 export async function saveEvent(
   data: Partial<CalendarEvent> & { title: string; date: string; startTime: string; endTime: string },
   actor: AppUser,
@@ -164,6 +216,7 @@ export async function saveEvent(
   if (id) {
     const before = await getEvent(id);
     await updateDocById<CalendarEvent>(COLLECTIONS.calendarEvents, id, payload);
+    await syncPublicSchedule(id, { ...(before ?? {}), ...payload });
     await audit.log({
       actor,
       action: 'UPDATE',
@@ -179,6 +232,7 @@ export async function saveEvent(
   }
 
   const newId = await createDoc(COLLECTIONS.calendarEvents, payload, { actorId: actor.uid });
+  await syncPublicSchedule(newId, payload);
   await audit.log({
     actor,
     action: 'CREATE',
@@ -192,6 +246,10 @@ export async function saveEvent(
 export async function deleteEvent(id: string, actor: AppUser): Promise<void> {
   const before = await getEvent(id);
   await softDelete(COLLECTIONS.calendarEvents, id, actor.uid);
+  // The public copy is hard-deleted rather than flagged: it exists only to be
+  // read by strangers, and a soft-deleted advertisement is still an
+  // advertisement unless every reader remembers to filter it.
+  await deleteDoc(doc(db, COLLECTIONS.publicSchedule, id)).catch(() => undefined);
   await audit.log({
     actor,
     action: 'DELETE',
@@ -199,6 +257,40 @@ export async function deleteEvent(id: string, actor: AppUser): Promise<void> {
     documentId: id,
     summary: `Removed event "${before?.title ?? id}"`,
   });
+}
+
+export interface PublicClass {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  venue?: string | null;
+  location?: string | null;
+  speaker?: string | null;
+  bannerUrl?: string | null;
+}
+
+/**
+ * The upcoming classes a signed-out visitor may see.
+ *
+ * Reads the thin public copy, never `calendarEvents` — see syncPublicSchedule
+ * for why that distinction is the whole point.
+ */
+export async function listPublicClasses(limit = 6): Promise<PublicClass[]> {
+  const rows = await listAll<PublicClass & { startsAt?: unknown }>(
+    COLLECTIONS.publicSchedule,
+    {
+      filters: [['startsAt', '>=', new Date()]],
+      orderByField: 'startsAt',
+      direction: 'asc',
+      pageSize: limit,
+    }
+  ).catch((error) => {
+    console.warn('[WeeklyClass] could not read the public schedule:', error);
+    return [];
+  });
+  return rows;
 }
 
 /** Groups events by ISO date for a month or agenda view. */

@@ -306,6 +306,19 @@ service cloud.firestore {
       allow write: if can('MANAGE_SETTINGS');
     }
 
+    // A deliberately thin copy of the class schedule, written by the calendar
+    // and readable by anybody — including somebody who has never signed in,
+    // which is the point: the sign-in screen advertises the coming classes.
+    //
+    // It holds only what a poster would say. No meeting link, no class id, no
+    // audience, no attendee count. Firestore grants a whole document or none of
+    // it, so publishing a title while withholding a URL is not something a rule
+    // can do — the field has to be absent from the document, and here it is.
+    match /publicSchedule/{eventId} {
+      allow read: if true;
+      allow write: if can('MANAGE_CALENDAR');
+    }
+
     match /languages/{code} {
       allow read: if true;
       allow write: if can('MANAGE_LANGUAGES');

@@ -33,6 +33,7 @@ export const COLLECTIONS = {
   auditLogs: 'auditLogs',
   counters: 'counters',
   notes: 'notes',
+  publicSchedule: 'publicSchedule',
 } as const;
 
 /** `settings/{APP_SETTINGS_DOC}` holds the single global settings document. */

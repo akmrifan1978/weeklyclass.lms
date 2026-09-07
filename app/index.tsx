@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as calendarService from '@/services/calendarService';
 import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -40,6 +41,24 @@ const ROLES: {
 ];
 
 export default function SplashScreen() {
+  const [classes, setClasses] = useState<calendarService.PublicClass[]>([]);
+
+  useEffect(() => {
+    // Best effort and silent: the sign-in screen must render whether or not
+    // this succeeds, and a visitor who cannot see the schedule can still sign
+    // in, which is what the screen is for.
+    let cancelled = false;
+    calendarService
+      .listPublicClasses(4)
+      .then((rows) => {
+        if (!cancelled) setClasses(rows);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const { t } = useTranslation();
   // `settings/app` is world-readable precisely so this screen can show the
   // organisation's own identity before anyone signs in.
@@ -149,6 +168,37 @@ export default function SplashScreen() {
             />
           </View>
 
+          {/* After the programme description, deliberately: somebody has just
+              read what this is, and the next question is when it happens.
+              Drawn from the thin public copy of the schedule — no meeting
+              links reach this screen. */}
+          {classes.length > 0 ? (
+            <View style={styles.classesBlock}>
+              <Text style={styles.sectionLabel}>{t('dashboard.upcomingClasses')}</Text>
+              {classes.map((item) => (
+                <View key={item.id} style={styles.classRow}>
+                  {item.bannerUrl ? (
+                    <Image source={{ uri: item.bannerUrl }} style={styles.classPhoto} />
+                  ) : (
+                    <View style={[styles.classPhoto, styles.classPhotoEmpty]}>
+                      <Ionicons name="calendar" size={18} color={brand.orange} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.classTitle} numberOfLines={2}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.classFact} numberOfLines={1}>
+                      {item.date}
+                      {item.startTime ? `  ·  ${item.startTime}` : ''}
+                      {item.venue ? `  ·  ${item.venue}` : ''}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.languageBlock}>
             <Text style={styles.sectionLabel}>{t('auth.chooseLanguage')}</Text>
             <View style={styles.languageRow}>
@@ -206,6 +256,20 @@ function LinkButton({
 }
 
 const styles = StyleSheet.create({
+  classesBlock: { width: '100%', maxWidth: 420, alignSelf: 'center', marginTop: spacing.xl },
+  classRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: radius.lg,
+    padding: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  classPhoto: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surface },
+  classPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
+  classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textInverse },
+  classFact: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.72)', marginTop: 2 },
   container: { flex: 1, backgroundColor: brand.navyDeep },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
   inner: { width: '100%', maxWidth: 460, alignSelf: 'center' },

@@ -62,7 +62,11 @@ export default function TeacherHome() {
       })),
       nextEventFor(user).catch(() => null),
       listUpcoming({ pageSize: 6 })
-        .then((page) => page.items)
+        // Classes only. An entry carrying `registration` is a ticketed
+        // event and lives on the events screen, with its seat count and
+        // its booking button; showing it here as a class is what made
+        // the two look like one thing.
+        .then((page) => page.items.filter((event) => !event.registration))
         .catch(() => []),
       announcementsFor(user, 3).catch(() => []),
     ]);
