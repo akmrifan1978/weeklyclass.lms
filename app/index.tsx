@@ -37,8 +37,28 @@ const ROLES: {
   tint: string;
 }[] = [
   { role: 'student', labelKey: 'auth.studentLogin', icon: 'school-outline', tint: brand.orange },
-  { role: 'teacher', labelKey: 'auth.teacherLogin', icon: 'people-outline', tint: brand.orangeLight },
-  { role: 'admin', labelKey: 'auth.adminLogin', icon: 'shield-checkmark-outline', tint: brand.slate },
+];
+
+/**
+ * Staff ways in, deliberately smaller than the student one.
+ *
+ * Almost everybody arriving at this screen is a student, and three equal cards
+ * asked every one of them to work out which of the three they are. Worse, two
+ * of the answers are wrong for them, and a student who picks "Admin Login"
+ * learns only that their password does not work — the screen having implied
+ * the choice was theirs to make.
+ *
+ * So the student route is the button, and staff get a quiet pair beneath it.
+ * Nothing is hidden: a teacher still finds theirs at a glance, because they
+ * know which one they are looking for and a student does not.
+ */
+const STAFF_ROLES: {
+  role: UserRole;
+  labelKey: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { role: 'teacher', labelKey: 'auth.teacherLogin', icon: 'people-outline' },
+  { role: 'admin', labelKey: 'auth.adminLogin', icon: 'shield-checkmark-outline' },
 ];
 
 export default function SplashScreen() {
@@ -145,6 +165,25 @@ export default function SplashScreen() {
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
               </Pressable>
             ))}
+
+            <View style={styles.staffRow}>
+              {STAFF_ROLES.map((item) => (
+                <Pressable
+                  key={item.role}
+                  onPress={() =>
+                    router.push({ pathname: '/(auth)/login', params: { role: item.role } })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={t(item.labelKey)}
+                  style={({ pressed }) => [styles.staffButton, { opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Ionicons name={item.icon} size={15} color={brand.sandLight} />
+                  <Text style={styles.staffLabel} numberOfLines={1}>
+                    {t(item.labelKey)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
           <View style={styles.linkRow}>
@@ -336,6 +375,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   roleBlock: { marginBottom: spacing.xl },
+  staffRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  staffButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: spacing.md,
+    // Short of the 44pt guideline on purpose is NOT what this is: the row is
+    // padded to a comfortable tap target while reading as secondary.
+    paddingVertical: 9,
+  },
+  staffLabel: { fontSize: fontSize.xs, color: brand.sandLight, fontWeight: fontWeight.semibold },
   roleButton: {
     flexDirection: 'row',
     alignItems: 'center',
