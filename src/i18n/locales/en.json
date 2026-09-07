@@ -1008,7 +1008,14 @@
     "originalArabic": "Original Arabic",
     "approvedTranslation": "Approved translation · {{language}}",
     "noApprovedTranslation": "No approved translation in your language. The Arabic original is shown alone.",
-    "toggleTranslation": "Show or hide the translation"
+    "toggleTranslation": "Show or hide the translation",
+    "translateWithMachine": "Translate to {{language}}",
+    "machineTranslation": "Machine translation — {{language}}",
+    "machineCaveat": "Translated by software, not by a scholar. It may be wrong. Check it against the English above before relying on it or quoting it.",
+    "translating": "Translating…",
+    "translateFailed_quota": "The free translation limit for today has been reached. It resets tomorrow.",
+    "translateFailed_network": "Could not reach the translation service. Check your connection and try again.",
+    "translateFailed_refused": "The translation service could not translate this passage."
   },
   "language": {
     "add": "Add language",

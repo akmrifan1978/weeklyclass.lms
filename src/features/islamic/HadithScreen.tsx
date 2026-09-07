@@ -9,6 +9,7 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import * as hadithService from '@/services/hadithService';
+import * as translateService from '@/services/translateService';
 import type { LanguageCode } from '@/types';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { ScriptureText } from './ScriptureText';
@@ -42,6 +43,35 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
 
   const [collection, setCollection] = useState<string | null>(null);
   const [section, setSection] = useState(1);
+  /**
+   * Machine glosses, keyed by hadith number.
+   *
+   * Requested one at a time rather than for the whole book: the free service
+   * allows a few thousand characters a day, and a reader wants the narration in
+   * front of them, not ninety they will never scroll to.
+   */
+  const [glosses, setGlosses] = useState<
+    Record<number, { text?: string; loading?: boolean; error?: string }>
+  >({});
+
+  const requestGloss = useCallback(
+    async (number: number, english: string) => {
+      setGlosses((g) => ({ ...g, [number]: { loading: true } }));
+      try {
+        const text = await translateService.translate(english, 'en', language);
+        setGlosses((g) => ({ ...g, [number]: { text } }));
+      } catch (err) {
+        const reason =
+          err instanceof translateService.TranslationUnavailable ? err.reason : 'network';
+        setGlosses((g) => ({
+          ...g,
+          [number]: { error: t(`scripture.translateFailed_${reason}`) },
+        }));
+      }
+    },
+    [language, t]
+  );
+
   const [search, setSearch] = useState('');
 
   const loadCollections = useCallback(
@@ -198,6 +228,17 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
                           // the fallback has to avoid making.
                           language: current?.translationLanguage ?? language,
                           source: current?.translationSource,
+                        }
+                      : null
+                  }
+                  machine={
+                    current?.isFallbackLanguage && h.translation
+                      ? {
+                          text: glosses[h.number]?.text ?? null,
+                          language,
+                          loading: glosses[h.number]?.loading,
+                          error: glosses[h.number]?.error,
+                          onRequest: () => void requestGloss(h.number, h.translation!),
                         }
                       : null
                   }

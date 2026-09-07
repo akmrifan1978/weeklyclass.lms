@@ -1008,7 +1008,14 @@
     "originalArabic": "النص العربي الأصلي",
     "approvedTranslation": "ترجمة معتمدة · {{language}}",
     "noApprovedTranslation": "لا توجد ترجمة معتمدة بلغتك، ويُعرض النص العربي الأصلي وحده.",
-    "toggleTranslation": "إظهار الترجمة أو إخفاؤها"
+    "toggleTranslation": "إظهار الترجمة أو إخفاؤها",
+    "translateWithMachine": "ترجم إلى {{language}}",
+    "machineTranslation": "ترجمة آلية — {{language}}",
+    "machineCaveat": "ترجمها برنامج لا عالم، وقد تكون خاطئة. راجعها مع الإنجليزية أعلاه قبل الاعتماد عليها أو الاقتباس منها.",
+    "translating": "جارٍ الترجمة…",
+    "translateFailed_quota": "بلغت حد الترجمة المجاني لليوم، ويعود غدًا.",
+    "translateFailed_network": "تعذّر الوصول إلى خدمة الترجمة. تحقق من اتصالك وحاول مجددًا.",
+    "translateFailed_refused": "تعذّر على خدمة الترجمة ترجمة هذا النص."
   },
   "language": {
     "add": "إضافة لغة",
