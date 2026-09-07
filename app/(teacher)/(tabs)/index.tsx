@@ -80,6 +80,8 @@ export default function TeacherHome() {
   const tiles: { permission: Permission; icon: React.ComponentProps<typeof QuickAccessTile>['icon']; labelKey: string; route: string; tint: string }[] = [
     { permission: 'VIEW_STUDENTS', icon: 'people-outline', labelKey: 'nav.myStudents', route: '/(teacher)/students', tint: brand.navy },
     { permission: 'VIEW_LESSONS', icon: 'book-outline', labelKey: 'nav.lessons', route: '/(teacher)/lessons', tint: brand.orange },
+    { permission: 'UPLOAD_VIDEO', icon: 'radio-button-on', labelKey: 'record.title', route: '/(teacher)/record', tint: brand.red },
+    { permission: 'UPLOAD_VIDEO', icon: 'film-outline', labelKey: 'video.recordings', route: '/(teacher)/recordings', tint: brand.slate },
     { permission: 'UPLOAD_VIDEO', icon: 'videocam-outline', labelKey: 'nav.videos', route: '/(teacher)/videos', tint: brand.orangeLight },
     { permission: 'UPLOAD_MATERIAL', icon: 'folder-open-outline', labelKey: 'nav.materials', route: '/(teacher)/materials', tint: brand.sand },
     { permission: 'CREATE_QUIZ', icon: 'help-circle-outline', labelKey: 'nav.quizzes', route: '/(teacher)/quizzes', tint: brand.navy },

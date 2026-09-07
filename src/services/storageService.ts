@@ -34,7 +34,13 @@ import { formatBytes } from '@/utils/format';
  * See docs/FIREBASE.md.
  */
 
-export type UploadKind = 'avatar' | 'material' | 'thumbnail' | 'article' | 'branding';
+export type UploadKind =
+  | 'avatar'
+  | 'material'
+  | 'thumbnail'
+  | 'article'
+  | 'branding'
+  | 'recording';
 
 /**
  * How long an upload may run before it is treated as stuck. Generous enough for
@@ -52,6 +58,97 @@ export function uploadsConfigured(): boolean {
 }
 
 /**
+ * One multipart POST to Cloudinary, over XMLHttpRequest rather than fetch.
+ *
+ * XHR is used for exactly one reason: it reports upload progress and fetch does
+ * not. That used to be papered over by claiming 50% and hoping, which is fine
+ * for a 200 KB avatar and useless for a recorded lesson — the one upload where
+ * somebody genuinely needs to know whether it is worth continuing to wait.
+ *
+ * It works the same on React Native, where a file is handed over as a
+ * `{ uri, name, type }` part and the platform streams it from disk rather than
+ * loading ninety megabytes into memory first.
+ */
+function postToCloudinary(params: {
+  file: Blob | { uri: string; name: string; type: string };
+  fileName: string;
+  folder: string;
+  resourceType: 'auto' | 'video';
+  timeoutMs: number;
+  onProgress?: (percent: number) => void;
+}): Promise<CloudinaryResponse> {
+  const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/${params.resourceType}/upload`;
+
+  const form = new FormData();
+  if (typeof Blob !== 'undefined' && params.file instanceof Blob) {
+    form.append('file', params.file, params.fileName);
+  } else {
+    form.append('file', params.file as unknown as Blob);
+  }
+  form.append('upload_preset', CLOUDINARY_PRESET);
+  form.append('folder', params.folder);
+
+  return new Promise<CloudinaryResponse>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', endpoint);
+    request.timeout = params.timeoutMs;
+
+    request.upload.onprogress = (event) => {
+      if (!event.lengthComputable || !event.total) return;
+      // Held at 99 while bytes are still moving. The last percent belongs to
+      // Cloudinary's own processing, and a bar that sits full through a long
+      // transcode is a bar that looks broken.
+      params.onProgress?.(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+    };
+
+    request.onload = () => {
+      let payload: CloudinaryResponse;
+      try {
+        payload = JSON.parse(request.responseText) as CloudinaryResponse;
+      } catch {
+        reject(new AppError('errors.uploadFailed', 'cloudinary/unreadable'));
+        return;
+      }
+      if (!payload.secure_url) {
+        // Worth logging verbatim: an unsigned preset that has not been allowed
+        // to accept video says exactly that, and no amount of retrying fixes it.
+        console.error('[WeeklyClass] Cloudinary rejected the upload:', payload.error);
+        reject(new AppError('errors.uploadFailed', 'cloudinary/rejected'));
+        return;
+      }
+      params.onProgress?.(100);
+      resolve(payload);
+    };
+
+    request.onerror = () => reject(new AppError('errors.uploadFailed', 'cloudinary/network'));
+    request.ontimeout = () => reject(new AppError('errors.uploadTimedOut', 'cloudinary/timeout'));
+    request.onabort = () => reject(new AppError('errors.uploadCancelled', 'cloudinary/abort'));
+
+    request.send(form);
+  });
+}
+
+interface CloudinaryResponse {
+  secure_url?: string;
+  public_id?: string;
+  bytes?: number;
+  duration?: number;
+  error?: { message?: string };
+}
+
+/** The web takes a Blob; React Native takes the file's own uri. */
+async function filePart(
+  uri: string,
+  fileName: string,
+  contentType: string
+): Promise<Blob | { uri: string; name: string; type: string }> {
+  if (uri.startsWith('data:') || uri.startsWith('blob:') || Platform.OS === 'web') {
+    return fetch(uri).then((r) => r.blob());
+  }
+  return { uri, name: fileName, type: contentType };
+}
+
+/**
  * Uploads through Cloudinary's unsigned endpoint.
  *
  * `auto` handles images and documents alike, so one path covers avatars,
@@ -65,60 +162,122 @@ async function uploadToCloudinary(params: {
   contentType: string;
   onProgress?: (percent: number) => void;
 }): Promise<UploadResult> {
-  const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`;
+  const payload = await postToCloudinary({
+    file: await filePart(params.uri, params.fileName, params.contentType),
+    fileName: params.fileName,
+    folder: `weeklyclass/${params.kind}`,
+    resourceType: 'auto',
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+    onProgress: params.onProgress,
+  });
 
-  const form = new FormData();
-  // React Native's FormData takes this shape; on web the fetched blob is used.
-  if (params.uri.startsWith('data:') || params.uri.startsWith('blob:') || Platform.OS === 'web') {
-    const blob = await fetch(params.uri).then((r) => r.blob());
-    form.append('file', blob, params.fileName);
-  } else {
-    form.append('file', {
-      uri: params.uri,
-      name: params.fileName,
-      type: params.contentType,
-    } as unknown as Blob);
-  }
-  form.append('upload_preset', CLOUDINARY_PRESET);
-  form.append('folder', `weeklyclass/${params.kind}`);
-
-  // Cloudinary gives no progress events over fetch. Report an indeterminate
-  // midpoint so the button does not look frozen on a slow connection.
-  params.onProgress?.(50);
-
-  const controller = new AbortController();
-  const deadline = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
-
-  let payload: { secure_url?: string; bytes?: number; error?: { message?: string } };
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      body: form,
-      signal: controller.signal,
-    });
-    payload = await response.json();
-  } catch (error) {
-    throw (error as Error)?.name === 'AbortError'
-      ? new AppError('errors.uploadTimedOut', 'cloudinary/timeout')
-      : new AppError('errors.uploadFailed', 'cloudinary/network');
-  } finally {
-    clearTimeout(deadline);
-  }
-
-  if (!payload.secure_url) {
-    console.error('[WeeklyClass] Cloudinary rejected the upload:', payload.error);
-    throw new AppError('errors.uploadFailed', 'cloudinary/rejected');
-  }
-
-  params.onProgress?.(100);
   return {
-    url: optimisedUrl(payload.secure_url, params.kind),
+    url: optimisedUrl(payload.secure_url as string, params.kind),
     // Cloudinary is addressed by URL, not by a Storage path; nothing to delete
     // through storageService.remove().
     path: '',
+    publicId: payload.public_id ?? null,
     size: payload.bytes ?? 0,
     contentType: params.contentType,
   };
+}
+
+/**
+ * How long a video upload may run.
+ *
+ * Far longer than the ninety seconds a document gets. Ninety megabytes over a
+ * phone connection in a hall is a genuinely slow thing that is nonetheless
+ * working, and cutting it off throws away a recording that cannot be made
+ * again.
+ */
+const VIDEO_UPLOAD_TIMEOUT_MS = 20 * 60_000;
+
+export interface VideoUploadResult extends UploadResult {
+  /** Seconds, as Cloudinary measured it — more trustworthy than our own timer. */
+  durationSeconds: number | null;
+}
+
+/**
+ * Uploads a recorded lesson.
+ *
+ * Separate from `upload` because a video is not a document with a bigger number
+ * attached. It goes to Cloudinary's `video` endpoint so the file is handled as
+ * media — which is what later makes a poster frame and a format conversion
+ * possible — and it never touches Firebase Storage, which on a free project
+ * does not exist.
+ *
+ * The size is checked here rather than left to Cloudinary because Cloudinary
+ * only refuses an oversized file after receiving all of it, and the end of a
+ * long upload is the worst possible moment to learn that.
+ */
+export async function uploadVideo(params: {
+  uri: string;
+  fileName: string;
+  ownerId: string;
+  contentType: string;
+  sizeBytes?: number;
+  onProgress?: (percent: number) => void;
+}): Promise<VideoUploadResult> {
+  if (!uploadsConfigured()) {
+    throw new AppError('errors.videoUploadUnavailable', 'cloudinary/not-configured');
+  }
+  if (params.sizeBytes && params.sizeBytes > UPLOAD_LIMITS.videoBytes) {
+    throw new AppError(
+      `errors.fileTooLarge|${formatBytes(UPLOAD_LIMITS.videoBytes)}`,
+      'cloudinary/too-large'
+    );
+  }
+
+  const payload = await postToCloudinary({
+    file: await filePart(params.uri, params.fileName, params.contentType),
+    fileName: params.fileName,
+    folder: `weeklyclass/recordings/${params.ownerId}`,
+    resourceType: 'video',
+    timeoutMs: VIDEO_UPLOAD_TIMEOUT_MS,
+    onProgress: params.onProgress,
+  });
+
+  return {
+    url: playableUrl(payload.secure_url as string),
+    path: '',
+    publicId: payload.public_id ?? null,
+    size: payload.bytes ?? params.sizeBytes ?? 0,
+    contentType: params.contentType,
+    durationSeconds: typeof payload.duration === 'number' ? payload.duration : null,
+  };
+}
+
+/**
+ * Asks Cloudinary to serve whichever format the viewer's browser can play.
+ *
+ * Not an optimisation — this is what makes a recording watchable at all. A
+ * browser records in whatever format it supports, which is WebM in Chrome and
+ * MP4 in Safari, and a WebM file handed to an iPhone plays as nothing at all.
+ * `f_auto:video` has Cloudinary transcode per request and cache the result, so
+ * one recording serves every student whatever it was made on.
+ */
+export function playableUrl(url: string): string {
+  const marker = '/video/upload/';
+  if (!url.includes('res.cloudinary.com') || !url.includes(marker)) return url;
+  // Already carrying a transformation — leave it alone rather than stack another.
+  if (/\/video\/upload\/[a-z]{1,3}_/.test(url)) return url;
+  return url.replace(marker, `${marker}f_auto:video,q_auto/`);
+}
+
+/**
+ * A still from a Cloudinary-hosted video, usable as a thumbnail.
+ *
+ * Costs nothing to make and nothing to store: it is the same asset addressed as
+ * an image at a given second. Null for a video hosted anywhere else, where the
+ * caller falls back to a picture somebody chose.
+ */
+export function videoPosterUrl(url: string, atSecond = 1): string | null {
+  const marker = '/video/upload/';
+  if (!url.includes('res.cloudinary.com') || !url.includes(marker)) return null;
+  const [head, tail] = url.split(marker);
+  const withoutTransform = tail.replace(/^[a-z]{1,3}_[^/]*\//, '');
+  const withoutExtension = withoutTransform.replace(/\.[A-Za-z0-9]+$/, '');
+  return `${head}${marker}so_${atSecond},c_fill,w_640,h_360,q_auto/${withoutExtension}.jpg`;
 }
 
 /**
@@ -151,11 +310,19 @@ const LIMITS: Record<UploadKind, number> = {
   article: UPLOAD_LIMITS.imageBytes,
   branding: UPLOAD_LIMITS.imageBytes,
   material: UPLOAD_LIMITS.documentBytes,
+  recording: UPLOAD_LIMITS.videoBytes,
 };
 
 export interface UploadResult {
   url: string;
   path: string;
+  /**
+   * Cloudinary's own id for the asset, when that is where it went.
+   *
+   * Kept so a stored recording can be addressed again later — for a poster
+   * frame, another format, or a deletion — without parsing it back out of a URL.
+   */
+  publicId?: string | null;
   size: number;
   contentType: string;
 }
@@ -191,6 +358,8 @@ export function pathFor(kind: UploadKind, ownerId: string, fileName: string): st
       return `articles/${stamp}-${safe}.${ext}`;
     case 'branding':
       return `branding/${stamp}-${safe}.${ext}`;
+    case 'recording':
+      return `recordings/${ownerId}/${stamp}-${safe}.${ext}`;
   }
 }
 
@@ -210,6 +379,9 @@ const MAX_EDGE: Record<UploadKind, number> = {
   // Deliberately generous: a material may be a photographed page of a book, and
   // text stops being readable long before a photograph starts to look wrong.
   material: 2200,
+  // Never applied — a recording is not an image and shrinkIfImage leaves it
+  // alone. Present because the map must cover every kind.
+  recording: 0,
 };
 
 /**
@@ -362,7 +534,7 @@ export async function upload(params: {
   });
 
   const url = await getDownloadURL(objectRef);
-  return { url, path, size: blob.size, contentType };
+  return { url, path, publicId: null, size: blob.size, contentType };
 }
 
 /** Deletes a stored object. Missing objects are not an error. */

@@ -179,6 +179,18 @@ export default function AdminDashboard() {
             onPress={() => router.push({ pathname: '/(admin)/lessons', params: { action: 'new' } })}
           />
           <QuickAccessTile
+            icon="radio-button-on"
+            label={t('record.title')}
+            tint={brand.red}
+            onPress={() => router.push('/(admin)/record')}
+          />
+          <QuickAccessTile
+            icon="film-outline"
+            label={t('video.recordings')}
+            tint={brand.slate}
+            onPress={() => router.push('/(admin)/recordings')}
+          />
+          <QuickAccessTile
             icon="videocam-outline"
             label={t('dashboard.addVideo')}
             tint={brand.orangeLight}

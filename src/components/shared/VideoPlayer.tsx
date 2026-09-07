@@ -9,20 +9,49 @@ import { embedUrl } from '@/services/videoService';
 import { Button } from '@/components/ui';
 
 /**
+ * Recognises a URL that is the video itself rather than a page about one.
+ *
+ * A lesson recorded in the app is delivered straight from Cloudinary, so it has
+ * no embed page to put in a frame — it is a file, and a file wants a player.
+ * Cloudinary's delivery URLs are matched by path because the format conversion
+ * they carry leaves the extension off the end.
+ */
+function isDirectMedia(url: string): boolean {
+  if (/\/video\/upload\//.test(url) && url.includes('res.cloudinary.com')) return true;
+  return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url);
+}
+
+/**
  * Plays a video from any source without bundling a heavy player.
  *
  * - YouTube / Vimeo links become embeds (an iframe on web, a WebView on native).
- * - Anything else gets an "open in browser" action, which covers direct MP4s,
- *   Google Drive links and Firebase Storage URLs.
- *
- * Keeping playback URL-based is what allows video hosting to stay free — no
- * media is ever uploaded to Firebase Storage.
+ * - A direct media file is played in place — this is the path a lesson recorded
+ *   in the app takes, and sending somebody out to a browser tab to watch their
+ *   own class would be a strange way to end the recording flow.
+ * - Anything else gets an "open in browser" action, which still covers Google
+ *   Drive links and everything unrecognised.
  */
 export function VideoPlayer({ url, title }: { url: string; title?: string }) {
   const { t } = useTranslation();
   const embed = embedUrl(url);
+  const direct = !embed && isDirectMedia(url);
 
-  if (!embed) {
+  if (direct && Platform.OS === 'web') {
+    return (
+      <View style={styles.frame}>
+        {React.createElement('video', {
+          src: url,
+          title,
+          controls: true,
+          playsInline: true,
+          preload: 'metadata',
+          style: { width: '100%', height: '100%', background: '#000', borderRadius: radius.lg },
+        })}
+      </View>
+    );
+  }
+
+  if (!embed && !direct) {
     return (
       <View style={styles.fallback}>
         <Ionicons name="play-circle-outline" size={44} color={colors.slate} />
@@ -62,7 +91,7 @@ export function VideoPlayer({ url, title }: { url: string; title?: string }) {
   return (
     <View style={styles.frame}>
       <WebView
-        source={{ uri: embed }}
+        source={{ uri: embed ?? url }}
         style={styles.webview}
         allowsFullscreenVideo
         javaScriptEnabled

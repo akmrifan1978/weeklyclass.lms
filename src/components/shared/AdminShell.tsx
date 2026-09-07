@@ -48,6 +48,11 @@ export const ADMIN_NAV: NavItem[] = [
 
   { labelKey: 'nav.lessons', route: '/(admin)/lessons', icon: 'book-outline', permission: 'VIEW_LESSONS', group: 'content' },
   { labelKey: 'nav.videos', route: '/(admin)/videos', icon: 'videocam-outline', permission: 'UPLOAD_VIDEO', group: 'content' },
+  // Making a recording and managing the ones already made are different jobs on
+  // different days, so they are different entries rather than one screen with a
+  // button hidden in it.
+  { labelKey: 'record.title', route: '/(admin)/record', icon: 'radio-button-on', permission: 'UPLOAD_VIDEO', group: 'content' },
+  { labelKey: 'video.recordings', route: '/(admin)/recordings', icon: 'film-outline', permission: 'UPLOAD_VIDEO', group: 'content' },
   { labelKey: 'nav.articles', route: '/(admin)/articles', icon: 'newspaper-outline', permission: 'MANAGE_ARTICLES', group: 'content' },
   { labelKey: 'nav.materials', route: '/(admin)/materials', icon: 'folder-open-outline', permission: 'UPLOAD_MATERIAL', group: 'content' },
   { labelKey: 'nav.calendar', route: '/(admin)/calendar', icon: 'calendar-outline', permission: 'MANAGE_CALENDAR', group: 'content' },

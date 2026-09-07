@@ -140,4 +140,20 @@ export const UPLOAD_LIMITS = {
   imageBytes: 3 * 1024 * 1024,
   documentBytes: 15 * 1024 * 1024,
   audioBytes: 25 * 1024 * 1024,
+  /**
+   * The ceiling on a recorded lesson.
+   *
+   * Not our choice: Cloudinary's free plan refuses a video larger than 100 MB,
+   * and it refuses it after the whole thing has been uploaded. So the recorder
+   * enforces the limit while there is still something to be done about it,
+   * with a little headroom for the container overhead we cannot predict.
+   *
+   * How long that buys depends entirely on the bitrate, which is why the
+   * recorder offers a quality choice and shows the minutes each one leaves:
+   * roughly 7 at 720p, 13 at 480p, 25 at 360p. A full-length weekly class does
+   * not fit at any of them, and pretending otherwise would waste somebody's
+   * hour — that recording belongs on YouTube with the link pasted in, which
+   * this app has always supported and which costs nothing.
+   */
+  videoBytes: 95 * 1024 * 1024,
 };
