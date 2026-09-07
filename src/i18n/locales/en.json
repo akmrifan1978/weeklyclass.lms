@@ -600,8 +600,6 @@
     "venueLabel": "Venue",
     "venueHint": "Shown on the sign-in screen, e.g. Jeddah Dawah Center – Tamil Section",
     "eventRegistration": "Event registration",
-    "autoApproveBookings": "Auto-approve free event bookings",
-    "autoApproveBookingsHelp": "Free bookings are confirmed the moment they are made and the ticket appears straight away. Paid bookings always wait for you, so nobody is confirmed before you have seen the payment.",
     "security": "Security",
     "sessionTimeout": "Session timeout (minutes)",
     "sessionTimeoutHint": "Sign people out after this many minutes without activity. Set 0 to never sign anyone out. Useful where a phone or tablet is shared.",
@@ -637,7 +635,9 @@
     "eventNames": "Event names",
     "eventNamesHint": "Presets offered when creating an event, so a recurring one is typed once.",
     "eventNamesPlaceholder": "Enter event name",
-    "noEventNames": "No event names yet."
+    "noEventNames": "No event names yet.",
+    "requireBookingApproval": "Review every booking myself",
+    "requireBookingApprovalHelp": "Off: a booking with seats available is confirmed at once and the ticket appears straight away, while a booking made when the event is full waits as a request for you to accept or decline. On: nothing is confirmed until you say so."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -1115,7 +1115,17 @@
     "cancelWarning": "Cancel {{name}}’s booking? {{count}} place(s) will be released and their ticket will stop working.",
     "cancelled": "Booking cancelled.",
     "exportAll": "All participants sheet",
-    "cannotConfirmCancelled": "A cancelled booking cannot be confirmed."
+    "cannotConfirmCancelled": "A cancelled booking cannot be confirmed.",
+    "bookingStatus_rejected": "Not accepted",
+    "rejectBooking": "Decline",
+    "rejected": "Request declined.",
+    "rejectReason": "Reason (optional)",
+    "rejectReasonHint": "Shown to the person who asked. \"The hall is full\" says more than \"declined\".",
+    "waitlistNotice": "This event is full. You can still ask for a place — the organiser will accept or decline it.",
+    "waitlistBook": "Join the waiting list",
+    "bookingRejected": "Your request for this event was not accepted.",
+    "cannotRejectConfirmed": "Cancel a confirmed booking instead — declining it would leave the seat held.",
+    "awaitingDecision": "Waiting for the organiser ({{seats}} place(s))"
   },
   "notes": {
     "new": "New note",

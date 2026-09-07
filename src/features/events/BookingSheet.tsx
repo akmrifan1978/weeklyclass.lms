@@ -112,6 +112,12 @@ export function BookingSheet({
       {/* The booker. Their name comes from their profile and is not editable
           here — a booking is made by an account, and letting the name be typed
           over would let one person book under another's. */}
+      {/* Said before the form rather than after the button. Somebody filling in
+          six names deserves to know at the top that this is a request. */}
+      {event && bookings.isFull(event) ? (
+        <Text style={styles.waitlist}>{t('event.waitlistNotice')}</Text>
+      ) : null}
+
       <Text style={styles.label}>{t('event.mainParticipant')}</Text>
       <View style={styles.selfRow}>
         <Text style={styles.selfName} numberOfLines={1}>
@@ -230,6 +236,15 @@ function hasBandedPrices(settings: NonNullable<CalendarEvent['registration']>): 
 }
 
 const styles = StyleSheet.create({
+  waitlist: {
+    fontSize: fontSize.xs,
+    color: colors.warning,
+    backgroundColor: colors.warningSoft,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    lineHeight: 17,
+    marginBottom: spacing.md,
+  },
   summary: {
     backgroundColor: colors.surfaceMuted,
     borderRadius: radius.md,

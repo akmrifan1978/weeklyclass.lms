@@ -358,10 +358,10 @@ function SettingsScreen() {
         <SectionHeader title={t('settings.eventRegistration')} icon="ticket-outline" />
         <Card>
           <ToggleRow
-            label={t('settings.autoApproveBookings')}
-            description={t('settings.autoApproveBookingsHelp')}
-            value={form.autoApproveEventBookings === true}
-            onValueChange={(v) => set('autoApproveEventBookings', v)}
+            label={t('settings.requireBookingApproval')}
+            description={t('settings.requireBookingApprovalHelp')}
+            value={form.requireBookingApproval === true}
+            onValueChange={(v) => set('requireBookingApproval', v)}
           />
         </Card>
 

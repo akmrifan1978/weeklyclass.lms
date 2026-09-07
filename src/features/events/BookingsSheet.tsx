@@ -17,6 +17,7 @@ import {
   EmptyState,
   FormSheet,
   SkeletonList,
+  TextField,
 } from '@/components/ui';
 
 /**
@@ -45,6 +46,8 @@ export function BookingsSheet({
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<EventRegistration | null>(null);
+  const [rejecting, setRejecting] = useState<EventRegistration | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const load = useCallback(async () => {
     if (!event) return [] as EventRegistration[];
@@ -137,7 +140,7 @@ export function BookingsSheet({
                   tone={
                     row.status === 'confirmed'
                       ? 'success'
-                      : row.status === 'cancelled'
+                      : row.status === 'cancelled' || row.status === 'rejected'
                         ? 'danger'
                         : 'warning'
                   }
@@ -174,7 +177,23 @@ export function BookingsSheet({
                   />
                 ) : null}
 
-                {row.status !== 'cancelled' ? (
+                {/* Declining is offered only for a request that is still open.
+                    A confirmed booking is taken back by cancelling, which
+                    releases the seat; declining it would leave the seat held. */}
+                {row.status === 'pending' ? (
+                  <Button
+                    label={t('event.rejectBooking')}
+                    icon="close-circle-outline"
+                    size="sm"
+                    variant="outline"
+                    onPress={() => {
+                      setRejectReason('');
+                      setRejecting(row);
+                    }}
+                  />
+                ) : null}
+
+                {row.status !== 'cancelled' && row.status !== 'rejected' ? (
                   <>
                     <Button
                       label={t(row.paid ? 'event.markUnpaid' : 'event.markPaid')}
@@ -198,6 +217,32 @@ export function BookingsSheet({
             </View>
           ))
         )}
+      </FormSheet>
+
+      <FormSheet
+        visible={Boolean(rejecting)}
+        title={t('event.rejectBooking')}
+        onClose={() => setRejecting(null)}
+        submitLabel={t('event.rejectBooking')}
+        submitting={busyId === rejecting?.id}
+        onSubmit={async () => {
+          const row = rejecting;
+          if (!row || !user) return;
+          await run(row, async () => {
+            await bookings.rejectBooking(row, user, rejectReason);
+            toast.success(t('event.rejected'));
+          });
+          setRejecting(null);
+        }}
+      >
+        <TextField
+          label={t('event.rejectReason')}
+          value={rejectReason}
+          onChangeText={setRejectReason}
+          multiline
+          hint={t('event.rejectReasonHint')}
+          containerStyle={{ marginBottom: 0 }}
+        />
       </FormSheet>
 
       <ConfirmDialog

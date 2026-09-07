@@ -154,6 +154,7 @@ export function EventsScreen({ basePath }: { basePath: string }) {
           data?.events.map((event) => {
             const mine = myBookingFor(event);
             const blocked = bookings.bookingBlockedReason(event, mine);
+            const waitlist = bookings.wouldWaitlist(event);
 
             return (
               <EventCard
@@ -202,17 +203,25 @@ export function EventsScreen({ basePath }: { basePath: string }) {
                           size="sm"
                           onPress={() => setTicket(mine)}
                         />
+                      ) : mine.status === 'rejected' ? (
+                        <Text style={styles.blocked}>
+                          {mine.rejectionReason || t('event.bookingRejected')}
+                        </Text>
                       ) : (
                         <Text style={styles.awaiting}>
-                          {t('event.awaitingConfirmation', { seats: mine.seats })}
+                          {t('event.awaitingDecision', { seats: mine.seats })}
                         </Text>
                       )
                     ) : blocked ? (
                       <Text style={styles.blocked}>{t(blocked)}</Text>
                     ) : (
+                      // A full event still takes requests. The button says which
+                      // it is, because "Book" on a full event promises a seat
+                      // that does not exist.
                       <Button
-                        label={t('event.book')}
-                        icon="ticket-outline"
+                        label={t(waitlist ? 'event.waitlistBook' : 'event.book')}
+                        icon={waitlist ? 'hourglass-outline' : 'ticket-outline'}
+                        variant={waitlist ? 'outline' : 'primary'}
                         size="sm"
                         onPress={() => setBooking(event)}
                       />

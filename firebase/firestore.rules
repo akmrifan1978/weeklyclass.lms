@@ -416,16 +416,32 @@ service cloud.firestore {
     }
 
     /**
-     * Whether the admin has allowed free bookings through without review.
+     * Whether the admin has asked to review every booking by hand.
      *
-     * One extra document read on a booking create, and only on that path. It is
-     * worth it: without reading the setting the rule would have to take the
-     * client's word for whether auto-approval is on, which is exactly the thing
-     * a client should not be trusted about.
+     * One extra document read, on the booking-create path only. Worth it:
+     * without reading the setting the rule would have to take the client's word
+     * for it, which is exactly the thing a client should not be trusted about.
      */
-    function autoApprovesBookings() {
+    function bookingsNeedApproval() {
       return get(/databases/$(database)/documents/settings/app)
-               .data.autoApproveEventBookings == true;
+               .data.get('requireBookingApproval', false) == true;
+    }
+
+    /**
+     * Whether the event genuinely has room for this booking right now.
+     *
+     * Read from the event document rather than believed from the request. The
+     * client computes the same thing inside its transaction, and this is the
+     * half that stops a client which simply lies about it — a booking may only
+     * write itself `confirmed` if the seats it claims actually exist.
+     *
+     * An event with no capacity is uncapped, and uncapped means always room.
+     */
+    function eventHasRoom(eventId, seats) {
+      let event = get(/databases/$(database)/documents/calendarEvents/$(eventId)).data;
+      let capacity = event.get('registration', {}).get('capacity', null);
+      return capacity == null
+        || event.get('registeredCount', 0) + seats <= capacity;
     }
 
     // =========================================================================
@@ -448,12 +464,17 @@ service cloud.firestore {
       // pending — nobody issues themselves a confirmed ticket. Nobody marks
       // their own booking paid either, whatever else is true.
       //
-      // The single exception is a FREE booking while the admin has switched
-      // auto-approval on, which is the organiser saying in advance that anyone
-      // may walk in. Both halves are checked here rather than trusted from the
-      // client: the amount must actually be zero, and the setting must actually
-      // be on. A priced booking can never be self-confirmed, because confirming
-      // one asserts that money was received.
+      // A booking may write itself `confirmed` only when the event actually has
+      // room for it AND the admin has not asked to review everything. Both are
+      // read from Firestore rather than taken from the request, so a client
+      // that claims a seat it cannot have is refused here even though its own
+      // transaction was willing.
+      //
+      // `pending` is always allowed: that is a request, and asking costs the
+      // event nothing.
+      //
+      // Confirming says a place is held, not that money arrived — `paid` is a
+      // separate field and no booking may set it for itself.
       allow create: if isSignedIn()
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.seats is int
@@ -461,8 +482,9 @@ service cloud.firestore {
                     && request.resource.data.paid == false
                     && (request.resource.data.status == 'pending'
                         || (request.resource.data.status == 'confirmed'
-                            && request.resource.data.amount == 0
-                            && autoApprovesBookings()));
+                            && !bookingsNeedApproval()
+                            && eventHasRoom(request.resource.data.eventId,
+                                            request.resource.data.seats)));
 
       // The holder may cancel their own booking and nothing else; only staff
       // may confirm one, which is what turns it into a ticket. Neither can
@@ -470,12 +492,18 @@ service cloud.firestore {
       allow update: if (isSignedIn()
                         && resource.data.userId == request.auth.uid
                         && onlyChanged(['status', 'updatedAt'])
+                        // Cancelling only. Nobody accepts or declines their own
+                        // request, which is the whole point of it being one.
                         && request.resource.data.status == 'cancelled')
                     || (isStaff()
                         && !changedKeys().hasAny(['amount', 'userId', 'seats', 'participants'])
                         // A cancelled booking stays cancelled: reinstating it
                         // would hand back a seat the count has already released.
                         && resource.data.status != 'cancelled');
+      // Note: a rejected booking CAN still be edited by staff, on purpose. An
+      // organiser who declined by mistake, or who found room later, should be
+      // able to confirm it — and confirming goes through the transaction that
+      // takes the seat, so it cannot oversell.
 
       allow delete: if isAdmin();
     }

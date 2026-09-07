@@ -359,15 +359,40 @@ export interface EventRegistration extends BaseDoc {
    * an admin confirms does the booker get something to show at the door.
    */
   status: BookingStatus;
-  /** When an admin confirmed it, and who. Absent while pending. */
+  /** When it was confirmed, and by whom. Absent while pending. */
   confirmedAt?: unknown;
   confirmedBy?: string | null;
+  /** When a pending request was declined, by whom, and why. */
+  rejectedAt?: unknown;
+  rejectedBy?: string | null;
+  /**
+   * Shown to the person who asked. Optional, and worth writing: "the hall is
+   * full" and "we could not reach you" are different answers, and neither is
+   * conveyed by the word "rejected" on its own.
+   */
+  rejectionReason?: string | null;
   /** Set by an admin once payment is in hand. */
   paid?: boolean;
   notes?: string | null;
 }
 
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
+/**
+ * Where a booking stands.
+ *
+ *  confirmed — there was room, the place is theirs, the ticket exists.
+ *  pending   — asked for, not granted. Either the event was already full when
+ *              they asked, or the organiser reviews every booking by hand.
+ *  rejected  — the organiser considered a pending request and declined it.
+ *  cancelled — it was granted and then given up, by either side.
+ *
+ * `rejected` is deliberately distinct from `cancelled`. One is a decision made
+ * about somebody, the other is a place released, and a list that renders them
+ * the same cannot tell an organiser who they still owe an answer to.
+ *
+ * None of these says anything about money — see `paid`. A confirmed booking is
+ * a place held, not a payment received.
+ */
+export type BookingStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled';
 
 export interface CalendarEvent extends BaseDoc {
   title: string;
@@ -756,14 +781,15 @@ export interface AppSettings {
   /** New student/teacher signups land in `pending` until an admin approves. */
   requireApproval: boolean;
   /**
-   * Confirms a free event booking the moment it is made, with no admin step.
+   * Holds EVERY booking for review, even when there is obviously room.
    *
-   * Paid bookings are never auto-confirmed, whatever this says. Confirming one
-   * is a statement that the money is expected and the place is theirs, and no
-   * setting should be able to make that claim on an organiser's behalf — see
-   * eventRegistrationService.book.
+   * Off by default, and off is the behaviour most events want: a booking with
+   * seats available confirms itself and the ticket appears at once, while one
+   * made against a full event waits as a request for the organiser to accept or
+   * decline. Turning this on removes the first half — nothing self-confirms,
+   * and every booking is a request.
    */
-  autoApproveEventBookings?: boolean;
+  requireBookingApproval?: boolean;
   /**
    * A line of text scrolling above the bottom menu on every screen.
    *

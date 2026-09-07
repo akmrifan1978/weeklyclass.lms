@@ -55,9 +55,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   availableLanguages: ['en', 'ta', 'si', 'ar'],
   registrationEnabled: true,
   requireApproval: true,
-  // Off: an organiser who set up bookings did so to see who is coming, and
-  // silently confirming everyone would take that decision away from them.
-  autoApproveEventBookings: false,
+  // Off: a booking with room confirms itself, which is what somebody pressing
+  // "book" expects. An organiser who wants to see each one first turns this on.
+  requireBookingApproval: false,
   tickerEnabled: false,
   tickerText: '',
   qaScholarName: '',

@@ -123,9 +123,18 @@ export function bookingBlockedReason(
   if (!registration) return 'event.notBookable';
   if (registration.status === 'openingSoon') return 'event.openingSoon';
   if (registration.status === 'closed') return 'event.registrationClosed';
+  // A rejected request is finished, and asking again with the same button would
+  // just overwrite the organiser's answer.
+  if (existing && existing.status === 'rejected') return 'event.bookingRejected';
   if (existing && existing.status !== 'cancelled') return 'event.alreadyBooked';
-  if (isFull(event)) return 'event.full';
+  // Being full is deliberately NOT a block. It changes what the button means —
+  // joining a waiting list rather than taking a seat — and the screen says so.
   return null;
+}
+
+/** True when a booking made right now would have to wait for the organiser. */
+export function wouldWaitlist(event: CalendarEvent): boolean {
+  return isFull(event);
 }
 
 /**
@@ -160,7 +169,7 @@ export async function book(
   // Read before the transaction, not inside it: a transaction may be retried,
   // and a settings read is neither part of the contention nor cheap to repeat.
   const appSettings = await getSettings().catch(() => null);
-  const autoApprove = appSettings?.autoApproveEventBookings === true;
+  const requireApproval = appSettings?.requireBookingApproval === true;
 
   await runTransaction(db, async (tx) => {
     const fresh = await tx.get(eventRef);
@@ -175,9 +184,10 @@ export async function book(
       existing.exists() && (existing.data() as EventRegistration).status !== 'cancelled';
     if (alreadyBooked) throw new AppError('event.alreadyBooked', 'already-exists');
 
-    if (capacity != null && taken + seats > capacity) {
-      throw new AppError('event.notEnoughSeats', 'failed-precondition');
-    }
+    // Being full is no longer a refusal. Somebody who wants a place they cannot
+    // have should be able to ask for one, and the organiser decides — a hard
+    // error at this point simply lost the request and told nobody about it.
+    const roomFor = capacity == null || taken + seats <= capacity;
 
     // Priced against the event as it is NOW, not as the screen last saw it.
     // Someone sitting on the booking sheet while the organiser changes the
@@ -205,15 +215,17 @@ export async function book(
       amount,
       currency: settings.currency ?? '',
       reference: reference?.trim() || null,
-      // Requested, not granted — the seats are held from this moment, but there
-      // is no ticket until an admin says so.
+      // Availability decides, and it is decided HERE — inside the transaction,
+      // against a count re-read a moment ago, not against whatever the screen
+      // was showing when the button was pressed.
       //
-      // Unless the organiser has asked for free bookings to go through on their
-      // own, which for a talk anyone may walk into is the sensible setting. A
-      // paid booking is never auto-confirmed however this is set: confirming
-      // one says the money is expected and the place is theirs, and no toggle
-      // should make that claim for an organiser who has not seen the payment.
-      status: autoApprove && amount === 0 ? 'confirmed' : 'pending',
+      // Room means the place is theirs and the ticket exists immediately. No
+      // room means the request stands as pending for the organiser to accept or
+      // decline; it is a waiting list, not a rejection, and not a silent loss.
+      //
+      // An organiser who wants to see every booking before it counts turns
+      // `requireBookingApproval` on, and then nothing self-confirms.
+      status: requireApproval || !roomFor ? 'pending' : 'confirmed',
       paid: false,
       deleted: false,
       createdAt: serverTimestamp(),
@@ -221,7 +233,12 @@ export async function book(
       createdBy: user.uid,
     });
 
-    tx.update(eventRef, { registeredCount: taken + seats });
+    // Only a confirmed booking occupies seats. Counting a waitlisted request
+    // would push the event further past its own capacity and make the next
+    // reader's "places left" a lie.
+    if (!requireApproval && roomFor) {
+      tx.update(eventRef, { registeredCount: taken + seats });
+    }
   });
 
   await audit
@@ -251,11 +268,37 @@ export async function confirmBooking(
   if (registration.status === 'cancelled') {
     throw new AppError('event.cannotConfirmCancelled', 'failed-precondition');
   }
+  if (registration.status === 'confirmed') return;
 
-  await updateDocById<EventRegistration>(COLLECTIONS.eventRegistrations, registration.id, {
-    status: 'confirmed',
-    confirmedAt: serverTimestamp(),
-    confirmedBy: actor.uid,
+  // A transaction, because confirming is the moment the seats are actually
+  // taken. Between the organiser opening this list and pressing the button,
+  // other people have been booking — so availability is checked again here,
+  // against a fresh read, and the count moves in the same write.
+  const eventRef = doc(db, COLLECTIONS.calendarEvents, registration.eventId);
+  const bookingRef = doc(db, COLLECTIONS.eventRegistrations, registration.id);
+
+  await runTransaction(db, async (tx) => {
+    const fresh = await tx.get(eventRef);
+    if (!fresh.exists()) throw new AppError('errors.notFound', 'not-found');
+
+    const current = fresh.data() as CalendarEvent;
+    const taken = current.registeredCount ?? 0;
+    const capacity = current.registration?.capacity ?? null;
+
+    // Refused rather than silently oversold. An organiser who genuinely wants
+    // to go over capacity raises the capacity, which is a decision with a
+    // number attached rather than a side effect of a button.
+    if (capacity != null && taken + registration.seats > capacity) {
+      throw new AppError('event.notEnoughSeats', 'failed-precondition');
+    }
+
+    tx.update(bookingRef, {
+      status: 'confirmed',
+      confirmedAt: serverTimestamp(),
+      confirmedBy: actor.uid,
+      updatedAt: serverTimestamp(),
+    });
+    tx.update(eventRef, { registeredCount: taken + registration.seats });
   });
 
   // The ticket is worthless if nobody knows it exists. Best effort: a
@@ -296,11 +339,16 @@ export async function cancel(
     const fresh = await tx.get(eventRef);
     const booking = await tx.get(bookingRef);
     if (!booking.exists()) return;
-    if ((booking.data() as EventRegistration).status === 'cancelled') return;
+    const before = (booking.data() as EventRegistration).status;
+    if (before === 'cancelled') return;
 
     tx.update(bookingRef, { status: 'cancelled', updatedAt: serverTimestamp() });
 
-    if (fresh.exists()) {
+    // Only a CONFIRMED booking was holding seats, so only a confirmed one gives
+    // any back. Decrementing for a waitlisted request would hand the event free
+    // capacity it never allocated, and the count would drift further from the
+    // truth with every cancelled request.
+    if (fresh.exists() && before === 'confirmed') {
       const taken = (fresh.data() as CalendarEvent).registeredCount ?? 0;
       // Clamped at zero: a count that has drifted must not be driven negative
       // by a cancellation, which would then let the event oversell.
@@ -325,6 +373,49 @@ export async function cancel(
     collection: COLLECTIONS.eventRegistrations,
     documentId: registration.id,
     summary: `Cancelled ${registration.userName}'s booking for "${registration.eventTitle}"`,
+  });
+}
+
+/**
+ * Declines a pending request.
+ *
+ * Distinct from cancelling. Nothing is released, because a waitlisted request
+ * was never holding anything — this is an answer, and the person is told they
+ * have one so they are not left watching a list forever.
+ */
+export async function rejectBooking(
+  registration: EventRegistration,
+  actor: AppUser,
+  reason?: string
+): Promise<void> {
+  if (registration.status === 'confirmed') {
+    // Taking a place back is a cancellation, and it has to release the seat.
+    // Routing it through here would leave the count holding a seat nobody has.
+    throw new AppError('event.cannotRejectConfirmed', 'failed-precondition');
+  }
+
+  await updateDocById<EventRegistration>(COLLECTIONS.eventRegistrations, registration.id, {
+    status: 'rejected',
+    rejectedAt: serverTimestamp(),
+    rejectedBy: actor.uid,
+    rejectionReason: reason?.trim() || null,
+  });
+
+  await notify(
+    registration,
+    actor,
+    'Booking not accepted',
+    reason?.trim()
+      ? `Your request for "${registration.eventTitle}" was not accepted: ${reason.trim()}`
+      : `Your request for "${registration.eventTitle}" was not accepted. The event may be full.`
+  );
+
+  await audit.log({
+    actor,
+    action: 'UPDATE',
+    collection: COLLECTIONS.eventRegistrations,
+    documentId: registration.id,
+    summary: `Rejected ${registration.userName}'s request for "${registration.eventTitle}"`,
   });
 }
 
