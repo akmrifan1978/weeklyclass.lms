@@ -1125,7 +1125,8 @@
     "waitlistBook": "Join the waiting list",
     "bookingRejected": "Your request for this event was not accepted.",
     "cannotRejectConfirmed": "Cancel a confirmed booking instead — declining it would leave the seat held.",
-    "awaitingDecision": "Waiting for the organiser ({{seats}} place(s))"
+    "awaitingDecision": "Waiting for the organiser ({{seats}} place(s))",
+    "genderAssumed": "Your profile has no gender recorded, so male is assumed. Change it in your profile if that is wrong."
   },
   "notes": {
     "new": "New note",

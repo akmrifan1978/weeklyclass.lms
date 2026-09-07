@@ -69,9 +69,25 @@ export function BookingSheet({
     [t]
   );
 
+  /**
+   * The booker's own gender, taken from their profile rather than asked for.
+   *
+   * They already told the platform once, and asking again on a form they are
+   * filling in for four other people is asking them to repeat themselves. It is
+   * shown, though, and not silently applied — an organiser seating a hall acts
+   * on this, so the person supplying it should be able to see what was supplied
+   * and go and correct their profile if it is wrong.
+   *
+   * Falls back to male only when the profile carries nothing, which is the case
+   * for teachers and admins: the field is collected at student registration and
+   * nowhere else.
+   */
+  const selfGender: Gender = (user?.gender as Gender) ?? 'male';
+  const genderFromProfile = Boolean(user?.gender);
+
   // The booker is always the first participant; the family rows follow.
   const party: PartyMember[] = [
-    { name: user?.fullName ?? '', gender: (user?.gender as Gender) ?? 'male', ageGroup: selfAge },
+    { name: user?.fullName ?? '', gender: selfGender, ageGroup: selfAge },
     ...family,
   ];
   const named = party.filter((p) => p.name.trim().length > 0);
@@ -123,6 +139,16 @@ export function BookingSheet({
         <Text style={styles.selfName} numberOfLines={1}>
           {user?.fullName}
         </Text>
+        {/* Read-only, and shown rather than hidden: it is taken from the
+            profile, and the only way to know that is to be able to see it. */}
+        <View style={styles.genderChip}>
+          <Ionicons
+            name={selfGender === 'female' ? 'woman-outline' : 'man-outline'}
+            size={13}
+            color={colors.textSecondary}
+          />
+          <Text style={styles.genderText}>{t(`auth.${selfGender}`)}</Text>
+        </View>
         <Select<AgeGroup>
           value={selfAge}
           options={ageOptions}
@@ -130,6 +156,9 @@ export function BookingSheet({
           containerStyle={{ flex: 1, marginBottom: 0 }}
         />
       </View>
+      {genderFromProfile ? null : (
+        <Text style={styles.genderNote}>{t('event.genderAssumed')}</Text>
+      )}
 
       {settings?.referenceLabel ? (
         <TextField
@@ -236,6 +265,23 @@ function hasBandedPrices(settings: NonNullable<CalendarEvent['registration']>): 
 }
 
 const styles = StyleSheet.create({
+  genderChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  genderText: { fontSize: fontSize.xs, color: colors.textSecondary },
+  genderNote: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 4,
+    marginBottom: spacing.sm,
+    lineHeight: 15,
+  },
   waitlist: {
     fontSize: fontSize.xs,
     color: colors.warning,

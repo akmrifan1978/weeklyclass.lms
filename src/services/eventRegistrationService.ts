@@ -162,6 +162,12 @@ export async function book(
   // One booking per person per event, so the id is derived rather than random.
   // A double tap then writes the same document twice instead of taking two
   // seats, which is the failure this shape makes impossible.
+  //
+  // The cost of that choice: booking again after cancelling writes over the
+  // same document, which Firestore sees as an update rather than a create. The
+  // rules allow it explicitly for a cancelled or declined booking — see the
+  // eventRegistrations block — because otherwise cancelling once would lock
+  // somebody out of the event for good.
   const registrationId = `${event.id}_${user.uid}`;
   const eventRef = doc(db, COLLECTIONS.calendarEvents, event.id);
   const bookingRef = doc(db, COLLECTIONS.eventRegistrations, registrationId);

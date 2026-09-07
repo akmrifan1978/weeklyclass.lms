@@ -486,15 +486,37 @@ service cloud.firestore {
                             && eventHasRoom(request.resource.data.eventId,
                                             request.resource.data.seats)));
 
-      // The holder may cancel their own booking and nothing else; only staff
-      // may confirm one, which is what turns it into a ticket. Neither can
-      // rewrite the amount or the party agreed at booking.
+      // Three quite different writes share this rule.
+      //
+      // 1. The holder cancels their own booking, and nothing else. Nobody
+      //    accepts or declines their own request — that is the point of it
+      //    being a request.
+      //
+      // 2. The holder books AGAIN after cancelling or being declined. The id is
+      //    derived from the event and the person, so a second booking lands on
+      //    the same document and Firestore sees an update rather than a create.
+      //    Without this, cancelling once locked somebody out of the event
+      //    permanently — the button was there and the write was always refused.
+      //    It is held to exactly the conditions a create is held to.
+      //
+      // 3. Staff confirm, decline, or record payment.
       allow update: if (isSignedIn()
                         && resource.data.userId == request.auth.uid
                         && onlyChanged(['status', 'updatedAt'])
-                        // Cancelling only. Nobody accepts or declines their own
-                        // request, which is the whole point of it being one.
                         && request.resource.data.status == 'cancelled')
+                    || (isSignedIn()
+                        && resource.data.userId == request.auth.uid
+                        && request.resource.data.userId == request.auth.uid
+                        && (resource.data.status == 'cancelled'
+                            || resource.data.status == 'rejected')
+                        && request.resource.data.seats is int
+                        && request.resource.data.seats > 0
+                        && request.resource.data.paid == false
+                        && (request.resource.data.status == 'pending'
+                            || (request.resource.data.status == 'confirmed'
+                                && !bookingsNeedApproval()
+                                && eventHasRoom(request.resource.data.eventId,
+                                                request.resource.data.seats))))
                     || (isStaff()
                         && !changedKeys().hasAny(['amount', 'userId', 'seats', 'participants'])
                         // A cancelled booking stays cancelled: reinstating it
