@@ -131,14 +131,25 @@ export default function RegisterScreen() {
     };
   }, []);
 
-  // Classes depend on the chosen branch, so they load on demand.
+  /**
+   * Every class, loaded once — not the chosen branch's classes, loaded after.
+   *
+   * The class question now comes BEFORE the branch one, because that is the
+   * order a student is told things: they are joining Children or Adults, and
+   * the branch is the organisation's business rather than theirs. Loading on
+   * the branch meant the field was empty at the moment it is asked, so it
+   * simply did not appear and nobody could pick a class at all.
+   *
+   * The branch is inferred from the class instead, below — a class belongs to
+   * exactly one, so asking twice was always asking the same question twice.
+   */
   useEffect(() => {
-    if (!form.branchId || role !== 'student') {
+    if (role !== 'student') {
       setClasses([]);
       return;
     }
     let cancelled = false;
-    listClasses({ branchId: form.branchId })
+    listClasses({ pageSize: 100 })
       .then((page) => {
         if (!cancelled) setClasses(page.items);
       })
@@ -146,7 +157,7 @@ export default function RegisterScreen() {
     return () => {
       cancelled = true;
     };
-  }, [form.branchId, role]);
+  }, [role]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((previous) => ({ ...previous, [key]: value }));
@@ -449,15 +460,18 @@ export default function RegisterScreen() {
               required
             />
 
+            {/* "Nationality" rather than "Country" here, because this is a
+                fact about the person. A branch has a country — where it is —
+                and that field keeps its own name; conflating the two asked a
+                Sri Lankan teacher working in Jeddah which of the two answers
+                was wanted. */}
             <Select
-              label={t('auth.country')}
+              label={t('auth.nationality')}
               value={form.country}
               options={countryOptions}
-              onChange={(v) => {
-                set('country', v);
-                set('branchId', '');
-                set('classId', '');
-              }}
+              // Clears nothing: the branch list is no longer filtered by it,
+              // and the class no longer hangs off the branch.
+              onChange={(v) => set('country', v)}
               error={errors.country}
               placeholder={
                 countryOptions.length ? undefined : t('empty.noCountriesYet')
@@ -465,6 +479,29 @@ export default function RegisterScreen() {
               searchable
               required
             />
+
+            {/* Directly after nationality, and above branch, because a student
+                is told which class they are joining before they are told
+                anything about branches — and asking in the order somebody was
+                told is what stops them guessing. */}
+            {role === 'student' && classOptions.length ? (
+              <Select
+                label={t('auth.class')}
+                value={form.classId}
+                options={classOptions}
+                onChange={(v) => {
+                  set('classId', v);
+                  // A class belongs to one branch, so picking the class answers
+                  // the branch question too. Left blank when the class has no
+                  // branch, rather than guessed at.
+                  const chosen = classes.find((c) => c.id === v);
+                  if (chosen?.branchId) set('branchId', chosen.branchId);
+                }}
+                error={errors.classId}
+                required={classRequired}
+                allowClear={!classRequired}
+              />
+            ) : null}
 
             {branchOptions.length ? (
               <Select
@@ -481,18 +518,6 @@ export default function RegisterScreen() {
 
             {role === 'student' ? (
               <>
-                {classOptions.length ? (
-                  <Select
-                    label={t('auth.class')}
-                    value={form.classId}
-                    options={classOptions}
-                    onChange={(v) => set('classId', v)}
-                    error={errors.classId}
-                    required={classRequired}
-                    allowClear={!classRequired}
-                  />
-                ) : null}
-
                 <DateField
                   label={t('auth.dateOfBirth')}
                   value={form.dateOfBirth}

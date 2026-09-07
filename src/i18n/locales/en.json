@@ -136,7 +136,8 @@
     "contactBackOnHint": "A mobile number or an email address an admin can use to contact you.",
     "askAdminForHelp": "Ask an admin for help",
     "sameEmail": "That is already your sign-in address.",
-    "emailOptionalHint": "Optional. Without one, this person cannot be sent a password reset and an admin has to help them back in."
+    "emailOptionalHint": "Optional. Without one, this person cannot be sent a password reset and an admin has to help them back in.",
+    "nationality": "Nationality"
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
