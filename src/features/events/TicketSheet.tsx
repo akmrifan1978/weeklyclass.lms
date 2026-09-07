@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
@@ -71,6 +72,30 @@ export function TicketSheet({
               holder must be able to prove. */}
           <View style={styles.perforation} />
 
+          {/* The code, twice: once for a camera and once for a person.
+              A scanner is faster and cannot mis-read a G as a 6, but a phone
+              with a cracked screen or a flat battery still has to get in, so
+              the printed code stays exactly as prominent as it was. */}
+          <View style={styles.qrFrame}>
+            <QRCode
+              value={code}
+              size={QR_SIZE}
+              // Black on white, not the brand colours. This is read by a
+              // camera in whatever light the doorway has, and contrast is the
+              // one thing that decides whether that works.
+              color="#000000"
+              backgroundColor="#FFFFFF"
+              // Highest error correction. Six characters fit in the smallest
+              // symbol either way, so the redundancy is free, and it buys a
+              // scan through glare, a thumb over a corner or a scuffed screen.
+              ecl="H"
+              // The quiet margin is part of the symbol: without it a scanner
+              // cannot find the edges against the card.
+              quietZone={QR_QUIET_ZONE}
+            />
+          </View>
+          <Text style={styles.qrHint}>{t('event.ticketScan')}</Text>
+
           <Text style={styles.codeLabel}>{t('event.ticketCode')}</Text>
           <Text style={styles.code} selectable>
             {code}
@@ -128,6 +153,10 @@ function Fact({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: stri
   );
 }
 
+/** Big enough to scan from across a table, small enough to leave the ticket a ticket. */
+const QR_SIZE = 132;
+const QR_QUIET_ZONE = 10;
+
 const styles = StyleSheet.create({
   ticket: {
     borderRadius: radius.lg,
@@ -164,6 +193,20 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: colors.border,
     marginVertical: spacing.md,
+  },
+  qrFrame: {
+    alignSelf: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    // No padding: the quiet zone the QR draws for itself is the margin, and
+    // adding a second one only makes the symbol smaller for no gain.
+    marginBottom: 2,
+  },
+  qrHint: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
   codeLabel: {
     fontSize: fontSize.xs,

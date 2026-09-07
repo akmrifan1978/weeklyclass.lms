@@ -1117,6 +1117,7 @@
     "ticket": "Your ticket",
     "ticketConfirmed": "CONFIRMED",
     "ticketCode": "TICKET CODE",
+    "ticketScan": "Scan at the door",
     "ticketHolders": "Admitted on this ticket",
     "ticketNote": "Show this ticket at the entrance. The code is checked against the organiser’s list. To change or cancel this booking, please speak to the organisers.",
     "viewTicket": "View ticket",
