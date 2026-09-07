@@ -9,6 +9,7 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import * as hadithService from '@/services/hadithService';
+import type { LanguageCode } from '@/types';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { ScriptureText } from './ScriptureText';
 import {
@@ -102,6 +103,7 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
                     key={c.id}
                     name={c.name}
                     sahih
+                    collectionId={c.id}
                     translated={c.translated}
                     language={language}
                     onPress={() => {
@@ -118,6 +120,7 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
                   <CollectionRow
                     key={c.id}
                     name={c.name}
+                    collectionId={c.id}
                     translated={c.translated}
                     language={language}
                     onPress={() => {
@@ -149,12 +152,19 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
           placeholder={t('hadith.searchInBook')}
         />
 
-        {/* No approved translation in this language means the Arabic alone —
-            not English standing in for Tamil. Said plainly, once, at the top. */}
+        {/* Which language the reader is actually looking at, said once at the
+            top rather than left to be inferred. English standing in for Tamil
+            is help; English standing in for Tamil without saying so is a reader
+            unable to tell a translation from the narration. */}
         {current && !current.hasTranslation ? (
           <Card style={styles.notice}>
             <Ionicons name="language-outline" size={18} color={colors.warning} />
             <Text style={styles.noticeText}>{t('hadith.arabicOnlyNotice')}</Text>
+          </Card>
+        ) : current?.isFallbackLanguage ? (
+          <Card style={styles.notice}>
+            <Ionicons name="language-outline" size={18} color={colors.warning} />
+            <Text style={styles.noticeText}>{t('hadith.englishFallbackNotice')}</Text>
           </Card>
         ) : null}
 
@@ -183,7 +193,10 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
                     h.translation
                       ? {
                           text: h.translation,
-                          language,
+                          // The edition's language, not the reader's. Labelling
+                          // an English rendering as Tamil is the exact mistake
+                          // the fallback has to avoid making.
+                          language: current?.translationLanguage ?? language,
                           source: current?.translationSource,
                         }
                       : null
@@ -230,6 +243,7 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
 function CollectionRow({
   name,
   sahih,
+  collectionId,
   translated,
   language,
   onPress,
@@ -237,14 +251,19 @@ function CollectionRow({
   name: string;
   sahih?: boolean;
   /** False when this collection has no edition in the reader's language. */
+  collectionId: string;
   translated: boolean;
-  language: string;
+  language: LanguageCode;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
-  // Only worth flagging when the reader actually asked for another language: an
-  // English reader being told "shown in English" is noise.
-  const flagFallback = !translated && language !== 'en';
+
+  // Asked of the same function the reader will actually get their text from,
+  // rather than inferred. Inferring it labelled every collection "English" for
+  // an Arabic reader, who is shown no translation at all.
+  const choice = hadithService.editionFor(collectionId, language);
+  // An English reader being told "shown in English" is noise, not information.
+  const flagFallback = choice.isFallback && language !== 'en';
 
   return (
     <Pressable
@@ -263,10 +282,10 @@ function CollectionRow({
         <View style={styles.tagRow}>
           {sahih ? <Text style={styles.sahihTag}>{t('hadith.sahih')}</Text> : null}
           {flagFallback ? (
-            <Text style={styles.fallbackTag}>{t('hadith.arabicEnglishOnly')}</Text>
-          ) : (
+            <Text style={styles.fallbackTag}>{t('hadith.englishOnly')}</Text>
+          ) : translated ? (
             <Text style={styles.translatedTag}>{t('hadith.translationAvailable')}</Text>
-          )}
+          ) : null}
         </View>
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

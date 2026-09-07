@@ -938,9 +938,10 @@
     "nextBook": "Next",
     "bookNumber": "Book {{number}}",
     "translationAvailable": "Translated",
-    "arabicEnglishOnly": "Arabic only",
     "coverageNote": "Every narration is shown in Arabic. A translation appears beneath it where one exists — Tamil for the two Sahihs, English for the rest. Collections are labelled so you know before you open one.",
-    "arabicOnlyNotice": "There is no approved translation of this collection in your language, so the Arabic original is shown on its own. Sahih al-Bukhari and Sahih Muslim have a published Tamil translation."
+    "arabicOnlyNotice": "No published translation of this collection is available in any language the app carries, so the Arabic original is shown on its own.",
+    "englishOnly": "English",
+    "englishFallbackNotice": "This collection has no published Tamil translation, so the English translation is shown beside the Arabic. Sahih al-Bukhari and Sahih Muslim are available in Tamil."
   },
   "progress": {
     "none": "Nothing to show yet",

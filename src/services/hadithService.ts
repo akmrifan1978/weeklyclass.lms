@@ -58,14 +58,21 @@ export const SAHIH = new Set(['bukhari', 'muslim']);
 /**
  * Published translation editions, per language and collection.
  *
- * NO FALLBACK. A collection with no edition in the reader's language gets NO
- * translation — not English standing in for Tamil. Substituting another
- * language silently presents one translation as though it were the one asked
- * for, and a reader who cannot read it is left unable to tell whether it is the
- * hadith or somebody's rendering. Arabic alone is the honest answer.
+ * English stands in where the reader's own language has no edition, and it is
+ * ALWAYS named as English when it does. The rule this replaces refused any
+ * substitute and showed the Arabic alone, to stop a reader mistaking one
+ * translation for another. That concern was right; the remedy was too blunt.
+ * Seven of the nine collections have no Tamil edition, so a Tamil reader was
+ * being handed Arabic they may not read and nothing else, when a translation
+ * they could read existed all along.
+ *
+ * What made the substitution dangerous was doing it silently. Saying which
+ * language is on screen removes the danger and keeps the translation, so the
+ * reader decides for themselves whether it is of use to them.
  *
  * These are published translations, which is what makes them approved. Nothing
- * here is generated.
+ * here is generated, and nothing is machine-translated — a hadith rendered by
+ * software is not a hadith anybody should be quoting.
  */
 const EDITIONS: Record<LanguageCode, (collection: string) => string | null> = {
   // Arabic is not a translation; it is the text, and every collection has it.
@@ -86,31 +93,62 @@ const EDITION_SOURCE: Record<string, string> = {
   'eng-muslim': 'Abdul Hamid Siddiqui',
 };
 
-/**
- * The translation edition for a language, or null when none is approved.
- *
- * Null is not a failure state — it is the correct answer for most collections
- * in Tamil and for every collection in Sinhala, and the screens treat it as
- * "show the Arabic alone" rather than as something to work around.
- */
-export function editionFor(
-  collection: string,
-  language: LanguageCode
-): { edition: string | null; source?: string } {
-  // An admin can add a language the app has no edition table for. Unknown means
-  // no approved translation — which is the safe answer, not a crash, and is
-  // exactly what the rule requires anyway.
-  const lookup = EDITIONS[language];
-  const edition = lookup ? lookup(collection) : null;
-  return { edition, source: edition ? EDITION_SOURCE[edition] : undefined };
+export interface EditionChoice {
+  edition: string | null;
+  source?: string;
+  /**
+   * The language the edition is actually in, which is not always the one asked
+   * for. Every screen showing this text is expected to say so.
+   */
+  language: LanguageCode | null;
+  /** True when this is English standing in for a language with no edition. */
+  isFallback: boolean;
 }
 
-/** True when this language has an approved translation of this collection. */
+/**
+ * The best translation available for a reader, and which language it is in.
+ *
+ * Order: the reader's own language, then English, then nothing. Arabic is never
+ * a fallback because it is never absent — it is the narration itself, shown
+ * alongside whatever translation this returns.
+ */
+export function editionFor(collection: string, language: LanguageCode): EditionChoice {
+  // An admin can add a language the app has no edition table for. Unknown means
+  // no edition of its own, which is the safe answer rather than a crash.
+  const own = EDITIONS[language]?.(collection) ?? null;
+  if (own) {
+    return { edition: own, source: EDITION_SOURCE[own], language, isFallback: false };
+  }
+
+  // Arabic readers are not offered an English stand-in: they can read the
+  // narration itself, so a second language would be clutter rather than help.
+  if (language === 'ar') {
+    return { edition: null, language: null, isFallback: false };
+  }
+
+  const english = EDITIONS.en(collection);
+  if (!english) return { edition: null, language: null, isFallback: false };
+  return {
+    edition: english,
+    source: EDITION_SOURCE[english],
+    language: 'en',
+    isFallback: true,
+  };
+}
+
+/**
+ * True when this collection is published in the reader's OWN language.
+ *
+ * Deliberately not "is there anything to read" — the list uses this to mark
+ * which collections carry a Tamil rendering and which fall back to English,
+ * and a fallback must not be able to pass for the real thing.
+ */
 export function hasApprovedTranslation(
   collection: string,
   language: LanguageCode
 ): boolean {
-  return editionFor(collection, language).edition !== null;
+  const choice = editionFor(collection, language);
+  return choice.edition !== null && !choice.isFallback;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -185,8 +223,15 @@ export interface HadithSection {
   section: number;
   sectionName: string;
   hadiths: Hadith[];
-  /** True when this language has a published edition of this collection. */
+  /** True when there is any translation on screen at all. */
   hasTranslation: boolean;
+  /**
+   * The language that translation is in. Not always the one asked for — see
+   * editionFor — and the screen showing it has to say which.
+   */
+  translationLanguage: LanguageCode | null;
+  /** True when English is standing in for a language with no edition. */
+  isFallbackLanguage: boolean;
   /** Named translator of that edition, where known. */
   translationSource?: string;
   /** How many sections this collection has, for paging on. */
@@ -212,7 +257,10 @@ export async function getSection(
   section: number,
   language: LanguageCode
 ): Promise<HadithSection> {
-  const { edition, source } = editionFor(collection, language);
+  const { edition, source, language: editionLanguage, isFallback } = editionFor(
+    collection,
+    language
+  );
   const cacheKey = `${CACHE_PREFIX}${collection}/${section}/${edition ?? 'ar-only'}/v3`;
 
   const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
@@ -244,6 +292,8 @@ export async function getSection(
     section,
     sectionName: Object.values(sectionNames)[0] ?? String(section),
     hasTranslation: Boolean(edition),
+    translationLanguage: editionLanguage,
+    isFallbackLanguage: isFallback,
     translationSource: source,
     sectionCount: Object.keys(arabicData.metadata.sections ?? sectionNames).length || 0,
     hadiths: arabicData.hadiths.map((h) => ({
