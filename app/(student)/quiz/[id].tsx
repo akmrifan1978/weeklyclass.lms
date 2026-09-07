@@ -5,11 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import * as translateService from '@/services/translateService';
 import { useToast } from '@/contexts/ToastContext';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
 import { formatCountdown, toDate } from '@/utils/date';
 import { friendlyMessage } from '@/utils/errors';
+import type { LanguageCode } from '@/types';
 import { saveProgress, startAttempt, submitAttempt } from '@/services/quizService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import {
@@ -18,6 +21,7 @@ import {
   Button,
   Card,
   ConfirmDialog,
+  FormSheet,
   Screen,
   SkeletonList,
   Spacer,
@@ -33,6 +37,7 @@ import {
 export default function QuizPlayer() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const toast = useToast();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,6 +46,9 @@ export default function QuizPlayer() {
   const [index, setIndex] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [glosses, setGlosses] = useState<
+    Record<string, { text?: string; loading?: boolean; error?: string }>
+  >({});
   const [submitting, setSubmitting] = useState(false);
   const submittedRef = useRef(false);
 
@@ -115,6 +123,41 @@ export default function QuizPlayer() {
 
   const questions = data?.questions ?? [];
   const question = questions[index];
+  const gloss = (question && glosses[question.id]) ?? {};
+
+  /**
+   * Translates the question and its options in one request.
+   *
+   * The source is the language the assignment was WRITTEN in, which the quiz
+   * records — assuming English would have produced nonsense the first time
+   * somebody set an assignment in Tamil. The target is whatever the reader has
+   * the app in, and where the two match there is nothing to translate and no
+   * button to press.
+   */
+  const sourceLanguage = (data?.quiz.language ?? 'en') as LanguageCode;
+  const canTranslate = Boolean(question) && sourceLanguage !== language;
+
+  const translateQuestion = async () => {
+    if (!question) return;
+    const id = question.id;
+    setGlosses((g) => ({ ...g, [id]: { loading: true } }));
+    try {
+      // One request for the question and every option together: reading the
+      // question without the answers is no use, and four separate calls would
+      // spend four times the daily allowance on a single screen.
+      const source = [question.text, ...question.options].join('. ');
+      const text = await translateService.translate(
+        source,
+        sourceLanguage,
+        language as LanguageCode
+      );
+      setGlosses((g) => ({ ...g, [id]: { text } }));
+    } catch (err) {
+      const reason =
+        err instanceof translateService.TranslationUnavailable ? err.reason : 'network';
+      setGlosses((g) => ({ ...g, [id]: { error: t(`scripture.translateFailed_${reason}`) } }));
+    }
+  };
   const answered = Object.keys(answers).length;
   const unanswered = questions.length - answered;
   const isLast = index === questions.length - 1;
@@ -179,6 +222,41 @@ export default function QuizPlayer() {
                 <Text style={styles.questionText} accessibilityRole="header">
                   {question.text}
                 </Text>
+
+                {/*
+                  A rough reading in the student's own language, on request.
+
+                  An assignment is written in one language by whoever set it,
+                  and a student who reads another was previously answering a
+                  question they could not read. The original stays above — it is
+                  what the marking is against, and a gloss must never be mistaken
+                  for the question itself.
+
+                  Question and options together, in one request, because reading
+                  the question without the answers is no use and asking for four
+                  separate translations would spend four times the daily
+                  allowance on one screen.
+                */}
+                {gloss.text ? (
+                  <View style={styles.glossBlock}>
+                    <Text style={styles.glossLabel}>{t('quiz.roughTranslation')}</Text>
+                    <Text style={styles.glossText}>{gloss.text}</Text>
+                    <Text style={styles.glossNote}>{t('quiz.roughTranslationNote')}</Text>
+                  </View>
+                ) : gloss.error ? (
+                  <Text style={styles.glossError}>{gloss.error}</Text>
+                ) : gloss.loading ? (
+                  <Text style={styles.glossLabel}>{t('scripture.translating')}</Text>
+                ) : canTranslate ? (
+                  <Pressable
+                    onPress={() => void translateQuestion()}
+                    accessibilityRole="button"
+                    style={styles.glossButton}
+                  >
+                    <Ionicons name="language-outline" size={13} color={colors.primary} />
+                    <Text style={styles.glossButtonText}>{t('quiz.translateQuestion')}</Text>
+                  </Pressable>
+                ) : null}
               </Card>
 
               <Spacer />
@@ -280,24 +358,94 @@ export default function QuizPlayer() {
         </AsyncBoundary>
       </Screen>
 
-      <ConfirmDialog
+      {/*
+        Three ways out, not two.
+
+        This used to offer Cancel or Submit, which are both ways of NOT leaving:
+        one returns to the questions, the other ends the attempt for good. A
+        student who opened an assignment and did not want to continue had
+        neither, and their only remaining move was to force-close the app.
+
+        Leaving is safe and always was — every answer is written to the attempt
+        as it is chosen, so walking away keeps them and the assignment can be
+        picked up again. The button simply never existed.
+      */}
+      <FormSheet
         visible={confirming}
-        title={t('quiz.submitQuiz')}
-        message={
-          unanswered > 0
-            ? `${t('quiz.unanswered', { count: unanswered })}\n${t('quiz.submitConfirm')}`
-            : t('quiz.submitConfirm')
-        }
-        confirmLabel={t('common.submit')}
-        loading={submitting}
-        onCancel={() => setConfirming(false)}
-        onConfirm={() => handleSubmit(false)}
-      />
+        title={t('quiz.leaveTitle')}
+        onClose={() => setConfirming(false)}
+        onSubmit={() => handleSubmit(false)}
+        submitLabel={t('common.submit')}
+        submitting={submitting}
+      >
+        <Text style={styles.exitLead}>
+          {unanswered > 0
+            ? t('quiz.unanswered', { count: unanswered })
+            : t('quiz.allAnswered')}
+        </Text>
+
+        <Button
+          label={t('quiz.leaveWithoutSubmitting')}
+          icon="exit-outline"
+          variant="outline"
+          fullWidth
+          onPress={() => {
+            setConfirming(false);
+            router.back();
+          }}
+        />
+        <Text style={styles.exitNote}>
+          {data?.quiz.timeLimit ? t('quiz.leaveNoteTimed') : t('quiz.leaveNote')}
+        </Text>
+      </FormSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  glossButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    marginTop: spacing.md,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  glossButtonText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  glossBlock: {
+    marginTop: spacing.md,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+  },
+  glossLabel: {
+    fontSize: 11,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  glossText: { fontSize: fontSize.sm, color: colors.text, lineHeight: 21 },
+  glossNote: { fontSize: 10, color: colors.textMuted, marginTop: 6, lineHeight: 14 },
+  glossError: { fontSize: fontSize.xs, color: colors.danger, marginTop: spacing.md },
+  exitLead: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+    lineHeight: 21,
+    marginBottom: spacing.lg,
+  },
+  exitNote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginTop: spacing.sm,
+  },
   timer: {
     flexDirection: 'row',
     alignItems: 'center',

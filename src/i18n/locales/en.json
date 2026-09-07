@@ -442,7 +442,15 @@
     "noAttemptsLeft": "You have used all your attempts for this assignment.",
     "noQuizzes": "No weekly assignments yet",
     "opensAt": "Opens",
-    "closesAt": "Closes"
+    "closesAt": "Closes",
+    "leaveTitle": "Leave this assignment?",
+    "allAnswered": "You have answered every question.",
+    "leaveWithoutSubmitting": "Leave without submitting",
+    "leaveNote": "Your answers are saved. You can come back and finish this assignment later.",
+    "leaveNoteTimed": "Your answers are saved, but this assignment is timed and the clock keeps running while you are away.",
+    "translateQuestion": "Read in my language",
+    "roughTranslation": "Rough translation",
+    "roughTranslationNote": "Translated by software, so it may be imprecise. The original above is what your answer is marked against."
   },
   "result": {
     "title": "Results",
