@@ -412,6 +412,20 @@ service cloud.firestore {
      * Never deleted through the app. A note is replaced by editing it, and the
      * id is the name's number, so there is nothing to tidy up.
      */
+    /**
+     * Khutbah and bayan translations.
+     *
+     * Read by anyone signed in — this is the centre's own rendering of what was
+     * said from its own minbar, not a public document. Written by whoever is
+     * trusted with the written content, which is the same act and so the same
+     * permission.
+     */
+    match /khutbahs/{khutbahId} {
+      allow read: if isSignedIn();
+      allow create, update: if can('MANAGE_ARTICLES');
+      allow delete: if isAdmin();
+    }
+
     match /divineNames/{nameNumber} {
       allow read: if isSignedIn();
       allow write: if can('MANAGE_ARTICLES');
@@ -841,10 +855,17 @@ service cloud.firestore {
     match /qaQuestions/{questionId} {
       allow read: if isSignedIn();
 
+      // Nobody posts a question with its own answer already in it. Tested by
+      // VALUE, not by the key being absent: the client writes `answer: null`
+      // and `answeredBy: null` so the document has a fixed shape, and a rule
+      // that refused documents merely CONTAINING those keys refused every
+      // question ever asked — which is why this collection was empty. The same
+      // mistake was in the support request rule and was fixed there first.
       allow create: if isSignedIn()
                     && request.resource.data.askedBy == request.auth.uid
                     && request.resource.data.status == 'open'
-                    && !request.resource.data.keys().hasAny(['answer', 'answeredBy']);
+                    && request.resource.data.answer == null
+                    && request.resource.data.answeredBy == null;
 
       allow update: if isStaff();
       allow delete: if isAdmin();

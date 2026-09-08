@@ -42,14 +42,41 @@ const TIMEOUT_MS = 15_000;
  */
 const MAX_CHUNK = 400;
 
+/**
+ * Why a translation could not be produced.
+ *
+ * `network` and `service` were the same thing until it mattered. MyMemory
+ * answers roughly half of all requests with a 504 — measured, eight attempts,
+ * four gateway timeouts — and every one of those was being reported to the
+ * reader as "check your connection". Their connection was fine. Sending
+ * somebody to restart their router because a service in Italy is overloaded
+ * wastes their time and teaches them the message means nothing.
+ */
+export type TranslationFailure = 'quota' | 'network' | 'service' | 'refused';
+
 export class TranslationUnavailable extends Error {
-  readonly reason: 'quota' | 'network' | 'refused';
-  constructor(reason: 'quota' | 'network' | 'refused') {
+  readonly reason: TranslationFailure;
+  constructor(reason: TranslationFailure) {
     super(reason);
     this.name = 'TranslationUnavailable';
     this.reason = reason;
   }
 }
+
+/**
+ * How many times to ask before giving up.
+ *
+ * The failures are transient — the same text asked for again usually comes
+ * back. At the observed success rate a single attempt works about half the
+ * time and three attempts about seven times in eight, which is the difference
+ * between a feature that seems broken and one that seems slow.
+ */
+const ATTEMPTS = 3;
+
+/** Grows between tries, so a struggling service is not hammered. */
+const RETRY_DELAY_MS = 700;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Stable, short key for a piece of text. FNV-1a — not security, just identity. */
 function fingerprint(value: string): string {
@@ -133,6 +160,13 @@ async function translateChunk(
       `${ENDPOINT}?q=${encodeURIComponent(text)}&langpair=${from}|${to}` +
       (contact ? `&de=${encodeURIComponent(contact)}` : '');
     const response = await fetch(url, { signal: controller.signal });
+
+    // Checked before parsing. A 5xx from this service returns an HTML error
+    // page, and calling .json() on it throws something that says nothing about
+    // what actually happened.
+    if (response.status >= 500) throw new TranslationUnavailable('service');
+    if (!response.ok) throw new TranslationUnavailable('refused');
+
     const payload = (await response.json()) as {
       responseStatus?: number | string;
       responseData?: { translatedText?: string };
@@ -155,10 +189,46 @@ async function translateChunk(
     return result;
   } catch (error) {
     if (error instanceof TranslationUnavailable) throw error;
+    // A timeout is the service failing to answer, not the reader being offline.
+    if ((error as Error)?.name === 'AbortError') {
+      throw new TranslationUnavailable('service');
+    }
     throw new TranslationUnavailable('network');
   } finally {
     clearTimeout(deadline);
   }
+}
+
+/**
+ * One chunk, asked for up to three times.
+ *
+ * Only the transient failures are retried. A quota that has run out will still
+ * be exhausted a second later, and a passage the service refuses to translate
+ * will still be refused — retrying either wastes the reader's time and, in the
+ * quota case, their remaining allowance.
+ */
+async function translateChunkWithRetry(
+  text: string,
+  from: LanguageCode,
+  to: LanguageCode
+): Promise<string> {
+  let last: unknown;
+
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
+    try {
+      return await translateChunk(text, from, to);
+    } catch (error) {
+      last = error;
+      const reason =
+        error instanceof TranslationUnavailable ? error.reason : 'network';
+      if (reason === 'quota' || reason === 'refused') throw error;
+      if (attempt < ATTEMPTS) await wait(RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  throw last instanceof TranslationUnavailable
+    ? last
+    : new TranslationUnavailable('service');
 }
 
 /**
@@ -185,7 +255,7 @@ export async function translate(
   for (const piece of pieces) {
     // Sequential, not parallel. Firing five requests at a free service is how
     // a rate limit is met, and the pieces have to be rejoined in order anyway.
-    translated.push(await translateChunk(piece, from, to));
+    translated.push(await translateChunkWithRetry(piece, from, to));
   }
 
   const result = translated.join(' ').replace(/\s+/g, ' ').trim();

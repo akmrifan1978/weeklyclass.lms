@@ -38,6 +38,13 @@ const TILES: Tile[] = [
     tint: brand.orange,
   },
   {
+    feature: 'khutbah',
+    icon: 'mic',
+    labelKey: 'khutbah.title',
+    path: '/khutbah',
+    tint: brand.slate,
+  },
+  {
     feature: 'prayer',
     icon: 'time-outline',
     labelKey: 'nav.prayer',

@@ -891,9 +891,35 @@ export interface AppSettings {
 }
 
 /** The optional Islamic sections an admin can switch on or off. */
+/** A Friday sermon, or a talk given on some other occasion. */
+export type KhutbahKind = 'jumuah' | 'bayan';
+
+/**
+ * A khutbah or bayan and the translations of it this centre has written.
+ *
+ * `translations` is keyed by language and holds only what somebody actually
+ * wrote — see khutbahService for why nothing here is ever machine-generated.
+ */
+export interface KhutbahEntry extends BaseDoc {
+  kind: KhutbahKind;
+  title: string;
+  /** ISO date of the sermon or talk, not of the record. */
+  date: string;
+  speaker?: string | null;
+  venue?: string | null;
+  /** The language it was actually delivered in. Usually Arabic here. */
+  deliveredIn: LanguageCode;
+  /** Language code to the written translation. Absent means not translated. */
+  translations?: Partial<Record<LanguageCode, string>>;
+  /** A recording, where one exists. */
+  audioUrl?: string | null;
+  status: ContentStatus;
+}
+
 export type IslamicFeature =
   | 'prayer'
   | 'names'
+  | 'khutbah'
   | 'quran'
   | 'readingPlan'
   | 'tajweed'

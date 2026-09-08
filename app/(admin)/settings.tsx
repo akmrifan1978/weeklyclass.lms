@@ -40,6 +40,7 @@ import {
 const ISLAMIC_FEATURE_LABELS: Record<IslamicFeature, string> = {
   prayer: 'nav.prayer',
   names: 'names.title',
+  khutbah: 'khutbah.title',
   quran: 'nav.quran',
   readingPlan: 'quran.dailyReading',
   tajweed: 'nav.tajweed',

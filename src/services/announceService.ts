@@ -26,6 +26,7 @@ export type AnnounceKind =
   | 'assignment'
   | 'onlineClass'
   | 'event'
+  | 'khutbah'
   | 'article';
 
 /** Category and deep link per kind, so tapping the notification lands right. */
@@ -40,6 +41,8 @@ const ROUTES: Record<AnnounceKind, { category: NotificationCategory; route: stri
   // A calendar entry people can come to. Lands on the events screen, which is
   // where the booking is, rather than on the read-only calendar.
   event: { category: 'event_reminder', route: '/(student)/events' },
+  // Its own route because a translation is read, not attended.
+  khutbah: { category: 'new_article', route: '/(student)/khutbah' },
   article: { category: 'new_article', route: '/(student)/(tabs)' },
 };
 

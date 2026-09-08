@@ -11,6 +11,7 @@ export const COLLECTIONS = {
   organizations: 'organizations',
   countries: 'countries',
   divineNames: 'divineNames',
+  khutbahs: 'khutbahs',
   branches: 'branches',
   classes: 'classes',
   subjects: 'subjects',
@@ -76,6 +77,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   islamicFeatures: {
     prayer: true,
     names: true,
+    khutbah: true,
     quran: true,
     readingPlan: true,
     tajweed: true,
@@ -89,6 +91,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export const ISLAMIC_FEATURES = [
   'prayer',
   'names',
+  'khutbah',
   'quran',
   'readingPlan',
   'tajweed',

@@ -21,6 +21,7 @@ export const LANGUAGE_SCOPES = [
   'student',
   'prayer',
   'names',
+  'khutbah',
   'quran',
   'tajweed',
   'zakat',
