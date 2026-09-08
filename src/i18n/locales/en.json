@@ -960,7 +960,9 @@
     "onlineClassAdded": "Online class scheduled",
     "onlineClassUpdated": "Online class changed",
     "articleAdded": "New article",
-    "articleUpdated": "Article updated"
+    "articleUpdated": "Article updated",
+    "eventAdded": "New event",
+    "eventUpdated": "Event updated"
   },
   "support": {
     "helpline": "Care helpline",
@@ -1237,7 +1239,8 @@
     "bookingRejected": "Your request for this event was not accepted.",
     "cannotRejectConfirmed": "Cancel a confirmed booking instead — declining it would leave the seat held.",
     "awaitingDecision": "Waiting for the organiser ({{seats}} place(s))",
-    "ageAssumed": "Your profile has no date of birth, so the adult rate is used. Add it in your profile if that is wrong."
+    "ageAssumed": "Your profile has no date of birth, so the adult rate is used. Add it in your profile if that is wrong.",
+    "registerToBook": "Register to book"
   },
   "notes": {
     "new": "New note",
@@ -1289,5 +1292,20 @@
     "title": "Install the app",
     "body": "Add WeeklyClass to your home screen and open it like any other app.",
     "action": "Install"
+  },
+  "names": {
+    "title": "99 Names of Allah",
+    "lead": "Asmaul Husna — the most beautiful names",
+    "search": "Search the names",
+    "play": "Play the pronunciation",
+    "stop": "Stop",
+    "noNote": "Your teachers have not written a note on this name yet.",
+    "addNote": "Write the explanation",
+    "explanation": "Explanation",
+    "noteHint": "In your own words. Nothing is bundled with the app — what is written here is this centre's teaching, and it is shown with your name under it.",
+    "writtenBy": "Written by {{name}}",
+    "audio_platform": "Pronunciation audio is available in the browser version of the app.",
+    "audio_unsupported": "This browser cannot speak text aloud.",
+    "audio_noArabicVoice": "No Arabic voice is installed on this device, so the names are not read aloud — a wrong pronunciation would be worse than none. Adding an Arabic language pack in your system settings enables it."
   }
 }

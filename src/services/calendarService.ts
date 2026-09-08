@@ -10,10 +10,12 @@ import {
   listPage,
   softDelete,
   updateDocById,
+  watchList,
   type Cursor,
   type Page,
 } from './firestore';
 import * as audit from './auditService';
+import { announce } from './announceService';
 import { cached } from './offlineCache';
 
 /**
@@ -152,37 +154,46 @@ export function getEvent(id: string): Promise<CalendarEvent | null> {
 }
 
 /**
- * The class schedule, as much of it as a stranger may see.
+ * The schedule, as much of it as a stranger may see.
  *
- * The sign-in screen advertises the upcoming classes, and a signed-out visitor
+ * The sign-in screen advertises what is coming up, and a signed-out visitor
  * cannot read `calendarEvents` — nor should they. A calendar entry carries the
  * meeting link, and Firestore rules grant or refuse a whole document: there is
  * no way to publish the title while withholding the URL. Anyone with the link
  * can walk into the class.
  *
  * So a deliberately thin copy is kept alongside it, containing only what a
- * poster would say — what, when, where, and the picture. No link, no class id,
- * no audience, no attendee count. That copy is world-readable and the real
- * entry stays closed.
+ * poster would say — what, when, where, the picture, and a line about it. No
+ * link, no audience, no attendee count, no booking.
  *
- * Only CLASSES are mirrored. An entry with `registration` is a ticketed event
- * and belongs on the events screen behind a sign-in, where the seat count and
- * the booking live.
+ * WHAT IS MIRRORED, and why it changed. It used to be classes only, on the
+ * reasoning that a ticketed event belonged behind a sign-in with its seat
+ * count. But the point of the sign-in screen is to show somebody who has not
+ * joined yet what this place does, and a public event is the strongest thing
+ * it has to show them. So ticketed events are mirrored now as well, carrying a
+ * `takesBookings` flag so the card can offer a way in.
+ *
+ * WHAT IS NOT MIRRORED: anything scoped to one class. That is a private
+ * arrangement between a teacher and their students, and a stranger has no
+ * business reading its title, its venue or the hour it starts. This is
+ * narrower than the old rule, which advertised class-scoped classes to the
+ * world — the sign-in page keeps only what is genuinely open to everybody.
  */
 async function syncPublicSchedule(id: string, event: Partial<CalendarEvent>): Promise<void> {
-  const isClass = !event.registration;
+  const isPublic = !event.classId;
   const path = `${COLLECTIONS.publicSchedule}/${id}`;
 
   try {
-    if (!isClass) {
-      // It used to be a class and has become a ticketed event: withdraw the
-      // public copy rather than leave a stale one advertising it.
+    if (!isPublic) {
+      // It was open to everybody and has been narrowed to one class: withdraw
+      // the public copy rather than leave one advertising it.
       await deleteDoc(doc(db, COLLECTIONS.publicSchedule, id));
       return;
     }
 
     await setDoc(doc(db, COLLECTIONS.publicSchedule, id), {
       title: event.title ?? '',
+      description: event.description ?? null,
       date: event.date ?? '',
       startTime: event.startTime ?? '',
       endTime: event.endTime ?? '',
@@ -191,6 +202,10 @@ async function syncPublicSchedule(id: string, event: Partial<CalendarEvent>): Pr
       topic: event.topic ?? null,
       speaker: event.speaker ?? null,
       bannerUrl: event.bannerUrl ?? null,
+      // Whether there is something to book. Deliberately a boolean and not the
+      // registration block: the seat count, the price and the bookings stay
+      // behind a sign-in where they belong.
+      takesBookings: Boolean(event.registration),
       startsAt: combineDateTime(event.date ?? '', event.startTime ?? ''),
       deleted: false,
     });
@@ -233,6 +248,21 @@ export async function saveEvent(
 
   const newId = await createDoc(COLLECTIONS.calendarEvents, payload, { actorId: actor.uid });
   await syncPublicSchedule(newId, payload);
+
+  // Telling people is the point of putting it on the calendar. Fire and forget,
+  // like every other publish: an event that saved but could not be announced is
+  // still an event, and rolling it back would be the worse outcome.
+  void announce(
+    {
+      kind: 'event',
+      title: payload.title,
+      classId: payload.classId ?? null,
+      branchId: payload.branchId ?? null,
+      published: payload.status === 'scheduled',
+      image: payload.bannerUrl ?? null,
+    },
+    actor
+  );
   await audit.log({
     actor,
     action: 'CREATE',
@@ -262,6 +292,7 @@ export async function deleteEvent(id: string, actor: AppUser): Promise<void> {
 export interface PublicClass {
   id: string;
   title: string;
+  description?: string | null;
   date: string;
   startTime: string;
   endTime: string;
@@ -269,6 +300,8 @@ export interface PublicClass {
   location?: string | null;
   speaker?: string | null;
   bannerUrl?: string | null;
+  /** True when this event takes bookings, so the card can offer a way in. */
+  takesBookings?: boolean;
 }
 
 /**
@@ -291,6 +324,37 @@ export async function listPublicClasses(limit = 6): Promise<PublicClass[]> {
     return [];
   });
   return rows;
+}
+
+/**
+ * The same list, kept live.
+ *
+ * A snapshot listener rather than a fetch, for two reasons that both came from
+ * the same complaint. An event added by an admin appears on everybody's screen
+ * without them reloading, and — because Firestore answers a listener from its
+ * own cache first — the last known list is on screen immediately, including
+ * with no connection at all, and is replaced the moment the server has
+ * something newer.
+ *
+ * Returns an unsubscribe. Errors are reported to the caller rather than thrown,
+ * because a sign-in screen that fails to load its advertisement should still be
+ * a sign-in screen.
+ */
+export function watchPublicSchedule(
+  limit: number,
+  onNext: (rows: PublicClass[]) => void
+): () => void {
+  return watchList<PublicClass & { deleted?: boolean }>(
+    COLLECTIONS.publicSchedule,
+    {
+      filters: [['startsAt', '>=', new Date()]],
+      orderByField: 'startsAt',
+      direction: 'asc',
+      pageSize: limit,
+    },
+    onNext,
+    (error) => console.warn('[WeeklyClass] public schedule listener stopped:', error)
+  );
 }
 
 /** Groups events by ISO date for a month or agenda view. */

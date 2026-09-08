@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
 import { formatShortDate } from '@/utils/date';
-import type { CalendarEvent } from '@/types';
 import { SectionHeader } from '@/components/ui';
 
 /**
@@ -23,14 +22,36 @@ import { SectionHeader } from '@/components/ui';
  * photograph added there appears here without anybody publishing anything
  * twice.
  */
+/**
+ * What the card needs, from either source.
+ *
+ * The signed-in dashboards pass real calendar events; the sign-in screen passes
+ * the thin public copy. They agree on every field shown here, so one card
+ * renders both rather than two cards drifting apart.
+ */
+export interface UpcomingItem {
+  id: string;
+  title: string;
+  description?: string | null;
+  date: string;
+  startTime?: string;
+  venue?: string | null;
+  location?: string | null;
+  bannerUrl?: string | null;
+  takesBookings?: boolean;
+}
+
 export function UpcomingClasses({
   events,
   onPress,
   title,
+  actionLabel,
 }: {
-  events: CalendarEvent[];
-  onPress: (event: CalendarEvent) => void;
+  events: UpcomingItem[];
+  onPress: (event: UpcomingItem) => void;
   title?: string;
+  /** Shown on events that take bookings. Omit to show no button. */
+  actionLabel?: string;
 }) {
   const { t } = useTranslation();
   if (events.length === 0) return null;
@@ -89,6 +110,22 @@ export function UpcomingClasses({
                   </Text>
                 </View>
               ) : null}
+
+              {event.description ? (
+                <Text style={styles.blurb} numberOfLines={2}>
+                  {event.description}
+                </Text>
+              ) : null}
+
+              {/* Only where there is something to book. A button on a class
+                  that takes no bookings would promise a screen that has
+                  nothing on it. */}
+              {event.takesBookings && actionLabel ? (
+                <View style={styles.action}>
+                  <Text style={styles.actionText}>{actionLabel}</Text>
+                  <Ionicons name="arrow-forward" size={12} color={brand.orange} />
+                </View>
+              ) : null}
             </View>
           </Pressable>
         ))}
@@ -117,4 +154,21 @@ const styles = StyleSheet.create({
   },
   factRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   fact: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary },
+  blurb: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 16,
+    marginTop: spacing.sm,
+  },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+  },
+  actionText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: brand.orange,
+  },
 });

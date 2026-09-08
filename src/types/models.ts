@@ -893,6 +893,7 @@ export interface AppSettings {
 /** The optional Islamic sections an admin can switch on or off. */
 export type IslamicFeature =
   | 'prayer'
+  | 'names'
   | 'quran'
   | 'readingPlan'
   | 'tajweed'

@@ -10,6 +10,7 @@ export const COLLECTIONS = {
   usernames: 'usernames',
   organizations: 'organizations',
   countries: 'countries',
+  divineNames: 'divineNames',
   branches: 'branches',
   classes: 'classes',
   subjects: 'subjects',
@@ -74,6 +75,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   // install finding them all hidden would just look broken.
   islamicFeatures: {
     prayer: true,
+    names: true,
     quran: true,
     readingPlan: true,
     tajweed: true,
@@ -86,6 +88,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 /** Every Islamic section, in the order they appear on a dashboard. */
 export const ISLAMIC_FEATURES = [
   'prayer',
+  'names',
   'quran',
   'readingPlan',
   'tajweed',

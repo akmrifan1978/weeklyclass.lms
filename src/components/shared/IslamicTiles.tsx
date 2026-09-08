@@ -31,6 +31,13 @@ interface Tile {
 
 const TILES: Tile[] = [
   {
+    feature: 'names',
+    icon: 'sparkles',
+    labelKey: 'names.title',
+    path: '/names',
+    tint: brand.orange,
+  },
+  {
     feature: 'prayer',
     icon: 'time-outline',
     labelKey: 'nav.prayer',

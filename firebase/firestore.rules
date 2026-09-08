@@ -401,6 +401,22 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    /**
+     * The teachers' notes on the ninety-nine names.
+     *
+     * Readable by anyone signed in, and by nobody else — this is the centre's
+     * own teaching, not a public leaflet. Written only by whoever is trusted
+     * with the rest of the written content; the same permission that governs
+     * articles governs this, because it is the same act.
+     *
+     * Never deleted through the app. A note is replaced by editing it, and the
+     * id is the name's number, so there is nothing to tidy up.
+     */
+    match /divineNames/{nameNumber} {
+      allow read: if isSignedIn();
+      allow write: if can('MANAGE_ARTICLES');
+    }
+
     match /articles/{articleId} {
       // Same shop window as videos: a published article is readable by anybody,
       // a draft by nobody without an account. Articles carry no class scoping,

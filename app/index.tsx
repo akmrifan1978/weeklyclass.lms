@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { formatShortDate } from '@/utils/date';
 import * as calendarService from '@/services/calendarService';
 import { InstallPrompt } from '@/components/shared/InstallPrompt';
 import { useTranslation } from 'react-i18next';
@@ -65,19 +66,15 @@ export default function SplashScreen() {
   const [classes, setClasses] = useState<calendarService.PublicClass[]>([]);
 
   useEffect(() => {
-    // Best effort and silent: the sign-in screen must render whether or not
-    // this succeeds, and a visitor who cannot see the schedule can still sign
-    // in, which is what the screen is for.
-    let cancelled = false;
-    calendarService
-      .listPublicClasses(4)
-      .then((rows) => {
-        if (!cancelled) setClasses(rows);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
+    // A live subscription rather than one fetch. An event the admin adds shows
+    // up on this screen without anybody reloading it, and the last known list
+    // is drawn from Firestore's own cache first — so a visitor with no
+    // connection still sees what is coming up, and it corrects itself the
+    // moment there is a network again.
+    //
+    // Still best effort and still silent: a sign-in screen that cannot load
+    // its advertisement is a sign-in screen, which is what it is for.
+    return calendarService.watchPublicSchedule(6, setClasses);
   }, []);
 
   const { t } = useTranslation();
@@ -240,10 +237,32 @@ export default function SplashScreen() {
                       {item.title}
                     </Text>
                     <Text style={styles.classFact} numberOfLines={1}>
-                      {item.date}
+                      {formatShortDate(item.date)}
                       {item.startTime ? `  ·  ${item.startTime}` : ''}
-                      {item.venue ? `  ·  ${item.venue}` : ''}
+                      {item.venue || item.location
+                        ? `  ·  ${[item.venue, item.location].filter(Boolean).join(', ')}`
+                        : ''}
                     </Text>
+                    {item.description ? (
+                      <Text style={styles.classBlurb} numberOfLines={2}>
+                        {item.description}
+                      </Text>
+                    ) : null}
+
+                    {/* Bookings live behind a sign-in — the seat count and the
+                        ticket are not this screen's to show. So the button is
+                        an honest one: it says registering is possible and
+                        takes them to the door. */}
+                    {item.takesBookings ? (
+                      <Pressable
+                        onPress={() => router.push('/(auth)/register')}
+                        accessibilityRole="button"
+                        style={styles.classAction}
+                      >
+                        <Text style={styles.classActionText}>{t('event.registerToBook')}</Text>
+                        <Ionicons name="arrow-forward" size={11} color={brand.orange} />
+                      </Pressable>
+                    ) : null}
                   </View>
                 </View>
               ))}
@@ -320,6 +339,18 @@ const styles = StyleSheet.create({
   classPhoto: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surface },
   classPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
   classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textInverse },
+  classBlurb: {
+    fontSize: fontSize.xs,
+    color: 'rgba(255,255,255,0.62)',
+    lineHeight: 16,
+    marginTop: 3,
+  },
+  classAction: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  classActionText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: brand.orange,
+  },
   classFact: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.72)', marginTop: 2 },
   container: { flex: 1, backgroundColor: brand.navyDeep },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },

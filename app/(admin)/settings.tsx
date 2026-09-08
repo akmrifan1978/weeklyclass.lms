@@ -39,6 +39,7 @@ import {
 /** Toggle labels reuse the same keys the dashboards use for the tiles. */
 const ISLAMIC_FEATURE_LABELS: Record<IslamicFeature, string> = {
   prayer: 'nav.prayer',
+  names: 'names.title',
   quran: 'nav.quran',
   readingPlan: 'quran.dailyReading',
   tajweed: 'nav.tajweed',
