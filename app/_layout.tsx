@@ -227,9 +227,59 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   // Silent throughout — a failure here costs an install prompt and nothing
   // else, and the app works identically without one.
   if ('serviceWorker' in navigator) {
+    /**
+     * Registering the worker is the easy half. Making an installed app notice
+     * that a new version exists is the half that was missing.
+     *
+     * An installed PWA is not a browser tab. Nobody presses reload on it, and
+     * on Android reopening it from the recents list resumes the page that was
+     * already running rather than navigating afresh — so the JavaScript it
+     * started with can stay on screen for days while the server has moved on.
+     * That is why the app "was not updating" even though the site itself was
+     * serving the newest build all along.
+     *
+     * Two additions fix it, and both are needed:
+     *
+     *   ASK. Every time the app comes back to the foreground, ask the browser
+     *   to re-fetch sw.js. Without this the check happens on navigation or
+     *   roughly once a day, neither of which an installed app reliably does.
+     *
+     *   ACT. When a new worker takes control, reload once so the page picks up
+     *   the new bundle. The worker calls skipWaiting and claim, so control
+     *   changes as soon as the new version installs.
+     *
+     * The reload is guarded twice: only when a worker was already in control —
+     * otherwise the very first install would reload the page somebody just
+     * opened — and only once, because a reload loop is a far worse bug than a
+     * stale screen.
+     */
     const register = () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      let reloading = false;
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || reloading) return;
+        reloading = true;
+        window.location.reload();
+      });
+
+      void navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          const check = () => {
+            if (document.visibilityState !== 'visible') return;
+            void registration.update().catch(() => undefined);
+          };
+
+          document.addEventListener('visibilitychange', check);
+          window.addEventListener('focus', check);
+          // A backstop for a device left open on one screen all day.
+          setInterval(check, 60 * 60 * 1000);
+          check();
+        })
+        .catch(() => undefined);
     };
+
     if (document.readyState === 'complete') register();
     else window.addEventListener('load', register, { once: true });
   }
