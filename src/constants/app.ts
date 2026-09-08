@@ -76,6 +76,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   // install finding them all hidden would just look broken.
   islamicFeatures: {
     prayer: true,
+    qibla: true,
     names: true,
     khutbah: true,
     quran: true,
@@ -90,6 +91,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 /** Every Islamic section, in the order they appear on a dashboard. */
 export const ISLAMIC_FEATURES = [
   'prayer',
+  'qibla',
   'names',
   'khutbah',
   'quran',

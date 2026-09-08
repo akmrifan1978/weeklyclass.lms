@@ -13,6 +13,8 @@ import { formatShortDate, toISODate } from '@/utils/date';
 import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import * as khutbahs from '@/services/khutbahService';
+import { VideoPlayer } from '@/components/shared/VideoPlayer';
+import { MediaField } from './MediaField';
 import type { ContentStatus, KhutbahEntry, KhutbahKind, LanguageCode } from '@/types';
 import {
   AppHeader,
@@ -106,6 +108,8 @@ export function KhutbahScreen() {
           venue: form.venue.trim() || null,
           deliveredIn: form.deliveredIn,
           audioUrl: form.audioUrl.trim() || null,
+          mediaUrl: form.mediaUrl || null,
+          mediaType: form.mediaType,
           status: form.status,
           // Only what was actually written. An empty box is not a translation
           // and must not be stored as one, or the reader is offered a language
@@ -272,6 +276,15 @@ export function KhutbahScreen() {
                     <Text style={styles.noTranslation}>{t('khutbah.noTranslation')}</Text>
                   )}
 
+                  {/* An uploaded file plays in place; a pasted link opens
+                      wherever it lives. Both can be present, and both are
+                      offered rather than one quietly winning. */}
+                  {entry.mediaUrl ? (
+                    <View style={{ marginTop: spacing.md }}>
+                      <VideoPlayer url={entry.mediaUrl} title={entry.title} />
+                    </View>
+                  ) : null}
+
                   {entry.audioUrl ? (
                     <Button
                       label={t('khutbah.listen')}
@@ -354,6 +367,17 @@ export function KhutbahScreen() {
           onChangeText={(v) => setForm((f) => ({ ...f, audioUrl: v }))}
           icon="link-outline"
           autoCapitalize="none"
+          hint={t('khutbah.audioUrlHint')}
+        />
+
+        <MediaField
+          label={t('khutbah.recording')}
+          hint={t('khutbah.recordingHint')}
+          url={form.mediaUrl}
+          type={form.mediaType}
+          onChange={({ url, type }) =>
+            setForm((f) => ({ ...f, mediaUrl: url, mediaType: type }))
+          }
         />
 
         <Text style={styles.editorHint}>{t('khutbah.translationsHint')}</Text>
@@ -395,6 +419,8 @@ interface FormState {
   venue: string;
   deliveredIn: LanguageCode;
   audioUrl: string;
+  mediaUrl: string;
+  mediaType: 'audio' | 'video' | null;
   status: ContentStatus;
   translations: Partial<Record<LanguageCode, string>>;
 }
@@ -410,6 +436,8 @@ function emptyForm(): FormState {
     // default that is right nine times in ten saves a field being touched.
     deliveredIn: 'ar',
     audioUrl: '',
+    mediaUrl: '',
+    mediaType: null,
     status: 'published',
     translations: {},
   };
@@ -424,6 +452,8 @@ function toForm(entry: KhutbahEntry): FormState {
     venue: entry.venue ?? '',
     deliveredIn: entry.deliveredIn,
     audioUrl: entry.audioUrl ?? '',
+    mediaUrl: entry.mediaUrl ?? '',
+    mediaType: entry.mediaType ?? null,
     status: entry.status,
     translations: { ...(entry.translations ?? {}) },
   };

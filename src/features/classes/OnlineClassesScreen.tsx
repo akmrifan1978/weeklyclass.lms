@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useAsync } from '@/hooks/useAsync';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
 import * as calendar from '@/services/calendarService';
 import { listClasses } from '@/services/orgService';
 import { listUsers } from '@/services/userService';
@@ -17,6 +16,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Screen,
   SectionHeader,
   SkeletonList,
@@ -89,13 +89,7 @@ export function OnlineClassesScreen({
         {loading ? (
           <SkeletonList count={4} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : (data?.sessions.length ?? 0) === 0 ? (
           <EmptyState
             icon="videocam-outline"

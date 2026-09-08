@@ -20,6 +20,7 @@ import {
   Card,
   ConfirmDialog,
   EmptyState,
+  ErrorState,
   Screen,
   SectionHeader,
   SkeletonList,
@@ -222,13 +223,7 @@ export function ReadingPlanScreen({ headerTint }: { headerTint?: string }) {
                 {loadingPages ? (
                   <SkeletonList count={5} />
                 ) : error ? (
-                  <EmptyState
-                    icon="cloud-offline-outline"
-                    title={t('errors.networkUnavailable')}
-                    message={friendlyMessage(error, t)}
-                    actionLabel={t('common.retry')}
-                    onAction={reload}
-                  />
+                  <ErrorState error={error} onRetry={reload} />
                 ) : (
                   pages?.map((page) => (
                     <View key={page.page}>

@@ -12,6 +12,7 @@ import type {
 import {
   createDoc,
   listPage,
+  softDelete,
   updateDocById,
   type Cursor,
   type Page,
@@ -228,6 +229,50 @@ export async function replyToRequest(
     console.warn('[WeeklyClass] replied but could not notify:', error);
     return { notified: false, note: null };
   }
+}
+
+/**
+ * Removes requests, one call for however many were selected.
+ *
+ * A soft delete, like everything else here: a complaint that an admin tidies
+ * away is still a record of a complaint, and hard-deleting it would leave no
+ * trace that it was ever made. It stops appearing in the inbox, which is what
+ * "delete" means from where the admin is standing.
+ *
+ * Reported per id rather than as one pass/fail. Deleting twenty and having
+ * three refused should say which three, not throw away the seventeen that
+ * worked.
+ */
+export async function deleteRequests(
+  ids: string[],
+  actor: AppUser
+): Promise<{ removed: number; failed: string[] }> {
+  const failed: string[] = [];
+  let removed = 0;
+
+  for (const id of ids) {
+    try {
+      await softDelete(COLLECTIONS.supportRequests, id, actor.uid);
+      removed += 1;
+    } catch (error) {
+      console.warn(`[WeeklyClass] could not delete supportRequests/${id}:`, error);
+      failed.push(id);
+    }
+  }
+
+  if (removed > 0) {
+    await audit
+      .log({
+        actor,
+        action: 'DELETE',
+        collection: COLLECTIONS.supportRequests,
+        documentId: ids[0] ?? '',
+        summary: `Removed ${removed} support request(s)`,
+      })
+      .catch(() => undefined);
+  }
+
+  return { removed, failed };
 }
 
 export async function closeRequest(

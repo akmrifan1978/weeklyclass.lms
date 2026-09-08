@@ -18,7 +18,9 @@ import {
   Button,
   Card,
   ChipGroup,
+  ConfirmDialog,
   EmptyState,
+  ErrorState,
   FormSheet,
   IconButton,
   RatingBadge,
@@ -43,6 +45,59 @@ export function SupportInboxScreen() {
   const [replying, setReplying] = useState<SupportRequest | null>(null);
   const [replyText, setReplyText] = useState('');
   const [busy, setBusy] = useState(false);
+
+  /**
+   * Which requests are ticked for deletion.
+   *
+   * Selection mode is entered deliberately rather than being always on: a
+   * checkbox beside every message turns an inbox somebody is reading into a
+   * form somebody is filling in, and the common act here is reading and
+   * replying, not tidying.
+   */
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const toggle = (id: string) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const leaveSelection = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
+
+  const removeSelected = async () => {
+    if (!user || selected.size === 0) return;
+    setConfirmDelete(false);
+    setBusy(true);
+    try {
+      const outcome = await support.deleteRequests([...selected], user);
+      // Says what actually happened. "Deleted" when all of them went, and the
+      // count of survivors when some did not — which used to be indis-
+      // tinguishable from success.
+      if (outcome.failed.length === 0) {
+        toast.success(t('support.deletedCount', { count: outcome.removed }));
+      } else {
+        toast.error(
+          t('support.deletedPartly', {
+            removed: outcome.removed,
+            failed: outcome.failed.length,
+          })
+        );
+      }
+      leaveSelection();
+      void reload();
+    } catch (err) {
+      toast.error(friendlyMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const load = useCallback(
     () => support.listRequests({ status, pageSize: 50 }).then((page) => page.items),
@@ -95,21 +150,81 @@ export function SupportInboxScreen() {
           style={{ marginBottom: spacing.lg }}
         />
 
+        {/* Only offered when there is something to select. */}
+        {(data?.length ?? 0) > 0 ? (
+          <View style={styles.selectBar}>
+            {selecting ? (
+              <>
+                <Pressable onPress={leaveSelection} accessibilityRole="button">
+                  <Text style={styles.selectAction}>{t('common.cancel')}</Text>
+                </Pressable>
+                <Text style={styles.selectCount}>
+                  {t('support.selectedCount', { count: selected.size })}
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    setSelected(new Set((data ?? []).map((request) => request.id)))
+                  }
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.selectAction}>{t('support.selectAll')}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setConfirmDelete(true)}
+                  disabled={selected.size === 0 || busy}
+                  accessibilityRole="button"
+                >
+                  <Text
+                    style={[
+                      styles.selectDelete,
+                      selected.size === 0 && styles.selectDisabled,
+                    ]}
+                  >
+                    {t('common.delete')}
+                  </Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                onPress={() => setSelecting(true)}
+                accessibilityRole="button"
+                style={styles.selectStart}
+              >
+                <Ionicons name="checkbox-outline" size={15} color={colors.primary} />
+                <Text style={styles.selectAction}>{t('support.select')}</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
+
         {loading ? (
           <SkeletonList count={3} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : (data?.length ?? 0) === 0 ? (
           <EmptyState icon="checkmark-done-outline" title={t('support.inboxClear')} />
         ) : (
           data?.map((request) => (
             <Card key={request.id} style={styles.card}>
+              {selecting ? (
+                <Pressable
+                  onPress={() => toggle(request.id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected.has(request.id) }}
+                  accessibilityLabel={request.subject}
+                  style={styles.tickRow}
+                >
+                  <Ionicons
+                    name={selected.has(request.id) ? 'checkbox' : 'square-outline'}
+                    size={20}
+                    color={selected.has(request.id) ? colors.primary : colors.borderStrong}
+                  />
+                  <Text style={styles.tickLabel} numberOfLines={1}>
+                    {request.subject}
+                  </Text>
+                </Pressable>
+              ) : null}
+
               <View style={styles.header}>
                 <View style={styles.kindChip}>
                   <Text style={styles.kindText}>{t(`support.kind_${request.kind}`)}</Text>
@@ -184,6 +299,16 @@ export function SupportInboxScreen() {
           ))
         )}
       </Screen>
+
+      <ConfirmDialog
+        visible={confirmDelete}
+        title={t('support.deleteTitle')}
+        message={t('support.deleteMessage', { count: selected.size })}
+        confirmLabel={t('common.delete')}
+        destructive
+        onConfirm={() => void removeSelected()}
+        onCancel={() => setConfirmDelete(false)}
+      />
 
       <FormSheet
         visible={Boolean(replying)}
@@ -290,6 +415,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
+  selectBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  selectStart: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  selectAction: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  selectCount: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary },
+  selectDelete: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.danger },
+  selectDisabled: { color: colors.textMuted },
+  tickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+    marginBottom: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  tickLabel: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary },
   languageRow: {
     flexDirection: 'row',
     alignItems: 'center',

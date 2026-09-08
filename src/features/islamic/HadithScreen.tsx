@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { useAsync } from '@/hooks/useAsync';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import * as hadithService from '@/services/hadithService';
 import * as translateService from '@/services/translateService';
@@ -18,6 +17,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Screen,
   SearchField,
   SectionHeader,
@@ -201,13 +201,7 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
         {loadingSection ? (
           <SkeletonList count={5} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : visible.length === 0 ? (
           <EmptyState icon="search-outline" title={t('empty.noResults')} />
         ) : (

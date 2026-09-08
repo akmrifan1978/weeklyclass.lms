@@ -45,6 +45,13 @@ const TILES: Tile[] = [
     tint: brand.slate,
   },
   {
+    feature: 'qibla',
+    icon: 'compass',
+    labelKey: 'qibla.title',
+    path: '/qibla',
+    tint: brand.sand,
+  },
+  {
     feature: 'prayer',
     icon: 'time-outline',
     labelKey: 'nav.prayer',

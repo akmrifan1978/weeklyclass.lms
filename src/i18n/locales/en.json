@@ -66,7 +66,8 @@
     "imageLinkHint": "Paste a direct image link (ending .jpg or .png).",
     "uploadNeedsStorage": "Uploading requires Cloud Storage, which Firebase only offers on a paid plan. Pasting a link works on the free plan.",
     "uploadOrLink": "Upload a file, or paste a link.",
-    "undo": "Undo"
+    "undo": "Undo",
+    "remove": "Remove"
   },
   "auth": {
     "studentLogin": "Student Login",
@@ -1006,7 +1007,14 @@
     "translate": "Translate",
     "machineTranslation": "MACHINE TRANSLATION",
     "replyNotificationTitle": "Reply from the team",
-    "replySentNotNotified": "Reply saved, but the student could not be notified. Reach them another way."
+    "replySentNotNotified": "Reply saved, but the student could not be notified. Reach them another way.",
+    "select": "Select",
+    "selectAll": "Select all",
+    "selectedCount": "{{count}} selected",
+    "deleteTitle": "Delete these messages?",
+    "deleteMessage": "{{count}} will be removed from the inbox. They stay in the record, so nothing is lost from the audit trail.",
+    "deletedCount": "{{count}} deleted",
+    "deletedPartly": "{{removed}} deleted, {{failed}} could not be removed"
   },
   "rating": {
     "prompt": "Tap a star",
@@ -1326,6 +1334,28 @@
     "notInYourLanguage": "Not yet translated into your language. Showing the {{language}} version.",
     "noTranslation": "No translation has been written for this one yet.",
     "none": "Nothing published yet",
-    "noneHelp": "Friday khutbahs and special bayans appear here once your centre publishes a translation."
+    "noneHelp": "Friday khutbahs and special bayans appear here once your centre publishes a translation.",
+    "recording": "Recording file",
+    "recordingHint": "An audio or video file uploaded here. Use this when the recording is only on your phone; use the link above when it is already online.",
+    "audioUrlHint": "A link to the recording where it already lives — YouTube, Drive, anywhere.",
+    "attachMedia": "Attach audio or video",
+    "attachHintNative": "Large video files may not upload on a slow connection.",
+    "audioAttached": "Audio attached",
+    "videoAttached": "Video attached"
+  },
+  "qibla": {
+    "title": "Qibla finder",
+    "lead": "The direction of the Kaaba from where you are",
+    "locating": "Finding your location…",
+    "degrees": "{{degrees}}° from north",
+    "distance": "About {{km}} km to Makkah",
+    "noCompass": "This device has no compass, so the dial cannot turn with you. The bearing above is exact — read it against a compass, including the one in your phone's compass app.",
+    "magneticNote": "The compass follows magnetic north and can be pulled off by metal, magnets or a phone case. Check it against a second compass before you rely on it.",
+    "problem_denied_title": "Location is blocked",
+    "problem_denied_body": "The qibla is worked out from where you are, so this needs your location. Tap the padlock in the address bar, set Location to Allow, then try again.",
+    "problem_unavailable_title": "Could not find your location",
+    "problem_unavailable_body": "The device could not fix a position. Indoors and underground are the usual reasons — try again near a window or outside.",
+    "problem_unsupported_title": "Location is not available here",
+    "problem_unsupported_body": "This browser cannot report a location, so the qibla cannot be worked out. Opening the app on a phone will do it."
   }
 }

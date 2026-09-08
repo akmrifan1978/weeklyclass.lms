@@ -22,6 +22,7 @@ import {
   ConfirmDialog,
   DateField,
   EmptyState,
+  ErrorState,
   FormSheet,
   IconButton,
   Screen,
@@ -252,13 +253,7 @@ export function ScheduleOnlineClassScreen() {
         {loading ? (
           <SkeletonList count={3} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : (data?.sessions.length ?? 0) === 0 ? (
           <EmptyState
             icon="videocam-outline"

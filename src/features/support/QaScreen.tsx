@@ -19,6 +19,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   FormSheet,
   IconButton,
   Screen,
@@ -190,13 +191,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
         {loading ? (
           <SkeletonList count={3} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : sorted.length === 0 ? (
           <EmptyState icon="chatbubbles-outline" title={t('qa.none')} message={t('qa.noneHelp')} />
         ) : (

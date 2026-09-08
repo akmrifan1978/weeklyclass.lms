@@ -5,11 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { useAsync } from '@/hooks/useAsync';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
 import * as quranService from '@/services/quranService';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { ScriptureText } from './ScriptureText';
-import { AppHeader, Card, EmptyState, Screen, SkeletonList } from '@/components/ui';
+import { AppHeader, Card, EmptyState, ErrorState, Screen, SkeletonList } from '@/components/ui';
 
 /**
  * One surah: Arabic, with the translation for this dashboard's language.
@@ -46,13 +45,7 @@ export function SurahScreen({
         {loading ? (
           <SkeletonList count={6} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : data ? (
           <>
             <Card style={styles.header}>

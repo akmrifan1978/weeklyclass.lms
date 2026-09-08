@@ -911,13 +911,24 @@ export interface KhutbahEntry extends BaseDoc {
   deliveredIn: LanguageCode;
   /** Language code to the written translation. Absent means not translated. */
   translations?: Partial<Record<LanguageCode, string>>;
-  /** A recording, where one exists. */
+  /**
+   * A recording, where one exists.
+   *
+   * Two fields because they are two different things. `audioUrl` is a link
+   * somebody pasted — YouTube, Drive, anywhere — and costs this project
+   * nothing. `mediaUrl` is a file uploaded through the app, which is the only
+   * option when the recording exists solely on the phone in somebody's hand.
+   * Either may be present; the screen offers whichever there is.
+   */
   audioUrl?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: 'audio' | 'video' | null;
   status: ContentStatus;
 }
 
 export type IslamicFeature =
   | 'prayer'
+  | 'qibla'
   | 'names'
   | 'khutbah'
   | 'quran'

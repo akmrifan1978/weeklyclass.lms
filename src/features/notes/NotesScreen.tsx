@@ -17,6 +17,7 @@ import {
   Card,
   ConfirmDialog,
   EmptyState,
+  ErrorState,
   FormSheet,
   Screen,
   SearchField,
@@ -125,13 +126,7 @@ export function NotesScreen() {
         {loading && !data ? (
           <SkeletonList count={3} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : notes.length === 0 ? (
           <EmptyState
             icon="create-outline"

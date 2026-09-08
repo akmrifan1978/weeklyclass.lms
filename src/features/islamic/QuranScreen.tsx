@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { useAsync } from '@/hooks/useAsync';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import * as quranService from '@/services/quranService';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
@@ -14,6 +13,7 @@ import {
   AppHeader,
   Card,
   EmptyState,
+  ErrorState,
   Screen,
   SearchField,
   SkeletonList,
@@ -73,13 +73,7 @@ export function QuranScreen({
         {loading ? (
           <SkeletonList count={8} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : surahs.length === 0 ? (
           <EmptyState icon="search-outline" title={t('empty.noResults')} />
         ) : (

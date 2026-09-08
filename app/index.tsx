@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { formatShortDate } from '@/utils/date';
 import * as calendarService from '@/services/calendarService';
+import { FooterTicker } from '@/components/shared/FooterTicker';
 import { InstallPrompt } from '@/components/shared/InstallPrompt';
 import { useTranslation } from 'react-i18next';
 
@@ -222,27 +223,55 @@ export default function SplashScreen() {
               links reach this screen. */}
           {classes.length > 0 ? (
             <View style={styles.classesBlock}>
+              {/* The organisation's own line, above the events it belongs to.
+                  Reused rather than rebuilt: it reads the setting itself and
+                  renders nothing at all when the ticker is switched off, so an
+                  empty strip never costs vertical space here. */}
+              <View style={styles.tickerWrap}>
+                <FooterTicker />
+              </View>
+
               <Text style={styles.sectionLabel}>{t('dashboard.upcomingClasses')}</Text>
-              {classes.map((item) => (
-                <View key={item.id} style={styles.classRow}>
-                  {item.bannerUrl ? (
-                    <Image source={{ uri: item.bannerUrl }} style={styles.classPhoto} />
-                  ) : (
-                    <View style={[styles.classPhoto, styles.classPhotoEmpty]}>
-                      <Ionicons name="calendar" size={18} color={brand.orange} />
+
+              {/*
+                Sideways rather than stacked. Three events down the page pushed
+                the sign-in buttons off a phone screen entirely, which is the
+                one thing this screen exists for. Across, the section costs one
+                card's height however many events there are, and the cards that
+                do not fit are a swipe away rather than a scroll away.
+              */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.classStrip}
+              >
+                {classes.map((item) => (
+                  <View key={item.id} style={styles.classCard}>
+                    <View style={styles.classCardHead}>
+                      {item.bannerUrl ? (
+                        <Image source={{ uri: item.bannerUrl }} style={styles.classPhoto} />
+                      ) : (
+                        <View style={[styles.classPhoto, styles.classPhotoEmpty]}>
+                          <Ionicons name="calendar" size={18} color={brand.orange} />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.classTitle} numberOfLines={2}>
+                          {item.title}
+                        </Text>
+                        <Text style={styles.classFact} numberOfLines={1}>
+                          {formatShortDate(item.date)}
+                          {item.startTime ? `  ·  ${item.startTime}` : ''}
+                        </Text>
+                      </View>
                     </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.classTitle} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <Text style={styles.classFact} numberOfLines={1}>
-                      {formatShortDate(item.date)}
-                      {item.startTime ? `  ·  ${item.startTime}` : ''}
-                      {item.venue || item.location
-                        ? `  ·  ${[item.venue, item.location].filter(Boolean).join(', ')}`
-                        : ''}
-                    </Text>
+
+                    {item.venue || item.location ? (
+                      <Text style={styles.classFact} numberOfLines={1}>
+                        {[item.venue, item.location].filter(Boolean).join(', ')}
+                      </Text>
+                    ) : null}
+
                     {item.description ? (
                       <Text style={styles.classBlurb} numberOfLines={2}>
                         {item.description}
@@ -264,8 +293,8 @@ export default function SplashScreen() {
                       </Pressable>
                     ) : null}
                   </View>
-                </View>
-              ))}
+                ))}
+              </ScrollView>
             </View>
           ) : null}
 
@@ -326,16 +355,17 @@ function LinkButton({
 }
 
 const styles = StyleSheet.create({
-  classesBlock: { width: '100%', maxWidth: 420, alignSelf: 'center', marginTop: spacing.xl },
-  classRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
+  classesBlock: { width: '100%', maxWidth: 460, alignSelf: 'center', marginTop: spacing.xl },
+  tickerWrap: { borderRadius: radius.md, overflow: 'hidden', marginBottom: spacing.md },
+  classStrip: { gap: spacing.md, paddingRight: spacing.md, paddingVertical: 2 },
+  classCard: {
+    width: 236,
     backgroundColor: 'rgba(255,255,255,0.07)',
     borderRadius: radius.lg,
-    padding: spacing.sm,
-    marginTop: spacing.sm,
+    padding: spacing.md,
+    gap: 4,
   },
+  classCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   classPhoto: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surface },
   classPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
   classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textInverse },

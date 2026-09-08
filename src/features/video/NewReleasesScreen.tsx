@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAsync } from '@/hooks/useAsync';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
 import { toDate } from '@/utils/date';
 import { listVideosForStudent } from '@/services/videoService';
 import { VideoRow } from '@/components/shared/ContentCards';
@@ -16,6 +15,7 @@ import {
   AppHeader,
   Card,
   EmptyState,
+  ErrorState,
   Screen,
   SectionHeader,
   SkeletonList,
@@ -63,13 +63,7 @@ export function NewReleasesScreen({ basePath }: { basePath: string }) {
         {loading ? (
           <SkeletonList count={4} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : (data?.length ?? 0) === 0 ? (
           <EmptyState
             icon="videocam-outline"

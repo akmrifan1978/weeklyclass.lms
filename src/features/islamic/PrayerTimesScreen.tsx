@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { useAsync } from '@/hooks/useAsync';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
 import * as prayerService from '@/services/prayerService';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
@@ -15,6 +14,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Screen,
   SectionHeader,
   SkeletonList,
@@ -125,13 +125,7 @@ export function PrayerTimesScreen({ headerTint }: { headerTint?: string }) {
           message={t('prayer.cityRequiredHelp')}
         />
       ) : error ? (
-        <EmptyState
-          icon="cloud-offline-outline"
-          title={t('errors.networkUnavailable')}
-          message={friendlyMessage(error, t)}
-          actionLabel={t('common.retry')}
-          onAction={reload}
-        />
+        <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
           <Card style={styles.hero}>

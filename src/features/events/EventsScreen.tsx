@@ -20,6 +20,7 @@ import {
   Button,
   ConfirmDialog,
   EmptyState,
+  ErrorState,
   Screen,
   SkeletonList,
 } from '@/components/ui';
@@ -137,13 +138,7 @@ export function EventsScreen({ basePath }: { basePath: string }) {
         {loading ? (
           <SkeletonList count={2} />
         ) : error ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title={t('errors.networkUnavailable')}
-            message={friendlyMessage(error, t)}
-            actionLabel={t('common.retry')}
-            onAction={reload}
-          />
+          <ErrorState error={error} onRetry={reload} />
         ) : (data?.events.length ?? 0) === 0 ? (
           <EmptyState
             icon="calendar-outline"
