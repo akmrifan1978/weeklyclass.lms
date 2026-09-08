@@ -127,7 +127,12 @@ self.addEventListener('push', (event) => {
     // Same tag replaces rather than stacks, so three edits to one lesson do
     // not become three notifications about it.
     tag: payload.tag || 'weeklyclass',
-    renotify: Boolean(payload.tag),
+    // False, now that a tag identifies one notification rather than a category.
+    // The push often arrives after the app has already shown the same message
+    // itself, and this replaces that copy; renotify would make the phone buzz a
+    // second time for a notification the person has already been told about.
+    // A genuinely new notification carries a new tag and alerts normally.
+    renotify: false,
     timestamp: payload.timestamp || Date.now(),
     requireInteraction: false,
     data: { route: payload.route || '/', id: payload.id || null },

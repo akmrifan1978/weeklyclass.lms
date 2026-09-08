@@ -121,9 +121,21 @@ async function sendOne(webpush, db, doc) {
     image: notification.image || undefined,
     route: notification.route || '/',
     id: doc.id,
-    // Groups by category so an edit to the same kind of thing replaces the
-    // previous notice rather than stacking a third one on the pile.
-    tag: notification.category || 'general',
+    /*
+     * The notification's own id, and it MUST match the tag the app uses when it
+     * raises the same notification itself (see deviceNotify).
+     *
+     * This tagged by category instead, and the app tagged by id, so the browser
+     * saw two unrelated notifications and showed both — the same message twice
+     * on one phone. A tag is an identity: two notifications share one only if
+     * they are the same notification, and these two are the same notification
+     * arriving by two routes.
+     *
+     * Grouping by category, which this used to do, was worse than it looked
+     * anyway: two different notices of the same kind would silently replace one
+     * another on the lock screen, so the first was lost unread.
+     */
+    tag: `note:${doc.id}`,
     timestamp: Date.now(),
   });
 
