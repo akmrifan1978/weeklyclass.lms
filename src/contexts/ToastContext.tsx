@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, Text } from 'react-native';
+import { Animated, Modal, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
@@ -54,6 +54,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [opacity]
   );
 
+  /** Clears the message early. Android routes its back gesture here. */
+  const dismiss = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    opacity.setValue(0);
+    setToast(null);
+  }, [opacity]);
+
   const value = useMemo<ToastContextValue>(
     () => ({
       show,
@@ -63,22 +70,60 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [show]
   );
 
+  const bubble = toast ? (
+    <Animated.View
+      pointerEvents="none"
+      accessibilityLiveRegion="polite"
+      accessibilityRole="alert"
+      style={[
+        styles.container,
+        { opacity, top: insets.top + spacing.md },
+        { backgroundColor: KIND_STYLE[toast.kind].background },
+      ]}
+    >
+      <Text style={[styles.text, { color: KIND_STYLE[toast.kind].text }]}>{toast.message}</Text>
+    </Animated.View>
+  ) : null;
+
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {toast ? (
-        <Animated.View
-          pointerEvents="none"
-          accessibilityLiveRegion="polite"
-          accessibilityRole="alert"
-          style={[
-            styles.container,
-            { opacity, bottom: insets.bottom + spacing.xxxl },
-            { backgroundColor: KIND_STYLE[toast.kind].background },
-          ]}
-        >
-          <Text style={[styles.text, { color: KIND_STYLE[toast.kind].text }]}>{toast.message}</Text>
-        </Animated.View>
+
+      {/*
+        GETTING THE MESSAGE ON TOP, WITHOUT BLOCKING WHAT IS UNDERNEATH.
+
+        The toast used to render as an ordinary absolutely-positioned sibling
+        of the app, which meant it was invisible exactly when it mattered.
+        Almost every action that reports something — saving a lesson, replying
+        to a message — happens inside a FormSheet or a ConfirmDialog, and those
+        are Modals. Measured on the deployed site with a sheet open: the toast
+        as it was styled was covered, and still covered at z-index 9999.
+
+        The two platforms need different answers, and trying to use one cost a
+        measurement to find out:
+
+        WEB — a very high stacking order, in the ordinary tree. Verified above
+        a sheet's Modal layer. It must NOT be a Modal here: react-native-web
+        gives a Modal's wrapper `pointer-events: auto`, which cannot be turned
+        off from inside, so a Modal toast swallowed every click on the whole
+        screen for the three seconds it was up. Fields could still be focused
+        programmatically, which is exactly the kind of half-working that hides
+        a bug like this.
+
+        NATIVE — a Modal, because no z-index reaches past one. It is mounted
+        only while there is something to say, rather than kept mounted with
+        `visible` toggling: a Modal creates its layer when the COMPONENT
+        mounts, and this provider wraps the app, so a permanently-mounted one
+        is always the older layer and every later sheet paints over it.
+      */}
+      {Platform.OS === 'web' ? (
+        bubble
+      ) : toast ? (
+        <Modal visible transparent animationType="none" onRequestClose={dismiss}>
+          <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            {bubble}
+          </View>
+        </Modal>
       ) : null}
     </ToastContext.Provider>
   );
@@ -92,7 +137,21 @@ export function useToast(): ToastContextValue {
 
 const styles = StyleSheet.create({
   container: {
+    /**
+     * At the top, not the bottom, and that is a consequence of the fix above.
+     *
+     * Once the message could actually be seen over a sheet, it turned out to
+     * land exactly on the sheet's Cancel and Save buttons and swallow them for
+     * the three seconds it was up — measured: the Cancel button was
+     * unreachable while a toast showed. The bottom of the screen is where
+     * every action bar lives, and where the keyboard arrives on a phone. The
+     * top is clear of both.
+     */
     position: 'absolute',
+    // High enough to clear react-native-web's modal layer, which sits well
+    // above anything in the ordinary tree. Ignored on native, where the Modal
+    // above does the same job.
+    zIndex: 2147483647,
     left: spacing.lg,
     right: spacing.lg,
     maxWidth: 520,
