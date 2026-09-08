@@ -206,6 +206,16 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
     document.head.appendChild(link);
   }
 
+  // iOS ignores the manifest's icons entirely and reads this link instead, so
+  // without it an iPhone home screen shows a shrunken screenshot of the page
+  // rather than the centre's logo.
+  if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+    const touch = document.createElement('link');
+    touch.rel = 'apple-touch-icon';
+    touch.href = '/icons/apple-touch-icon.png';
+    document.head.appendChild(touch);
+  }
+
   // And a service worker is the other half of the browser's test.
   //
   // Waiting for `load` was wrong: this module is itself part of the bundle the
