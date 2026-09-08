@@ -265,6 +265,60 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
      * opened — and only once, because a reload loop is a far worse bug than a
      * stale screen.
      */
+    /**
+     * Noticing a new build WITHOUT going through the service worker.
+     *
+     * The worker route works and is still below, but it has one dependency
+     * that cannot be verified from here: the browser has to agree to re-fetch
+     * sw.js, install the new one and hand over control. On an installed iOS
+     * app that has proven unreliable — the app was reported as not updating
+     * twice, and a phone running an old worker is also a phone running an old
+     * push handler, which is how "no notifications" and "no updates" turn out
+     * to be the same fault.
+     *
+     * This asks a simpler question that nothing can refuse to answer: fetch
+     * index.html, read which bundle it points at, and compare it with the
+     * bundle actually running. They differ only when a new version has been
+     * deployed. `cache: 'no-store'` so the answer is the server's and not a
+     * copy of the question.
+     *
+     * Reloads once, and only when the tab is visible — a reload behind
+     * somebody's back loses whatever they were typing.
+     */
+    const watchForNewBuild = () => {
+      const running = Array.from(document.querySelectorAll('script[src]'))
+        .map((el) => (el as HTMLScriptElement).src.match(/entry-([a-f0-9]+)\.js/)?.[1])
+        .find(Boolean);
+
+      // No hashed bundle in the page means this is the dev server, where the
+      // question is meaningless and the answer would be a reload loop.
+      if (!running) return;
+
+      let reloaded = false;
+
+      const check = async () => {
+        if (reloaded || document.visibilityState !== 'visible' || !navigator.onLine) return;
+        try {
+          const html = await fetch('/index.html', { cache: 'no-store' }).then((r) => r.text());
+          const deployed = html.match(/entry-([a-f0-9]+)\.js/)?.[1];
+          if (deployed && deployed !== running) {
+            reloaded = true;
+            window.location.reload();
+          }
+        } catch {
+          // Offline, or the server is unreachable. Ask again next time.
+        }
+      };
+
+      document.addEventListener('visibilitychange', () => void check());
+      window.addEventListener('focus', () => void check());
+      // For a device left open on one screen all day.
+      setInterval(() => void check(), 30 * 60 * 1000);
+      void check();
+    };
+
+    watchForNewBuild();
+
     const register = () => {
       const hadController = Boolean(navigator.serviceWorker.controller);
       let reloading = false;
