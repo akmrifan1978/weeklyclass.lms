@@ -75,17 +75,61 @@ export function ReadingPlanScreen({ headerTint }: { headerTint?: string }) {
   const done = plan ? plans.completedToday(plan) : false;
   const finished = plan ? plans.isFinished(plan) : false;
 
+  /**
+   * Reading on past the day's portion.
+   *
+   * The screen showed today's pages and stopped there: the only way forward was
+   * to mark the day complete, which is a claim about having read it rather than
+   * a way to turn a page. Somebody who finished early and wanted to carry on,
+   * or who wanted to look back at yesterday, had nowhere to press.
+   *
+   * `null` means today. Browsing away from it never touches the plan — the
+   * cursor, the history and the streak are all untouched by looking — so the
+   * reading position is exactly where it was when they come back.
+   */
+  const [browseStart, setBrowseStart] = useState<number | null>(null);
+
+  const windowSize = Math.max(1, pagesDue.length || (plan?.dailyPages ?? 1));
+  const firstPage = browseStart ?? pagesDue[0] ?? 1;
+  const onToday = browseStart === null;
+
+  const shownPages = useMemo(() => {
+    if (!plan) return [];
+    if (onToday) return pagesDue;
+    const out: number[] = [];
+    for (let page = firstPage; page < firstPage + windowSize; page += 1) {
+      if (page >= 1 && page <= quranService.TOTAL_PAGES) out.push(page);
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, onToday, pagesDue.join(','), firstPage, windowSize]);
+
+  const canGoBack = shownPages.length > 0 && shownPages[0] > 1;
+  const canGoForward =
+    shownPages.length > 0 && shownPages[shownPages.length - 1] < quranService.TOTAL_PAGES;
+
+  /** Moves the window without disturbing the plan. */
+  const step = (direction: -1 | 1) => {
+    const from = shownPages[0] ?? 1;
+    const next = Math.min(
+      quranService.TOTAL_PAGES,
+      Math.max(1, from + direction * windowSize)
+    );
+    setBrowseStart(next);
+  };
+
   const loadPages = useCallback(async () => {
-    if (!plan || pagesDue.length === 0) return [];
+    if (!plan || shownPages.length === 0) return [];
     return Promise.all(
-      pagesDue.map((page) =>
+      shownPages.map((page) =>
         quranService.getPage(page, language, { audio: plan.audioEnabled })
       )
     );
     // Keyed on the pages themselves rather than the cursor: marking a day done
     // moves the cursor but must keep today's reading on screen, and undoing it
     // moves the cursor back to the same pages.
-  }, [pagesDue.join(','), plan?.audioEnabled, language]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownPages.join(','), plan?.audioEnabled, language]);
 
   const {
     data: pages,
@@ -189,18 +233,18 @@ export function ReadingPlanScreen({ headerTint }: { headerTint?: string }) {
                   <View style={styles.todayRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.todayPages}>
-                        {pagesDue.length === 1
-                          ? t('quran.pageNumber', { page: pagesDue[0] })
+                        {shownPages.length === 1
+                          ? t('quran.pageNumber', { page: shownPages[0] })
                           : t('quran.pageRange', {
-                              from: pagesDue[0],
-                              to: pagesDue[pagesDue.length - 1],
+                              from: shownPages[0],
+                              to: shownPages[shownPages.length - 1],
                             })}
                       </Text>
                       <Text style={styles.todayMeta}>
                         {t('quran.juzNumber', { juz: pages?.[0]?.juz ?? '—' })}
                       </Text>
                     </View>
-                    {done ? (
+                    {done && onToday ? (
                       <View style={styles.doneChip}>
                         <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                         <Text style={styles.doneText}>{t('quran.completed')}</Text>
@@ -208,7 +252,47 @@ export function ReadingPlanScreen({ headerTint }: { headerTint?: string }) {
                     ) : null}
                   </View>
 
-                  {!done ? (
+                  {/* Turning the page. Wraps on a narrow screen so the three
+                      controls never run off the edge of a phone. */}
+                  <View style={styles.pager}>
+                    <Button
+                      label={t('quran.previousPage')}
+                      icon="chevron-back"
+                      variant="outline"
+                      size="sm"
+                      disabled={!canGoBack}
+                      onPress={() => step(-1)}
+                      style={styles.pagerButton}
+                    />
+                    <Button
+                      label={t('quran.nextPage')}
+                      icon="chevron-forward"
+                      variant="outline"
+                      size="sm"
+                      disabled={!canGoForward}
+                      onPress={() => step(1)}
+                      style={styles.pagerButton}
+                    />
+                  </View>
+
+                  {/* Only offered once they have actually wandered off, so it
+                      is never a button that does nothing. */}
+                  {!onToday ? (
+                    <Button
+                      label={t('quran.backToToday')}
+                      icon="today-outline"
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => setBrowseStart(null)}
+                      fullWidth
+                      style={{ marginTop: spacing.sm }}
+                    />
+                  ) : null}
+
+                  {/* Completing the day is a claim about today's portion, so it
+                      is not offered while looking at some other part of the
+                      mushaf — that would mark the wrong pages read. */}
+                  {!done && onToday ? (
                     <Button
                       label={t('quran.markComplete')}
                       icon="checkmark-done"
@@ -658,6 +742,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
 
+  pager: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  pagerButton: { flexGrow: 1, flexBasis: 130 },
   todayCard: { marginBottom: spacing.lg },
   todayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   todayPages: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },

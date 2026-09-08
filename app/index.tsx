@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -84,6 +92,17 @@ function withVenueLabel(venue: string, label: string): string {
 }
 
 export default function SplashScreen() {
+  /**
+   * How much air the page can afford.
+   *
+   * The two gaps this feeds were a fixed 48px each. Together that is nearly a
+   * fifth of a small phone's screen spent on nothing, pushing the sign-in
+   * buttons towards the fold on exactly the devices most people arrive on —
+   * while a desktop, where the room actually exists, got the same 48.
+   */
+  const { height: screenHeight } = useWindowDimensions();
+  const blockGap = screenHeight < 700 ? spacing.lg : screenHeight < 900 ? spacing.xl : spacing.huge;
+
   const [classes, setClasses] = useState<calendarService.PublicClass[]>([]);
 
   useEffect(() => {
@@ -128,7 +147,7 @@ export default function SplashScreen() {
               nothing at all until the browser says an install is possible. */}
           <InstallPrompt />
 
-          <View style={styles.brandBlock}>
+          <View style={[styles.brandBlock, { marginBottom: blockGap }]}>
             {/* The organisation's own mark when they have set one. The book is
                 a placeholder for a platform nobody has branded yet, and it
                 should give way the moment somebody uploads a logo. */}
@@ -204,7 +223,7 @@ export default function SplashScreen() {
             </View>
           </View>
 
-          <View style={styles.linkRow}>
+          <View style={[styles.linkRow, { marginBottom: blockGap }]}>
             <LinkButton
               label={t('auth.register')}
               icon="person-add-outline"
@@ -408,7 +427,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: brand.navyDeep },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
   inner: { width: '100%', maxWidth: 460, alignSelf: 'center' },
-  brandBlock: { alignItems: 'center', marginBottom: spacing.huge },
+  brandBlock: { alignItems: 'center' },
   logo: {
     width: 84,
     height: 84,
@@ -509,7 +528,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: spacing.lg,
-    marginBottom: spacing.huge,
   },
   link: {
     flexDirection: 'row',
