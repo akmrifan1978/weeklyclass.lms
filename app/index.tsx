@@ -63,6 +63,26 @@ const STAFF_ROLES: {
   { role: 'admin', labelKey: 'auth.adminLogin', icon: 'shield-checkmark-outline' },
 ];
 
+/**
+ * "Venue: Jeddah Dawah Center" rather than "Venue: Venue: Jeddah Dawah Center".
+ *
+ * The label is added by this screen, and somebody filling in the setting
+ * reasonably typed it into the field as well — which read as a stutter on the
+ * first line anybody sees. Rather than editing what they wrote, the label is
+ * only added when it is not already there.
+ *
+ * Matched case-insensitively and against whatever the label currently is, so
+ * this keeps working in Tamil, Sinhala and Arabic and does not quietly become
+ * an English-only fix.
+ */
+function withVenueLabel(venue: string, label: string): string {
+  const value = venue.trim();
+  const prefix = `${label.trim().replace(/:$/, '')}:`;
+  return value.toLowerCase().startsWith(prefix.toLowerCase())
+    ? value
+    : `${prefix} ${value}`;
+}
+
 export default function SplashScreen() {
   const [classes, setClasses] = useState<calendarService.PublicClass[]>([]);
 
@@ -136,7 +156,7 @@ export default function SplashScreen() {
             </Text>
             {settings?.venue?.trim() ? (
               <Text style={styles.venue}>
-                {t('settings.venueLabel')}: {settings.venue.trim()}
+                {withVenueLabel(settings.venue, t('settings.venueLabel'))}
               </Text>
             ) : null}
             <View style={styles.rule} />
@@ -357,23 +377,26 @@ function LinkButton({
 const styles = StyleSheet.create({
   classesBlock: { width: '100%', maxWidth: 460, alignSelf: 'center', marginTop: spacing.xl },
   tickerWrap: { borderRadius: radius.md, overflow: 'hidden', marginBottom: spacing.md },
-  classStrip: { gap: spacing.md, paddingRight: spacing.md, paddingVertical: 2 },
+  classStrip: { gap: spacing.sm, paddingRight: spacing.xl, paddingVertical: 2 },
   classCard: {
-    width: 236,
+    // Narrower than a phone's content width on purpose: at 236 the second card
+    // sat exactly at the edge and looked clipped rather than scrollable. At
+    // 196 the next one peeks in, which is what tells somebody to swipe.
+    width: 196,
     backgroundColor: 'rgba(255,255,255,0.07)',
     borderRadius: radius.lg,
-    padding: spacing.md,
-    gap: 4,
+    padding: spacing.sm,
+    gap: 3,
   },
   classCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  classPhoto: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surface },
+  classPhoto: { width: 38, height: 38, borderRadius: radius.sm, backgroundColor: colors.surface },
   classPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
-  classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textInverse },
+  classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textInverse },
   classBlurb: {
     fontSize: fontSize.xs,
     color: 'rgba(255,255,255,0.62)',
-    lineHeight: 16,
-    marginTop: 3,
+    lineHeight: 15,
+    marginTop: 2,
   },
   classAction: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
   classActionText: {
@@ -414,16 +437,16 @@ const styles = StyleSheet.create({
     marginVertical: spacing.lg,
   },
   venue: {
-    fontSize: 13,
+    fontSize: fontSize.md,
     color: brand.sandLight,
     textAlign: 'center',
     marginTop: 6,
   },
   tagline: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: brand.sandLight,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
     paddingHorizontal: spacing.lg,
   },
   sectionLabel: {
@@ -491,14 +514,17 @@ const styles = StyleSheet.create({
   link: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: TOUCH_TARGET - 12,
+    gap: spacing.sm,
+    // A full touch target: Register and the two recovery links are the whole
+    // way in for somebody without an account, and they were the smallest
+    // things on the screen.
+    minHeight: TOUCH_TARGET,
     paddingVertical: spacing.sm,
   },
   linkText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: brand.sandLight,
-    fontWeight: fontWeight.medium,
+    fontWeight: fontWeight.semibold,
   },
   languageBlock: { alignItems: 'center' },
   languageRow: {

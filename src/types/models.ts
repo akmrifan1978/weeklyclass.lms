@@ -123,16 +123,51 @@ export interface Branch extends BaseDoc {
   status: 'active' | 'inactive';
 }
 
+/** The age bands classes are organised into. */
+export type AgeBand = 'children' | 'teenagers' | 'adults';
+
+/**
+ * Who a class group is for.
+ *
+ * `mixed` exists because not every group is separated — a lecture open to
+ * everybody is a real thing — and because a class created before this field
+ * existed has no answer to the question. Making the absence explicit is better
+ * than defaulting it to one of the two and quietly mis-sorting people.
+ */
+export type ClassGender = 'male' | 'female' | 'mixed';
+
 export interface ClassRoom extends BaseDoc {
   name: string;
   code?: string;
   description?: string;
+  /**
+   * The two axes a class group is organised by, alongside its name.
+   *
+   * They are kept as their own fields rather than parsed out of the name so
+   * they can be filtered on — the registration screen shows a student only the
+   * groups matching the gender they gave, and a teacher's list is scoped the
+   * same way. A name like "Children - Male" is for people to read; these are
+   * for the app to reason about.
+   */
+  ageBand?: AgeBand;
+  gender?: ClassGender;
   branchId: string;
   organizationId?: string;
   /** Primary teacher. */
   teacherId?: string | null;
   /** All teachers permitted to act on this class. */
   teacherIds: string[];
+  /**
+   * Their names, copied onto the group.
+   *
+   * Denormalised for one specific reason: the registration screen has to name
+   * the teachers a student is about to be assigned to, and it runs signed out
+   * — it cannot read the users collection, and it should not be able to. The
+   * names are written here whenever the group is saved, so the one screen that
+   * needs them can have them without opening up everything else about a
+   * teacher to the public.
+   */
+  teacherNames?: string[];
   subjectIds?: string[];
   language: LanguageCode;
   schedule?: string;

@@ -13,6 +13,7 @@ import { toDate } from '@/utils/date';
 import { nextEventFor } from '@/services/calendarService';
 import { getFeaturedVideo, getLiveVideo, listVideosForStudent } from '@/services/videoService';
 import { getLatestArticle, lessonsForStudent } from '@/services/contentService';
+import { getClass } from '@/services/orgService';
 import { announcementsFor } from '@/services/notificationService';
 import { scheduleEventReminders } from '@/services/pushService';
 import { listUpcoming } from '@/services/calendarService';
@@ -58,7 +59,17 @@ export default function StudentHome() {
 
   const load = useCallback(async () => {
     if (!user) return null;
-    const [event, upcoming, liveVideo, featuredVideo, article, lessons, recordings, announcements] =
+    const [
+      event,
+      upcoming,
+      liveVideo,
+      featuredVideo,
+      article,
+      lessons,
+      recordings,
+      announcements,
+      classGroup,
+    ] =
       await Promise.all([
       nextEventFor(user).catch(() => null),
       // Already fetched for the reminder scheduler and then discarded. Kept
@@ -78,8 +89,21 @@ export default function StudentHome() {
         : Promise.resolve([]),
       listVideosForStudent(user.classId, 'recording', 3).catch(() => []),
       announcementsFor(user, 3).catch(() => []),
+      // The group this student is in, for the names of whoever teaches it.
+      // One document, and it carries the names already — see ClassRoom.
+      user.classId ? getClass(user.classId).catch(() => null) : Promise.resolve(null),
     ]);
-    return { event, upcoming, liveVideo, featuredVideo, article, lessons, recordings, announcements };
+    return {
+      event,
+      upcoming,
+      liveVideo,
+      featuredVideo,
+      article,
+      lessons,
+      recordings,
+      announcements,
+      classGroup,
+    };
   }, [user]);
 
   const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, user?.classId]);
@@ -110,6 +134,26 @@ export default function StudentHome() {
             {user?.fullName ?? ''}
           </Text>
           {user?.studentId ? <Text style={styles.studentId}>{user.studentId}</Text> : null}
+
+          {/* Who teaches this student, on the screen they land on.
+              The group is the assignment — a student never picks a teacher —
+              so this is read from the group rather than stored on the person,
+              which means an admin moving somebody between groups changes it
+              without touching the student record at all. */}
+          {data?.classGroup ? (
+            <View style={styles.teacherRow}>
+              <Ionicons name="person-circle-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.teacherText} numberOfLines={2}>
+                {(data.classGroup.teacherNames ?? []).length > 0
+                  ? t('classGroup.yourTeachers', {
+                      names: (data.classGroup.teacherNames ?? []).join(', '),
+                    })
+                  : t('classGroup.noTeacherYet')}
+                {'  ·  '}
+                {data.classGroup.name}
+              </Text>
+            </View>
+          ) : null}
         </View>
         <LanguageMenu
           value={dashboardLanguage}
@@ -374,6 +418,8 @@ const styles = StyleSheet.create({
   salaam: { fontSize: fontSize.sm, color: colors.textSecondary },
   name: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text, marginTop: 2 },
   studentId: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  teacherRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  teacherText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
   noticeCard: { marginTop: spacing.lg, borderColor: colors.warning, borderWidth: 1 },
   noticeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   noticeText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },

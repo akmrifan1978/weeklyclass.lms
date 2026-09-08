@@ -224,10 +224,56 @@ export default function RegisterScreen() {
     [codedClasses, classCode]
   );
 
+  /**
+   * The class groups this person can actually join.
+   *
+   * Filtered by the gender they gave, because the groups are separated and
+   * offering a boy the girls' group is offering a mistake. A group marked
+   * `mixed`, or one created before groups carried a gender at all, is offered
+   * to everybody — the absence of an answer is not the same as "the other one".
+   *
+   * Before a gender is chosen the list is unfiltered rather than empty: an
+   * empty picker reads as "there are no classes", which is a different and
+   * more alarming thing than "tell me who you are first".
+   */
   const classOptions = useMemo<Option[]>(
-    () => classes.map((c) => ({ value: c.id, label: c.name, description: c.schedule })),
-    [classes]
+    () =>
+      classes
+        .filter((c) => {
+          if (!form.gender) return true;
+          const groupGender = c.gender ?? 'mixed';
+          return groupGender === 'mixed' || groupGender === form.gender;
+        })
+        .map((c) => ({
+          value: c.id,
+          label: c.name,
+          // What the group is, under its name — the two things that decide
+          // whether it is the right one.
+          description: [
+            c.ageBand ? t(`classGroup.age_${c.ageBand}`) : null,
+            c.gender && c.gender !== 'mixed' ? t(`classGroup.gender_${c.gender}`) : null,
+            c.schedule || null,
+          ]
+            .filter(Boolean)
+            .join('  ·  '),
+        })),
+    [classes, form.gender, t]
   );
+
+  /**
+   * The teachers who come with the chosen group.
+   *
+   * Not asked for and not chosen — a student does not pick their teacher, the
+   * group they join decides it. Shown because being told who will be teaching
+   * you is the point at which a class group stops being an abstraction.
+   */
+  const assignedTeachers = useMemo(() => {
+    const chosen = classes.find((c) => c.id === form.classId);
+    if (!chosen) return [] as string[];
+    // Read from the group rather than looked up: this screen runs signed out
+    // and has no access to the users collection.
+    return chosen.teacherNames ?? [];
+  }, [classes, form.classId]);
 
   const languageOptions = useMemo<Option[]>(
     () => available.map((l) => ({ value: l.code, label: l.nativeName, description: l.name })),
@@ -550,7 +596,7 @@ export default function RegisterScreen() {
               </>
             ) : role === 'student' && classOptions.length ? (
               <Select
-                label={t('auth.class')}
+                label={t('classGroup.field')}
                 value={form.classId}
                 options={classOptions}
                 onChange={(v) => {
@@ -562,6 +608,16 @@ export default function RegisterScreen() {
                 required={classRequired}
                 allowClear={!classRequired}
               />
+            ) : null}
+            {/* Who will be teaching, named as soon as the group is known —
+                whether it was typed as a code or picked from the list. A
+                student never chooses a teacher; the group decides. Being told
+                is the point at which a class group stops being an
+                abstraction. */}
+            {role === 'student' && assignedTeachers.length > 0 ? (
+              <Text style={styles.classMatched}>
+                {t('classGroup.assignedTeachers', { names: assignedTeachers.join(', ') })}
+              </Text>
             ) : null}
 
             {branchOptions.length ? (

@@ -6,18 +6,22 @@ import { useAsync } from '@/hooks/useAsync';
 import { matchesSearch } from '@/utils/format';
 import { deleteClass, listBranches, listClasses, saveClass } from '@/services/orgService';
 import { listUsers } from '@/services/userService';
-import type { ClassRoom, LanguageCode } from '@/types';
+import type { AgeBand, ClassGender, ClassRoom, LanguageCode } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
 import { AdminRow } from '@/features/AdminRow';
 import { Select, TextField, type Option } from '@/components/ui';
+import { TeacherPicker } from './TeacherPicker';
 
 interface ClassForm {
   name: string;
   code: string;
   description: string;
+  ageBand: AgeBand | '';
+  gender: ClassGender;
   branchId: string;
-  teacherId: string;
+  /** Every teacher who may act on this group, not just the first. */
+  teacherIds: string[];
   schedule: string;
   language: LanguageCode;
   status: 'active' | 'inactive';
@@ -27,8 +31,12 @@ const EMPTY: ClassForm = {
   name: '',
   code: '',
   description: '',
+  ageBand: '',
+  // Not defaulted to male or female. A group is separated on purpose or it is
+  // not, and guessing puts students in the wrong room.
+  gender: 'mixed',
   branchId: '',
-  teacherId: '',
+  teacherIds: [],
   schedule: '',
   language: 'en',
   status: 'active',
@@ -109,6 +117,9 @@ export function ClassManager() {
         teacherId: klass.teacherId ?? '',
         schedule: klass.schedule ?? '',
         language: klass.language,
+        ageBand: klass.ageBand ?? '',
+        gender: klass.gender ?? 'mixed',
+        teacherIds: klass.teacherIds ?? [],
         status: klass.status,
       })}
       validate={(form) => {
@@ -125,10 +136,18 @@ export function ClassManager() {
             code: form.code.trim(),
             description: form.description.trim(),
             branchId: form.branchId,
-            teacherId: form.teacherId || null,
-            // `teacherIds` is what class-scoped security rules read, so the
-            // primary teacher is always merged into it by the service.
-            teacherIds: existing?.teacherIds ?? [],
+            ageBand: form.ageBand || undefined,
+            gender: form.gender,
+            // The first selected teacher stays the primary one, because a
+            // single name is what a card and a notification can show. The full
+            // list is what the security rules read.
+            teacherId: form.teacherIds[0] ?? null,
+            teacherIds: form.teacherIds,
+            // Written here rather than looked up later: the registration
+            // screen is signed out and cannot read the users collection.
+            teacherNames: form.teacherIds
+              .map((id) => (refs?.teachers ?? []).find((teacher) => teacher.uid === id)?.fullName)
+              .filter((name): name is string => Boolean(name)),
             schedule: form.schedule.trim(),
             language: form.language,
             status: form.status,
@@ -191,13 +210,42 @@ export function ClassManager() {
             error={errors.branchId}
             required
           />
-          <Select
-            label={t('admin.primaryTeacher')}
-            value={form.teacherId}
-            options={teacherOptions}
-            onChange={(v) => set('teacherId', v)}
-            searchable
+          <Select<AgeBand>
+            label={t('classGroup.ageBand')}
+            value={form.ageBand || null}
+            options={[
+              { value: 'children', label: t('classGroup.age_children') },
+              { value: 'teenagers', label: t('classGroup.age_teenagers') },
+              { value: 'adults', label: t('classGroup.age_adults') },
+            ]}
+            onChange={(v) => set('ageBand', v)}
             allowClear
+          />
+
+          <Select<ClassGender>
+            label={t('classGroup.gender')}
+            value={form.gender}
+            options={[
+              { value: 'male', label: t('classGroup.gender_male') },
+              { value: 'female', label: t('classGroup.gender_female') },
+              {
+                value: 'mixed',
+                label: t('classGroup.gender_mixed'),
+                description: t('classGroup.genderMixedHint'),
+              },
+            ]}
+            onChange={(v) => set('gender', v)}
+          />
+
+          {/* Several teachers, not one. The rules already read the whole list;
+              until now the editor could only ever write a single name into it,
+              so a group taught by two people could not be described. */}
+          <TeacherPicker
+            label={t('classGroup.teachers')}
+            hint={t('classGroup.teachersHint')}
+            teachers={refs?.teachers ?? []}
+            selected={form.teacherIds}
+            onChange={(next) => set('teacherIds', next)}
           />
           <TextField
             label={t('common.time')}

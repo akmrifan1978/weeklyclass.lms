@@ -1369,5 +1369,22 @@
     "enabled": "Notifications are on for this device",
     "disabled": "Notifications are off for this device",
     "deniedToast": "The browser refused. Allow Notifications for this site in its settings."
+  },
+  "classGroup": {
+    "field": "Class Group",
+    "ageBand": "Age group",
+    "age_children": "Children",
+    "age_teenagers": "Teenagers",
+    "age_adults": "Adults",
+    "gender": "Who it is for",
+    "gender_male": "Male",
+    "gender_female": "Female",
+    "gender_mixed": "Open to everyone",
+    "genderMixedHint": "Shown to every student regardless of gender. Use this only where the group really is not separated.",
+    "teachers": "Teachers on this group",
+    "teachersHint": "Choose everyone who teaches this group — several is normal. They see its students, lessons and attendance. The first is the primary teacher, whose name appears where only one fits.",
+    "assignedTeachers": "Taught by {{names}}",
+    "yourTeachers": "Your teacher: {{names}}",
+    "noTeacherYet": "No teacher assigned yet"
   }
 }
