@@ -33,6 +33,36 @@ const KAABA = { latitude: 21.4224779, longitude: 39.8251832 };
 type Problem = 'denied' | 'unavailable' | 'unsupported';
 
 /**
+ * What the compass is doing.
+ *
+ *   asking     - iOS 13 and later will not deliver a single orientation event
+ *                until the page has asked for permission from inside a real
+ *                tap. This is why the dial never moved on any iPhone: the
+ *                listeners were attached and simply never fired, and the screen
+ *                had no way to tell that from "this laptop has no compass".
+ *   listening  - attached, waiting for the first reading.
+ *   live       - a heading has actually arrived.
+ *   refused    - asked, and the answer was no.
+ *   absent     - no compass here. The bearing is still correct and still shown.
+ */
+type Compass = 'asking' | 'listening' | 'live' | 'refused' | 'absent';
+
+/** iOS exposes the gate as a static method; nowhere else has it. */
+type OrientationGate = {
+  requestPermission?: () => Promise<'granted' | 'denied' | 'default'>;
+};
+
+function orientationGate(): OrientationGate | null {
+  if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return null;
+  return window.DeviceOrientationEvent as unknown as OrientationGate;
+}
+
+/** True when this device will not report a heading until it is asked. */
+function needsCompassPermission(): boolean {
+  return typeof orientationGate()?.requestPermission === 'function';
+}
+
+/**
  * Great-circle bearing from one point to another, in degrees clockwise from
  * true north.
  *
@@ -74,6 +104,11 @@ export function QiblaScreen() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [heading, setHeading] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
+  const [compass, setCompass] = useState<Compass>(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return 'absent';
+    if (!('DeviceOrientationEvent' in window)) return 'absent';
+    return needsCompassPermission() ? 'asking' : 'listening';
+  });
 
   const locate = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -113,27 +148,63 @@ export function QiblaScreen() {
    * and points people the wrong way round.
    */
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    if (!('DeviceOrientationEvent' in window)) return;
+    // Nothing to attach until the device has agreed to talk, and nothing to
+    // attach if it has said no or has no compass at all.
+    if (compass !== 'listening' && compass !== 'live') return undefined;
+    if (typeof window === 'undefined') return undefined;
 
     const onOrientation = (event: DeviceOrientationEvent) => {
       const webkit = (event as DeviceOrientationEvent & { webkitCompassHeading?: number })
         .webkitCompassHeading;
       if (typeof webkit === 'number') {
         setHeading(webkit);
+        setCompass('live');
         return;
       }
       if (typeof event.alpha === 'number' && event.absolute) {
         setHeading((360 - event.alpha) % 360);
+        setCompass('live');
       }
     };
 
     window.addEventListener('deviceorientationabsolute', onOrientation as EventListener);
     window.addEventListener('deviceorientation', onOrientation as EventListener);
+
+    // Attached and silent means there is no compass here, whatever the API
+    // claimed. Without this the screen waits for ever for a reading that is
+    // never coming and never admits it, which is how a laptop ends up showing a
+    // dial that does not move.
+    const giveUp = setTimeout(() => {
+      setCompass((current) => (current === 'listening' ? 'absent' : current));
+    }, 3000);
+
     return () => {
+      clearTimeout(giveUp);
       window.removeEventListener('deviceorientationabsolute', onOrientation as EventListener);
       window.removeEventListener('deviceorientation', onOrientation as EventListener);
     };
+  }, [compass]);
+
+  /**
+   * Asking iOS for the compass.
+   *
+   * Must be called from inside a real tap — Apple discards the request
+   * otherwise, silently, which is indistinguishable from a device that has no
+   * compass. Hence a button rather than something automatic on mount.
+   */
+  const enableCompass = useCallback(async () => {
+    const gate = orientationGate();
+    if (typeof gate?.requestPermission !== 'function') {
+      setCompass('listening');
+      return;
+    }
+    try {
+      const answer = await gate.requestPermission();
+      setCompass(answer === 'granted' ? 'listening' : 'refused');
+    } catch {
+      // Thrown when it was not called from a gesture, or the device cannot.
+      setCompass('refused');
+    }
   }, []);
 
   const qibla = useMemo(() => (coords ? bearingTo(coords) : null), [coords]);
@@ -197,15 +268,35 @@ export function QiblaScreen() {
               ) : null}
             </Card>
 
+            {/* The compass is a separate question from the bearing, so it
+                gets its own control rather than being folded into the dial. */}
+            {compass === 'asking' ? (
+              <Card style={styles.note}>
+                <Ionicons name="compass-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.noteText}>{t('qibla.compassAsk')}</Text>
+                <Button
+                  label={t('qibla.enableCompass')}
+                  icon="compass-outline"
+                  size="sm"
+                  onPress={enableCompass}
+                  style={{ marginTop: spacing.sm }}
+                />
+              </Card>
+            ) : null}
+
             {/* The honest caveat, and it is not small print. */}
             <Card style={styles.note}>
               <Ionicons
-                name={heading === null ? 'compass-outline' : 'information-circle-outline'}
+                name={compass === 'live' ? 'information-circle-outline' : 'compass-outline'}
                 size={16}
                 color={colors.textSecondary}
               />
               <Text style={styles.noteText}>
-                {t(heading === null ? 'qibla.noCompass' : 'qibla.magneticNote')}
+                {compass === 'live'
+                  ? t('qibla.magneticNote')
+                  : compass === 'refused'
+                    ? t('qibla.compassRefused')
+                    : t('qibla.noCompass')}
               </Text>
             </Card>
           </>
