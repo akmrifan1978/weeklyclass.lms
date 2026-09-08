@@ -143,8 +143,40 @@ export default function SplashScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.inner}>
-          {/* Above everything, on the one screen every visitor sees. It draws
-              nothing at all until the browser says an install is possible. */}
+          {/* Top corner, before anything else.
+              It used to sit at the very foot of the page, under the sign-in
+              buttons and the events, which is the last place somebody who
+              cannot read the page in English would think to look — and they
+              have to find it before any of the rest of the page is useful to
+              them. Right-aligned and compact so it reads as a control rather
+              than a section. */}
+          <View style={styles.languageBar}>
+            {available.map((option) => {
+              const active = option.code === language;
+              return (
+                <Pressable
+                  key={option.code}
+                  onPress={() => handleLanguage(option.code as LanguageCode)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={option.name}
+                  style={({ pressed }) => [
+                    styles.languageChip,
+                    active ? styles.languageChipActive : null,
+                    { opacity: pressed ? 0.8 : 1 },
+                  ]}
+                >
+                  <Text style={[styles.languageText, active ? styles.languageTextActive : null]}>
+                    {option.nativeName}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Above everything else, on the one screen every visitor sees. It
+              draws nothing at all until the browser says an install is
+              possible. */}
           <InstallPrompt />
 
           <View style={[styles.brandBlock, { marginBottom: blockGap }]}>
@@ -337,34 +369,6 @@ export default function SplashScreen() {
             </View>
           ) : null}
 
-          <View style={styles.languageBlock}>
-            <Text style={styles.sectionLabel}>{t('auth.chooseLanguage')}</Text>
-            <View style={styles.languageRow}>
-              {available.map((option) => {
-                const active = option.code === language;
-                return (
-                  <Pressable
-                    key={option.code}
-                    onPress={() => handleLanguage(option.code as LanguageCode)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={option.name}
-                    style={({ pressed }) => [
-                      styles.languageChip,
-                      active ? styles.languageChipActive : null,
-                      { opacity: pressed ? 0.8 : 1 },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.languageText, active ? styles.languageTextActive : null]}
-                    >
-                      {option.nativeName}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -544,7 +548,14 @@ const styles = StyleSheet.create({
     color: brand.sandLight,
     fontWeight: fontWeight.semibold,
   },
-  languageBlock: { alignItems: 'center' },
+  languageBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
   languageRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

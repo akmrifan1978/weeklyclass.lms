@@ -100,6 +100,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           },
           () => {
+            /*
+             * The listener failed — most often a permission error as a sign-out
+             * revokes access mid-flight.
+             *
+             * Forgetting which uid was being watched is the important part. The
+             * shortcut above skips rebuilding a listener that is "already"
+             * running for this person, and a dead listener would have satisfied
+             * it: signing out and back in as the same user would take the
+             * shortcut, build nothing, and leave the app with no profile
+             * feeding it. Clearing the marker means the next attempt rebuilds.
+             */
+            stopWatching();
             if (!settled) {
               settled = true;
               resolve();

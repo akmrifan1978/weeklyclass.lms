@@ -963,7 +963,6 @@ export interface KhutbahEntry extends BaseDoc {
 
 export type IslamicFeature =
   | 'prayer'
-  | 'qibla'
   | 'names'
   | 'khutbah'
   | 'quran'
