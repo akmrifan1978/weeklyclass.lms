@@ -192,6 +192,60 @@ async function sendOne(webpush, db, doc) {
   return sent;
 }
 
+/**
+ * Turns pending password-reset requests into one-time links.
+ *
+ * WHY IT LIVES HERE. Only the Admin SDK can mint a reset link, so it has to
+ * run on a trusted machine — and there is already exactly one of those,
+ * running exactly one loop. A second service would be a second thing to
+ * install and a second thing to notice had stopped.
+ *
+ * The link is written back for the admin to hand over. It is NOT sent
+ * anywhere: a reset link is a working credential, and putting one into an
+ * email or a message is the thing this design exists to avoid.
+ *
+ * A failure is recorded on the row rather than dropped, because an admin is
+ * sitting in front of the screen waiting and "nothing happened" is not an
+ * answer.
+ */
+async function mintResetLinks(auth, db) {
+  const snap = await db
+    .collection('passwordResets')
+    .where('status', '==', 'pending')
+    .limit(10)
+    .get();
+
+  if (snap.empty) return 0;
+
+  let made = 0;
+  for (const doc of snap.docs) {
+    const row = doc.data();
+    try {
+      // Looked up by uid rather than trusting the address on the row: the
+      // request was written by a client, and the account's real sign-in
+      // address is something only Auth can answer for.
+      const account = await auth.getUser(row.uid);
+      if (!account.email) throw new Error('account has no sign-in address');
+
+      const link = await auth.generatePasswordResetLink(account.email);
+      await doc.ref.update({
+        status: 'ready',
+        link,
+        email: account.email,
+        error: null,
+        readyAt: new Date(),
+      });
+      console.log(`  reset link ready for ${row.userName || row.uid}`);
+      made += 1;
+    } catch (error) {
+      const message = String((error && error.message) || error).slice(0, 200);
+      await doc.ref.update({ status: 'failed', error: message, readyAt: new Date() });
+      console.warn(`  ! reset link failed for ${row.userName || row.uid}: ${message}`);
+    }
+  }
+  return made;
+}
+
 async function run() {
   const args = parseArgs(process.argv);
   loadEnv();
@@ -242,6 +296,12 @@ async function run() {
 
   const { initializeApp, cert } = require('firebase-admin/app');
   const { getFirestore } = require('firebase-admin/firestore');
+  // The modular auth entry point. The namespaced `require('firebase-admin')`
+  // form does not expose .auth() in v13 and later, and fails at the moment it
+  // is called rather than at import — so it looked fine until an admin pressed
+  // the button.
+  // eslint-disable-next-line global-require
+  const { getAuth } = require('firebase-admin/auth');
   // eslint-disable-next-line import/no-dynamic-require, global-require
   initializeApp({ credential: cert(require(keyPath)) });
   const db = getFirestore();
@@ -285,17 +345,26 @@ async function run() {
     return total;
   };
 
+  // Two jobs, one loop, one thing to keep running.
+  const everyPass = async () => {
+    const pushed = await pass();
+    await mintResetLinks(getAuth(), db).catch((error) =>
+      console.warn('  ! reset pass failed:', error.message)
+    );
+    return pushed;
+  };
+
   if (args.watch) {
     console.log('\n  Watching for new notifications. Ctrl-C to stop.');
     // Polling rather than a listener: this is meant to survive being run on a
     // laptop that sleeps, and a poll recovers from that by itself.
     for (;;) {
-      await pass().catch((error) => console.warn('  ! pass failed:', error.message));
+      await everyPass().catch((error) => console.warn('  ! pass failed:', error.message));
       await new Promise((resolve) => setTimeout(resolve, 30_000));
     }
   }
 
-  const sent = await pass();
+  const sent = await everyPass();
   console.log(sent === 0 ? '\n  Nothing waiting.\n' : `\n  Done — ${sent} delivery(s).\n`);
 }
 

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { colors, fontSize, fontWeight, spacing } from '@/constants/theme';
+import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { useAsync, useDebounced, usePaginated } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
 import { humanise } from '@/utils/format';
@@ -23,6 +23,12 @@ import {
   updateUser,
 } from '@/services/userService';
 import { listBranches, listClasses, listCountries } from '@/services/orgService';
+import {
+  clearReset,
+  requestReset,
+  watchPending,
+  type PasswordResetRequest,
+} from '@/services/passwordResetService';
 import type { AppUser, Branch, ClassRoom, Country, LanguageCode, UserRole, UserStatus } from '@/types';
 import {
   AsyncBoundary,
@@ -78,6 +84,21 @@ export function UserManager({
   const [editing, setEditing] = useState<AppUser | null>(null);
   /** Set while the "everyone" version is waiting to be confirmed. */
   const [confirmResetAll, setConfirmResetAll] = useState(false);
+
+  /**
+   * Reset links, live.
+   *
+   * The link is minted by the machine running the notification sender, not by
+   * this app, so there is nothing here to await — it simply appears. Watching
+   * is the only honest way to show it.
+   */
+  const [resets, setResets] = useState<PasswordResetRequest[]>([]);
+
+  useEffect(() => {
+    if (!can('MANAGE_USERS')) return undefined;
+    return watchPending(setResets, () => setResets([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [confirm, setConfirm] = useState<{ user: AppUser; action: 'delete' | 'deactivate' } | null>(
     null
@@ -333,6 +354,31 @@ export function UserManager({
               {/* Requires a new password of this one person. Their current one
                   keeps working until they set it — see requirePasswordChange
                   for why a client cannot do more than that. */}
+              {/* Mints a one-time link the admin hands over. Works for the
+                  mobile-only accounts a reset email can never reach, and
+                  ends with the old password dead — which the flag-only
+                  version above cannot do. */}
+              {can('MANAGE_USERS') ? (
+                <Button
+                  label={t('auth.resetLink')}
+                  icon="link-outline"
+                  variant="outline"
+                  fullWidth
+                  onPress={() => {
+                    const target = selected;
+                    setSelected(null);
+                    void (async () => {
+                      try {
+                        await requestReset(target, actor!);
+                        toast.success(t('auth.resetLinkRequested'));
+                      } catch (error) {
+                        toast.error(friendlyMessage(error, t));
+                      }
+                    })();
+                  }}
+                />
+              ) : null}
+
               {can('MANAGE_USERS') ? (
                 <Button
                   label={t('auth.requireReset')}
@@ -459,6 +505,59 @@ export function UserManager({
       {/* The message says plainly that existing passwords keep working. An
           admin reaching for this is usually reacting to a leak, and letting
           them believe it cuts access off would be the harmful kind of wrong. */}
+      {/* Above everything, because an admin who pressed the button is
+          waiting for exactly this and should not have to hunt for it. */}
+      {resets.length > 0 ? (
+        <Card style={{ marginBottom: spacing.lg }}>
+          <SectionHeader title={t('auth.resetLinks')} icon="link-outline" />
+          {resets.map((row) => (
+            <View key={row.id} style={styles.resetRow}>
+              <Text style={styles.resetName}>{row.userName}</Text>
+
+              {row.status === 'pending' ? (
+                <Text style={styles.resetNote}>{t('auth.resetLinkPending')}</Text>
+              ) : row.status === 'failed' ? (
+                <Text style={styles.resetFailed}>{row.error}</Text>
+              ) : (
+                <>
+                  <Text style={styles.resetNote}>{t('auth.resetLinkReady')}</Text>
+                  {/* Selectable rather than only copyable: on a phone the
+                      clipboard is not always available and the link still
+                      has to be gettable. */}
+                  <Text selectable style={styles.resetLink}>
+                    {row.link}
+                  </Text>
+                </>
+              )}
+
+              <View style={styles.resetActions}>
+                {row.status === 'ready' && row.link ? (
+                  <Button
+                    label={t('common.copy')}
+                    icon="copy-outline"
+                    size="sm"
+                    variant="outline"
+                    onPress={() => {
+                      void navigator.clipboard
+                        ?.writeText(row.link!)
+                        .then(() => toast.success(t('common.copied')))
+                        .catch(() => undefined);
+                    }}
+                  />
+                ) : null}
+                <Button
+                  label={t('common.done')}
+                  icon="checkmark"
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => void clearReset(row.id)}
+                />
+              </View>
+            </View>
+          ))}
+        </Card>
+      ) : null}
+
       <ConfirmDialog
         visible={confirmResetAll}
         title={t('auth.requireResetAll')}
@@ -880,6 +979,18 @@ function UserForm({
 }
 
 const styles = StyleSheet.create({
+  resetRow: { gap: spacing.xs, paddingVertical: spacing.sm },
+  resetName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text },
+  resetNote: { fontSize: fontSize.xs, color: colors.textMuted },
+  resetFailed: { fontSize: fontSize.xs, color: colors.danger },
+  resetLink: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+  },
+  resetActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -67,7 +67,9 @@
     "uploadNeedsStorage": "Uploading requires Cloud Storage, which Firebase only offers on a paid plan. Pasting a link works on the free plan.",
     "uploadOrLink": "Upload a file, or paste a link.",
     "undo": "Undo",
-    "remove": "Remove"
+    "remove": "Remove",
+    "copy": "Copy",
+    "done": "Done"
   },
   "auth": {
     "studentLogin": "Student Login",
@@ -155,7 +157,12 @@
     "requireResetAll": "Require a new password from everyone",
     "requireResetConfirm": "Everyone except you will be asked to set a new password the next time they sign in. Their current passwords keep working until they do — this cannot switch them off from here.",
     "requireResetDone_one": "{{count}} account will be asked at next sign-in.",
-    "requireResetDone_other": "{{count}} accounts will be asked at next sign-in."
+    "requireResetDone_other": "{{count}} accounts will be asked at next sign-in.",
+    "resetLink": "Create a reset link",
+    "resetLinkRequested": "Requested. The link appears here within a minute.",
+    "resetLinks": "Password reset links",
+    "resetLinkPending": "Waiting for the link…",
+    "resetLinkReady": "Give this link to the person. It can be used once, and their old password stops working as soon as they use it."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",

@@ -13,6 +13,7 @@ export const COLLECTIONS = {
   divineNames: 'divineNames',
   khutbahs: 'khutbahs',
   pushSubscriptions: 'pushSubscriptions',
+  passwordResets: 'passwordResets',
   branches: 'branches',
   classes: 'classes',
   subjects: 'subjects',
