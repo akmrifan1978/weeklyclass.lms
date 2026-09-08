@@ -688,7 +688,33 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isSignedIn();
 
-      allow create: if can('SEND_NOTIFICATIONS');
+      /**
+       * Two ways a notification gets created, and they are not the same act.
+       *
+       * A BROADCAST somebody composed — "general" or "announcement" — is a
+       * message to the whole school in the organisation's voice, and stays
+       * behind SEND_NOTIFICATIONS.
+       *
+       * An AUTOMATIC one is the tail of an action the staff member was already
+       * permitted to take: they published a lesson, a recording or a reply, and
+       * the people it concerns are told. Requiring a second permission for that
+       * did not make anything safer — it made a teacher's every publish notify
+       * nobody, silently, because the notification write was denied after the
+       * lesson had already been saved and the failure was swallowed. Teachers
+       * do not hold SEND_NOTIFICATIONS by default, so this was every teacher.
+       *
+       * The category is what separates them, and it is checked here rather than
+       * trusted from the client's intent.
+       */
+      allow create: if can('SEND_NOTIFICATIONS')
+                    || (
+                      isStaff()
+                      && request.resource.data.category in [
+                        'class_reminder', 'new_lesson', 'new_video',
+                        'quiz_available', 'quiz_closing', 'new_article',
+                        'event_reminder', 'attendance_reminder', 'support_reply'
+                      ]
+                    );
 
       // Anyone signed in may mark a notification read — but only by adding
       // their own uid, nothing else about the document may change.

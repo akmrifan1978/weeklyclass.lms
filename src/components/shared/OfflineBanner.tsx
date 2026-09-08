@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -23,16 +23,50 @@ export function OfflineBanner() {
   const { online } = useNetworkStatus();
   const insets = useSafeAreaInsets();
 
-  if (online) return null;
+  /**
+   * Coming back deserves a word too, briefly.
+   *
+   * Anything written while offline is queued by Firestore and sent the moment
+   * the connection returns — but that happens invisibly, and somebody who
+   * submitted an assignment on a bus with no signal has no way of knowing it
+   * ever left the phone. The strip turns green, says so, and gets out of the
+   * way; a permanent "you are online" badge is noise, since online is the
+   * state people already assume they are in.
+   */
+  const [justReturned, setJustReturned] = useState(false);
+  const wasOffline = useRef(false);
+
+  useEffect(() => {
+    if (!online) {
+      wasOffline.current = true;
+      setJustReturned(false);
+      return;
+    }
+    if (!wasOffline.current) return;
+    wasOffline.current = false;
+    setJustReturned(true);
+    const timer = setTimeout(() => setJustReturned(false), 4000);
+    return () => clearTimeout(timer);
+  }, [online]);
+
+  if (online && !justReturned) return null;
 
   return (
     <View
-      style={[styles.banner, { paddingTop: insets.top + spacing.xs }]}
+      style={[
+        styles.banner,
+        online ? styles.bannerOnline : null,
+        { paddingTop: insets.top + spacing.xs },
+      ]}
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
     >
-      <Ionicons name="cloud-offline" size={15} color={colors.textInverse} />
-      <Text style={styles.text}>{t('offline.banner')}</Text>
+      <Ionicons
+        name={online ? 'cloud-done' : 'cloud-offline'}
+        size={15}
+        color={colors.textInverse}
+      />
+      <Text style={styles.text}>{t(online ? 'offline.restored' : 'offline.banner')}</Text>
     </View>
   );
 }
@@ -47,6 +81,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.xs,
   },
+  bannerOnline: { backgroundColor: colors.success },
   text: {
     color: colors.textInverse,
     fontSize: fontSize.xs,

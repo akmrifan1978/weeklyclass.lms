@@ -54,8 +54,12 @@ export function SupportInboxScreen() {
     if (!replying || !user || replyText.trim().length < 2) return;
     setBusy(true);
     try {
-      await support.replyToRequest(replying.id, replyText, replying, user);
-      toast.success(t('support.replySent'));
+      const outcome = await support.replyToRequest(replying.id, replyText, replying, user);
+      // Two different things happened, and they get two different sentences.
+      // "Sent" when the student was told; a warning when the reply is saved but
+      // nobody was notified, which used to look identical from here.
+      if (outcome.notified) toast.success(t('support.replySent'));
+      else toast.error(t('support.replySentNotNotified'));
       setReplying(null);
       setReplyText('');
       void reload();

@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { COLLECTIONS } from '@/constants/app';
 import type {
   AppUser,
@@ -166,12 +167,24 @@ export async function requestPasswordHelp(input: {
  * The notification is targeted at that one user rather than their class: they
  * wrote in privately and the reply stays private.
  */
+/**
+ * What happened when the reply was sent, so the admin can be told.
+ *
+ * `notified` is false when the reply saved but the student could not be told —
+ * a real outcome that used to be swallowed, leaving an admin certain they had
+ * answered somebody who never heard.
+ */
+export interface ReplyOutcome {
+  notified: boolean;
+  note: string | null;
+}
+
 export async function replyToRequest(
   requestId: string,
   reply: string,
   request: SupportRequest,
   actor: AppUser
-): Promise<void> {
+): Promise<ReplyOutcome> {
   await updateDocById<SupportRequest>(COLLECTIONS.supportRequests, requestId, {
     reply: reply.trim(),
     repliedBy: actor.uid,
@@ -188,19 +201,33 @@ export async function replyToRequest(
     summary: `Replied to ${request.userName}'s ${request.kind}`,
   });
 
-  void notifications
-    .send(
+  // A request filed by somebody who could not sign in has no account to
+  // notify. The reply is still saved and still visible to staff; there is
+  // simply nobody to send it to, which is not a failure.
+  if (!request.userId) {
+    return { notified: false, note: null };
+  }
+
+  try {
+    const outcome = await notifications.send(
       {
-        title: 'Reply from the team',
+        title: i18n.t('support.replyNotificationTitle'),
         message: request.subject,
-        category: 'general',
+        category: 'support_reply',
         targetRole: 'user',
         userId: request.userId,
         route: '/(student)/support',
       },
       actor
-    )
-    .catch(() => undefined);
+    );
+    return { notified: true, note: outcome.note };
+  } catch (error) {
+    // Deliberately not rethrown: the reply itself is saved and undoing it
+    // because the doorbell failed would be the worse outcome. But it is
+    // reported, so the admin knows to reach the student another way.
+    console.warn('[WeeklyClass] replied but could not notify:', error);
+    return { notified: false, note: null };
+  }
 }
 
 export async function closeRequest(

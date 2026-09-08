@@ -76,8 +76,8 @@ export async function announce(
   actor: AppUser,
   translate: (key: string, options?: Record<string, unknown>) => string = (key) =>
     i18n.t(key)
-): Promise<void> {
-  if (input.published === false) return;
+): Promise<boolean> {
+  if (input.published === false) return false;
 
   const { category, route } = ROUTES[input.kind];
 
@@ -98,10 +98,16 @@ export async function announce(
       },
       actor
     );
+    return true;
   } catch (error) {
+    // Still swallowed as far as the publish is concerned — rolling back a saved
+    // lesson because a notification failed would be the worse outcome by a wide
+    // margin. What changed is that it now says so out loud rather than
+    // returning as though everybody had been told.
     console.warn(
       `[WeeklyClass] published ${input.kind} "${input.title}" but could not notify:`,
       error
     );
+    return false;
   }
 }

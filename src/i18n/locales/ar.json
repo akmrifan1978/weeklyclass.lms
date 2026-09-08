@@ -282,7 +282,7 @@
     "addArticle": "إضافة مقال",
     "addEvent": "إضافة فعالية",
     "sendNotification": "إرسال إشعار",
-    "upcomingClasses": "الحلقات القادمة"
+    "upcomingClasses": "الفعاليات القادمة"
   },
   "calendar": {
     "title": "التقويم",
@@ -1000,7 +1000,9 @@
     "writtenIn": "لغة الرسالة",
     "writtenInHint": "اكتب باللغة التي ترتاح لها. وتحديدها يعيننا على قراءتها كما ينبغي.",
     "translate": "ترجمة",
-    "machineTranslation": "ترجمة آلية"
+    "machineTranslation": "ترجمة آلية",
+    "replyNotificationTitle": "رد من الفريق",
+    "replySentNotNotified": "حُفظ الرد، لكن تعذّر إشعار الطالب. تواصل معه بطريقة أخرى."
   },
   "rating": {
     "prompt": "اختر نجمة",
@@ -1064,7 +1066,8 @@
     "noPlanHelp": "ابدأ خطة قراءة يومية للقرآن وسيظهر تقدّمك هنا."
   },
   "offline": {
-    "banner": "أنت غير متصل — يُعرض المحتوى المحفوظ"
+    "banner": "أنت غير متصل — يُعرض المحتوى المحفوظ",
+    "restored": "عاد الاتصال — يُرسل الآن ما حُفظ دون اتصال"
   },
   "dua": {
     "search": "ابحث في الأدعية",

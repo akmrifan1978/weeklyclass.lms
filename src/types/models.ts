@@ -681,6 +681,15 @@ export type NotificationCategory =
   | 'new_article'
   | 'event_reminder'
   | 'attendance_reminder'
+  /**
+   * An admin answering something one person wrote in.
+   *
+   * Its own category rather than 'general' because it is addressed to one
+   * student about one thing they asked, and because the rules distinguish a
+   * broadcast somebody composed from the automatic tail of an action they were
+   * already allowed to take.
+   */
+  | 'support_reply'
   | 'announcement';
 
 export interface AppNotification extends BaseDoc {

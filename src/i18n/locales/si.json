@@ -282,7 +282,7 @@
     "addArticle": "ලිපියක් එකතු කරන්න",
     "addEvent": "වැඩසටහනක් එකතු කරන්න",
     "sendNotification": "දැනුම්දීමක් යවන්න",
-    "upcomingClasses": "ඉදිරි පන්ති"
+    "upcomingClasses": "ඉදිරි සිදුවීම්"
   },
   "calendar": {
     "title": "දින දර්ශනය",
@@ -1000,7 +1000,9 @@
     "writtenIn": "ලියූ භාෂාව",
     "writtenInHint": "ඔබට වැඩිම හුරු භාෂාවකින් ලියන්න. කුමකදැයි කිවියොත් අපට ඒය නිවැරදිව කියවිය හැක.",
     "translate": "පරිවර්තනය",
-    "machineTranslation": "යන්ත්ර පරිවර්තනය"
+    "machineTranslation": "යන්ත්ර පරිවර්තනය",
+    "replyNotificationTitle": "කණ්ඩායමෙන් පිළිතුරු",
+    "replySentNotNotified": "පිළිතුර සුරැකිණි, නමුත් සිසුවට දැනුම් දිය නොහැකි විය. වෙනත් ක්‍රමයකින් සම්බන්ධ වන්න."
   },
   "rating": {
     "prompt": "තාරකක් ස්පර්ශ කරන්න",
@@ -1064,7 +1066,8 @@
     "noPlanHelp": "Start a daily Qur'an reading plan and your progress will show here."
   },
   "offline": {
-    "banner": "ඔබ නොබැඳිය — සුරකින ලද අන්තර්ගතය පෙන්වයි"
+    "banner": "ඔබ නොබැඳිය — සුරකින ලද අන්තර්ගතය පෙන්වයි",
+    "restored": "නැවත සම්බන්ධයි — අන්හිලේ සුරැකිවේ යවෙමින්"
   },
   "dua": {
     "search": "දුආ සොයන්න",

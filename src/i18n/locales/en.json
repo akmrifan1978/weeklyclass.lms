@@ -282,7 +282,7 @@
     "addArticle": "Add article",
     "addEvent": "Add event",
     "sendNotification": "Send notification",
-    "upcomingClasses": "Upcoming classes"
+    "upcomingClasses": "Upcoming events"
   },
   "calendar": {
     "title": "Calendar",
@@ -1000,7 +1000,9 @@
     "writtenIn": "Written in",
     "writtenInHint": "Write in whichever language you are most comfortable in. Telling us which one lets us read it properly.",
     "translate": "Translate",
-    "machineTranslation": "MACHINE TRANSLATION"
+    "machineTranslation": "MACHINE TRANSLATION",
+    "replyNotificationTitle": "Reply from the team",
+    "replySentNotNotified": "Reply saved, but the student could not be notified. Reach them another way."
   },
   "rating": {
     "prompt": "Tap a star",
@@ -1064,7 +1066,8 @@
     "noPlanHelp": "Start a daily Qur'an reading plan and your progress will show here."
   },
   "offline": {
-    "banner": "You are offline — showing saved content"
+    "banner": "You are offline — showing saved content",
+    "restored": "Back online — anything saved offline is being sent"
   },
   "dua": {
     "search": "Search duas",
