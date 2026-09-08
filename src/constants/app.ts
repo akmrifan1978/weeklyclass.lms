@@ -14,6 +14,7 @@ export const COLLECTIONS = {
   khutbahs: 'khutbahs',
   pushSubscriptions: 'pushSubscriptions',
   passwordResets: 'passwordResets',
+  passwordChanges: 'passwordChanges',
   branches: 'branches',
   classes: 'classes',
   subjects: 'subjects',

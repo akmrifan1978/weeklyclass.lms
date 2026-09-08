@@ -162,7 +162,11 @@
     "resetLinkRequested": "Requested. The link appears here within a minute.",
     "resetLinks": "Password reset links",
     "resetLinkPending": "Waiting for the link…",
-    "resetLinkReady": "Give this link to the person. It can be used once, and their old password stops working as soon as they use it."
+    "resetLinkReady": "Give this link to the person. It can be used once, and their old password stops working as soon as they use it.",
+    "newPasswordOptional": "New password (optional)",
+    "newPasswordOptionalHint": "Leave blank to keep the current password. Setting one replaces it within a minute — and means you know it, so prefer a reset link where you can.",
+    "passwordQueued": "Saved. The new password takes effect within a minute.",
+    "setPasswordUnavailable": "This device cannot set a password securely. Use a desktop browser, or create a reset link instead."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",

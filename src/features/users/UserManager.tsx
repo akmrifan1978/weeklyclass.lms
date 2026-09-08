@@ -29,6 +29,7 @@ import {
   watchPending,
   type PasswordResetRequest,
 } from '@/services/passwordResetService';
+import { canSetPassword, setPassword } from '@/services/passwordChangeService';
 import type { AppUser, Branch, ClassRoom, Country, LanguageCode, UserRole, UserStatus } from '@/types';
 import {
   AsyncBoundary,
@@ -750,6 +751,14 @@ function UserForm({
         setErrors({ fullName: 'validation.nameRequired' });
         return;
       }
+      // Checked before anything is saved, so a rejected password does not
+      // leave the rest of the edit half-applied.
+      const newPassword = form.password.trim();
+      if (newPassword && newPassword.length < 6) {
+        setErrors({ password: 'validation.passwordTooShort' });
+        return;
+      }
+
       setBusy(true);
       try {
         await updateUser(
@@ -768,7 +777,15 @@ function UserForm({
           },
           actor
         );
-        toast.success(t('profile.profileUpdated'));
+        // After the profile, because a password change is applied by another
+        // machine a moment later and should not be queued against an edit
+        // that then failed to save.
+        if (newPassword) {
+          await setPassword(existing, newPassword, actor);
+          toast.success(t('auth.passwordQueued'));
+        } else {
+          toast.success(t('profile.profileUpdated'));
+        }
         await onSaved();
       } catch (error) {
         toast.error(friendlyMessage(error, t));
@@ -952,6 +969,21 @@ function UserForm({
         ]}
         onChange={(v) => set('status', v)}
       />
+
+      {/* Editing: setting a password is optional, and left blank changes
+          nothing. Only offered where the browser can encrypt it — the
+          password is sealed before it is written, so a device without Web
+          Crypto cannot offer this safely and does not pretend to. */}
+      {isEdit && canSetPassword() ? (
+        <PasswordField
+          label={t('auth.newPasswordOptional')}
+          value={form.password}
+          onChangeText={(v) => set('password', v)}
+          error={errors.password}
+          icon="lock-closed-outline"
+          hint={t('auth.newPasswordOptionalHint')}
+        />
+      ) : null}
 
       {!isEdit ? (
         <>

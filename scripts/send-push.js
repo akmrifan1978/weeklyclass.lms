@@ -246,6 +246,70 @@ async function mintResetLinks(auth, db) {
   return made;
 }
 
+/**
+ * Applies password changes an admin queued from the Edit form.
+ *
+ * The password arrives sealed with this machine's public key, because the
+ * only channel between the browser and here is Firestore and a password
+ * written there in the clear would land in every nightly backup. Opening it
+ * needs the private half, which lives in .env on this machine and nowhere
+ * else.
+ *
+ * THE ROW IS DELETED, not marked done. A sealed password is still a password
+ * to anybody who later gets hold of the key, and there is no reason to keep
+ * one after it has been applied. The audit entry written by the app is the
+ * lasting record; this is just the envelope it travelled in.
+ *
+ * A failure keeps the row so the admin can see why, but drops the sealed
+ * value — whatever went wrong, another attempt has to start from a freshly
+ * typed password rather than a stale envelope.
+ */
+async function applyPasswordChanges(auth, db) {
+  const privateKey = process.env.PASSWORD_PRIVATE_KEY;
+  if (!privateKey) return 0;
+
+  const snap = await db
+    .collection('passwordChanges')
+    .where('status', '==', 'pending')
+    .limit(10)
+    .get();
+
+  if (snap.empty) return 0;
+
+  // eslint-disable-next-line global-require
+  const crypto = require('crypto');
+  const key = crypto.createPrivateKey({
+    key: Buffer.from(privateKey, 'base64'),
+    format: 'der',
+    type: 'pkcs8',
+  });
+
+  let applied = 0;
+  for (const doc of snap.docs) {
+    const row = doc.data();
+    try {
+      const password = crypto
+        .privateDecrypt(
+          { key, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256' },
+          Buffer.from(row.sealed, 'base64')
+        )
+        .toString('utf8');
+
+      await auth.updateUser(row.uid, { password });
+
+      // Gone entirely, envelope and all.
+      await doc.ref.delete();
+      console.log(`  password set for ${row.userName || row.uid}`);
+      applied += 1;
+    } catch (error) {
+      const message = String((error && error.message) || error).slice(0, 200);
+      await doc.ref.update({ status: 'failed', error: message, sealed: null });
+      console.warn(`  ! password change failed for ${row.userName || row.uid}: ${message}`);
+    }
+  }
+  return applied;
+}
+
 async function run() {
   const args = parseArgs(process.argv);
   loadEnv();
@@ -350,6 +414,9 @@ async function run() {
     const pushed = await pass();
     await mintResetLinks(getAuth(), db).catch((error) =>
       console.warn('  ! reset pass failed:', error.message)
+    );
+    await applyPasswordChanges(getAuth(), db).catch((error) =>
+      console.warn('  ! password pass failed:', error.message)
     );
     return pushed;
   };
