@@ -174,11 +174,6 @@ export default function SplashScreen() {
             })}
           </View>
 
-          {/* Above everything else, on the one screen every visitor sees. It
-              draws nothing at all until the browser says an install is
-              possible. */}
-          <InstallPrompt />
-
           <View style={[styles.brandBlock, { marginBottom: blockGap }]}>
             {/* The organisation's own mark when they have set one. The book is
                 a placeholder for a platform nobody has branded yet, and it
@@ -349,25 +344,26 @@ export default function SplashScreen() {
                       </Text>
                     ) : null}
 
-                    {/* Bookings live behind a sign-in — the seat count and the
-                        ticket are not this screen's to show. So the button is
-                        an honest one: it says registering is possible and
-                        takes them to the door. */}
-                    {item.takesBookings ? (
-                      <Pressable
-                        onPress={() => router.push('/(auth)/register')}
-                        accessibilityRole="button"
-                        style={styles.classAction}
-                      >
-                        <Text style={styles.classActionText}>{t('event.registerToBook')}</Text>
-                        <Ionicons name="arrow-forward" size={11} color={brand.orange} />
-                      </Pressable>
-                    ) : null}
+                    {/* No booking from here, deliberately.
+                        This screen exists to tell a visitor what is coming up,
+                        and every card carrying its own call to register turned
+                        three announcements into three sales pitches. Registering
+                        belongs after signing in, where the seat count, the price
+                        and the person's own eligibility are all knowable — none
+                        of which this screen can see. */}
                   </View>
                 ))}
               </ScrollView>
             </View>
           ) : null}
+
+          {/* At the foot, not the head.
+              It used to sit above the logo, where it pushed the sign-in
+              buttons down the page and was the first thing a visitor met —
+              an interruption before they had seen what they came for. Down
+              here it is an offer rather than a toll gate, and it still draws
+              nothing at all until the browser says an install is possible. */}
+          <InstallPrompt />
 
         </View>
       </ScrollView>
@@ -398,7 +394,10 @@ function LinkButton({
 }
 
 const styles = StyleSheet.create({
-  classesBlock: { width: '100%', maxWidth: 460, alignSelf: 'center', marginTop: spacing.xl },
+  // The gap above the events was a full xl on top of the link row's own
+  // margin, which read as the page having ended. Half of it is enough to
+  // separate the two without suggesting they are unrelated.
+  classesBlock: { width: '100%', maxWidth: 460, alignSelf: 'center', marginTop: spacing.sm },
   tickerWrap: { borderRadius: radius.md, overflow: 'hidden', marginBottom: spacing.md },
   classStrip: { gap: spacing.sm, paddingRight: spacing.xl, paddingVertical: 2 },
   classCard: {
@@ -420,12 +419,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.62)',
     lineHeight: 15,
     marginTop: 2,
-  },
-  classAction: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  classActionText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: brand.orange,
   },
   classFact: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.72)', marginTop: 2 },
   container: { flex: 1, backgroundColor: brand.navyDeep },
