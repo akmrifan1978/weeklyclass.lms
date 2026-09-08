@@ -71,6 +71,94 @@ function isImmutableAsset(url) {
   );
 }
 
+/**
+ * A notification arriving while the app is closed.
+ *
+ * This is the whole point of push: the phone shows it on the lock screen, in
+ * the shade and on the app icon, whether or not the app is running. Everything
+ * the app itself puts in its Notification Centre already worked; none of it
+ * ever left the app.
+ *
+ * The payload is JSON the sender composed. It is parsed defensively — a push
+ * that arrives malformed must still show something, because a browser that is
+ * handed a push and shows nothing at all is required to show its own "this
+ * site has been updated in the background" notice instead, which is worse than
+ * anything we could write.
+ */
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : '' };
+  }
+
+  const title = payload.title || 'WeeklyClass LMS';
+
+  const options = {
+    body: payload.body || '',
+    // The app's own mark, so the notification is recognisably from this app
+    // among a dozen others in the shade.
+    icon: payload.icon || '/icons/icon-192.png',
+    // Android draws this as a white silhouette in the status bar. Passing the
+    // full-colour logo here gets a white blob.
+    badge: '/icons/badge-96.png',
+    // The large picture, where the thing being announced has one — a lesson's
+    // cover, an event's banner.
+    image: payload.image || undefined,
+    // Same tag replaces rather than stacks, so three edits to one lesson do
+    // not become three notifications about it.
+    tag: payload.tag || 'weeklyclass',
+    renotify: Boolean(payload.tag),
+    timestamp: payload.timestamp || Date.now(),
+    requireInteraction: false,
+    data: { route: payload.route || '/', id: payload.id || null },
+  };
+
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(title, options);
+
+      // The count on the app icon, where the platform supports it.
+      if (typeof payload.badgeCount === 'number' && 'setAppBadge' in self.navigator) {
+        await self.navigator.setAppBadge(payload.badgeCount).catch(() => undefined);
+      }
+    })()
+  );
+});
+
+/**
+ * Tapping the notification.
+ *
+ * An already-open window is focused and told where to go rather than a second
+ * copy of the app being opened — somebody who taps a notification expects to
+ * land in the app they already had, not a duplicate of it.
+ */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const route = (event.notification.data && event.notification.data.route) || '/';
+
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+
+      for (const client of windows) {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        await client.focus();
+        // The app routes on this message; posting is what lets a focused
+        // window navigate without being reloaded out from under the reader.
+        client.postMessage({ type: 'notification-open', route });
+        return;
+      }
+
+      await self.clients.openWindow(route);
+    })()
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 

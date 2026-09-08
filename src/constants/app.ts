@@ -12,6 +12,7 @@ export const COLLECTIONS = {
   countries: 'countries',
   divineNames: 'divineNames',
   khutbahs: 'khutbahs',
+  pushSubscriptions: 'pushSubscriptions',
   branches: 'branches',
   classes: 'classes',
   subjects: 'subjects',

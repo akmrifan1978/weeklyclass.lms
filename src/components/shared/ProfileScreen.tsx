@@ -36,6 +36,7 @@ import {
   StatusBadge,
   TextField,
 } from '@/components/ui';
+import { PushToggle } from '@/components/shared/PushToggle';
 
 /**
  * Profile screen for every role. The fields shown adapt to the role, and
@@ -312,6 +313,9 @@ export function ProfileScreen() {
         </Card>
 
         <Spacer />
+
+        <SectionHeader title={t('push.section')} icon="notifications-outline" />
+        <PushToggle />
 
         <SectionHeader title={t('profile.preferences')} icon="settings-outline" />
         <Card>

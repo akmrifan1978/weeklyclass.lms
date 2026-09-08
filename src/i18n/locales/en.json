@@ -1357,5 +1357,17 @@
     "problem_unavailable_body": "The device could not fix a position. Indoors and underground are the usual reasons — try again near a window or outside.",
     "problem_unsupported_title": "Location is not available here",
     "problem_unsupported_body": "This browser cannot report a location, so the qibla cannot be worked out. Opening the app on a phone will do it."
+  },
+  "push": {
+    "section": "Notifications on this device",
+    "title": "Alerts on your phone",
+    "off": "Off. Turn this on and new lessons, replies and announcements appear on your phone even when the app is closed.",
+    "on": "On. New lessons, replies and announcements will appear on this device.",
+    "blocked": "Blocked in this browser. It will not ask again — allow Notifications for this site in the browser's settings, then come back.",
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "enabled": "Notifications are on for this device",
+    "disabled": "Notifications are off for this device",
+    "deniedToast": "The browser refused. Allow Notifications for this site in its settings."
   }
 }

@@ -65,7 +65,9 @@
     "firebase:deploy": "firebase deploy --only firestore:rules,firestore:indexes",
     "emulators": "firebase emulators:start",
     "deploy:web": "expo export --platform web && firebase deploy --only hosting",
-    "reset-link": "node scripts/reset-link.js --key ./serviceAccount.json --user"
+    "reset-link": "node scripts/reset-link.js --key ./serviceAccount.json --user",
+    "push": "node scripts/send-push.js --key ./serviceAccount.json",
+    "push:watch": "node scripts/send-push.js --key ./serviceAccount.json --watch"
   },
   "private": true
 }

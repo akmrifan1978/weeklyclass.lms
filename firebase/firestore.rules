@@ -420,6 +420,27 @@ service cloud.firestore {
      * trusted with the written content, which is the same act and so the same
      * permission.
      */
+    /**
+     * Where a browser is reachable for a push notification.
+     *
+     * A subscription endpoint is a capability, not a name: anybody holding one
+     * together with the private key can put a notification on that person's
+     * lock screen. So nobody reads these from the app — not students, not
+     * staff, not admins. Only the sender reads them, and it runs with a
+     * service account outside these rules.
+     *
+     * A person may write their OWN, which is what registering a device is, and
+     * may mark it deleted, which is what turning notifications off is. The uid
+     * is checked against the document so one account cannot register a device
+     * in somebody else's name and receive their notifications.
+     */
+    match /pushSubscriptions/{subscriptionId} {
+      allow read: if false;
+      allow create, update: if isSignedIn()
+                            && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
     match /khutbahs/{khutbahId} {
       allow read: if isSignedIn();
       allow create, update: if can('MANAGE_ARTICLES');
