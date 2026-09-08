@@ -127,12 +127,20 @@ self.addEventListener('push', (event) => {
     // Same tag replaces rather than stacks, so three edits to one lesson do
     // not become three notifications about it.
     tag: payload.tag || 'weeklyclass',
-    // False, now that a tag identifies one notification rather than a category.
-    // The push often arrives after the app has already shown the same message
-    // itself, and this replaces that copy; renotify would make the phone buzz a
-    // second time for a notification the person has already been told about.
-    // A genuinely new notification carries a new tag and alerts normally.
-    renotify: false,
+    /*
+     * True, and reverted from false deliberately.
+     *
+     * Setting it false was meant to stop a second buzz when the pushed copy
+     * replaces the one the app had already shown. But de-duplication was
+     * already solved by giving both paths the same per-notification tag; this
+     * was belt on top of braces, and iOS appears to take it as licence to
+     * deliver the whole notification silently — which is indistinguishable
+     * from push being broken, and was reported as exactly that.
+     *
+     * A notification that alerts twice in the rare case of both paths landing
+     * is a far smaller fault than one that never alerts at all.
+     */
+    renotify: true,
     timestamp: payload.timestamp || Date.now(),
     requireInteraction: false,
     data: { route: payload.route || '/', id: payload.id || null },
