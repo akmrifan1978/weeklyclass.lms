@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useAsync } from '@/hooks/useAsync';
-import { formatShortDate, formatTimeRange, toISODate } from '@/utils/date';
+import { combineDateTime, formatShortDate, formatTimeRange, toISODate } from '@/utils/date';
 import { matchesSearch } from '@/utils/format';
 import {
   deleteEvent,
@@ -102,6 +103,12 @@ const EMPTY: EventForm = {
   referenceLabel: '',
 };
 
+/** True once the moment an event starts has already gone by. */
+function isPast(date: string, startTime: string): boolean {
+  if (!date || !startTime) return false;
+  return combineDateTime(date, startTime).getTime() < Date.now();
+}
+
 export function CalendarManager({ classScope }: { classScope?: string[] }) {
   // Built here rather than in a module-scope StyleSheet: this file had none
   // before, and reading theme tokens while the module is still initialising is
@@ -122,6 +129,22 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.primary,
+  };
+
+  const PAST_NOTICE = {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: spacing.sm,
+    backgroundColor: colors.warningSoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  };
+  const PAST_NOTICE_TEXT = {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.text,
+    lineHeight: 17,
   };
 
   const [eventNames, setEventNames] = useState<string[]>([]);
@@ -380,6 +403,22 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
             error={errors.endTime}
             required
           />
+
+          {/*
+            An event whose start has already passed is saved happily and then
+            filed under Past, which from the other side of the screen looks
+            exactly like the save having failed — so it is said out loud here,
+            while the date is still on screen and still changeable.
+
+            A warning rather than an error, because backdating is legitimate:
+            a class that happened last week still belongs on the calendar.
+          */}
+          {isPast(form.date, form.startTime) ? (
+            <View style={PAST_NOTICE}>
+              <Ionicons name="time-outline" size={16} color={colors.warning} />
+              <Text style={PAST_NOTICE_TEXT}>{t('calendar.startsInThePast')}</Text>
+            </View>
+          ) : null}
           <TextField
             label={t('calendar.venue')}
             value={form.venue}

@@ -319,7 +319,8 @@
     "onlineClass": "Online class",
     "logo": "Logo",
     "banner": "Banner",
-    "brandingHint": "Shown with this class. Published classes keep the logo and banner they were created with."
+    "brandingHint": "Shown with this class. Published classes keep the logo and banner they were created with.",
+    "startsInThePast": "This starts in the past, so it will be saved under Past rather than Upcoming."
   },
   "video": {
     "title": "Videos",
@@ -720,7 +721,17 @@
     "removeImportedDone": "Removed {{count}} imported recordings.",
     "translation": "Translation",
     "translationEmail": "Contact email for the translation service",
-    "translationEmailHint": "Optional. The free translator allows about 5,000 characters a day without one and about 50,000 with it. Your address is sent to MyMemory with each request and is used only to raise that limit."
+    "translationEmailHint": "Optional. The free translator allows about 5,000 characters a day without one and about 50,000 with it. Your address is sent to MyMemory with each request and is used only to raise that limit.",
+    "calendar": "Calendar",
+    "calendarSystem": "Dates are shown in",
+    "calendar_gregorian": "Gregorian only",
+    "calendar_gregorianHint": "Mar 12, 2026",
+    "calendar_both": "Gregorian with Hijri",
+    "calendar_bothHint": "Mar 12, 2026  (Ram. 23, 1447 AH)",
+    "calendar_hijri": "Hijri only",
+    "calendar_hijriHint": "Ramadan 23, 1447 AH",
+    "calendarNote": "Applies everywhere dates are shown — lessons, events, tickets and recordings. Hijri dates follow the Umm al-Qura calendar and are a calculation, not a moon sighting.",
+    "calendarApproximate": "On this device the Hijri date is worked out arithmetically and may be a day or two out."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -984,7 +995,20 @@
     "kindHint_complaint": "Report a problem. It goes only to the administrators.",
     "kindHint_contact": "A private message to the administrators.",
     "kind_passwordHelp": "Password help",
-    "notSignedIn": "not signed in"
+    "notSignedIn": "not signed in",
+    "howWasIt": "How are we doing?",
+    "writtenIn": "Written in",
+    "writtenInHint": "Write in whichever language you are most comfortable in. Telling us which one lets us read it properly.",
+    "translate": "Translate",
+    "machineTranslation": "MACHINE TRANSLATION"
+  },
+  "rating": {
+    "prompt": "Tap a star",
+    "level_1": "Very bad",
+    "level_2": "Bad",
+    "level_3": "Okay",
+    "level_4": "Good",
+    "level_5": "Very good"
   },
   "qa": {
     "askTitle": "Ask a question",

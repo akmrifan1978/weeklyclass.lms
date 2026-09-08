@@ -1,6 +1,7 @@
 import type { AgeGroup } from '@/types';
 import { Timestamp } from 'firebase/firestore';
-import type { FireDate } from '@/types';
+import type { CalendarSystem, FireDate } from '@/types';
+import { formatHijri } from './hijri';
 
 /** Normalises anything Firestore might hand back into a JS `Date`. */
 export function toDate(value: FireDate | undefined | string | number): Date | null {
@@ -42,26 +43,74 @@ export function combineDateTime(isoDate: string, time: string): Date {
   return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0);
 }
 
+/**
+ * Which calendar the whole app prints dates in.
+ *
+ * Held in a module rather than passed down, because `formatDate` is called from
+ * roughly a hundred places that have no business knowing about a setting, and
+ * threading it through all of them would be a worse change than this one.
+ *
+ * Kept in step with the admin setting by `useCalendarSystem`, mounted once in
+ * the root layout. Gregorian until told otherwise, so a first paint before the
+ * settings arrive shows the same thing it always did.
+ */
+let calendarSystem: CalendarSystem = 'gregorian';
+
+export function setCalendarSystem(next: CalendarSystem): void {
+  calendarSystem = next;
+}
+
+export function getCalendarSystem(): CalendarSystem {
+  return calendarSystem;
+}
+
+/**
+ * Adds the Hijri date to a formatted Gregorian one, per the setting.
+ *
+ * In `both` the Gregorian date leads and the Hijri follows in brackets. That
+ * order is deliberate: the phone, the bus timetable and the school term are all
+ * Gregorian, so the date somebody acts on comes first and the date that places
+ * it in the year comes second.
+ */
+function withHijri(date: Date, gregorian: string, locale: string, short: boolean): string {
+  if (calendarSystem === 'gregorian') return gregorian;
+  const hijri = formatHijri(date, locale, short);
+  return calendarSystem === 'hijri' ? hijri : `${gregorian}  (${hijri})`;
+}
+
 export function formatDate(value: FireDate | string | undefined, locale = 'en'): string {
   const date = toDate(value ?? null);
   if (!date) return '—';
-  return date.toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' });
+  return withHijri(
+    date,
+    date.toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' }),
+    locale,
+    false
+  );
 }
 
 export function formatShortDate(value: FireDate | string | undefined, locale = 'en'): string {
   const date = toDate(value ?? null);
   if (!date) return '—';
-  return date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+  return withHijri(
+    date,
+    date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }),
+    locale,
+    true
+  );
 }
 
 export function formatDateTime(value: FireDate | string | undefined, locale = 'en'): string {
   const date = toDate(value ?? null);
   if (!date) return '—';
-  return `${date.toLocaleDateString(locale, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })} · ${date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
+  const time = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const day = withHijri(
+    date,
+    date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }),
+    locale,
+    true
+  );
+  return `${day} · ${time}`;
 }
 
 /** Converts `HH:mm` (24h) to a localised 12h/24h label. */

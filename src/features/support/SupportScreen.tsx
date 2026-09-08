@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useAsync } from '@/hooks/useAsync';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
@@ -11,15 +12,19 @@ import { friendlyMessage } from '@/utils/errors';
 import { relativeTime } from '@/utils/date';
 import * as support from '@/services/supportService';
 import { getSettings } from '@/services/settingsService';
-import type { SupportKind, SupportRequest } from '@/types';
+import { LANGUAGES } from '@/constants/app';
+import type { LanguageCode, SupportKind, SupportRequest } from '@/types';
 import {
   AppHeader,
   Button,
   Card,
   ChipGroup,
   EmptyState,
+  Rating,
+  RatingBadge,
   Screen,
   SectionHeader,
+  Select,
   SkeletonList,
   TextField,
 } from '@/components/ui';
@@ -41,9 +46,16 @@ export function SupportScreen() {
   const toast = useToast();
   const { user } = useAuth();
 
+  const { language } = useLanguage();
+
   const [kind, setKind] = useState<SupportKind>('question');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [rating, setRating] = useState<number | null>(null);
+  // Starts at whatever they are reading the app in, which is nearly always what
+  // they are about to write in. Changeable, because a household shares a phone
+  // and the person writing is not always the person who set the language.
+  const [writtenIn, setWrittenIn] = useState<LanguageCode>(language);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
@@ -71,10 +83,14 @@ export function SupportScreen() {
 
     setBusy(true);
     try {
-      await support.submitRequest({ kind, subject, message }, user);
+      await support.submitRequest(
+        { kind, subject, message, rating, language: writtenIn },
+        user
+      );
       toast.success(t('support.sent'));
       setSubject('');
       setMessage('');
+      setRating(null);
       setErrors({});
       void reload();
     } catch (error) {
@@ -141,6 +157,13 @@ export function SupportScreen() {
           />
           <Text style={styles.kindHint}>{t(`support.kindHint_${kind}`)}</Text>
 
+          {/* Only on feedback. Asking somebody to score a complaint out of five
+              trivialises it, and asking for stars alongside a question makes no
+              sense at all. */}
+          {kind === 'feedback' ? (
+            <Rating label={t('support.howWasIt')} value={rating} onChange={setRating} />
+          ) : null}
+
           <TextField
             label={t('support.subject')}
             value={subject}
@@ -157,6 +180,20 @@ export function SupportScreen() {
             multiline
             required
           />
+          {/* Below the message, not above it: it describes what has just been
+              written, and putting a language picker before the box invites
+              people to think they must write in the one they pick. */}
+          <Select<LanguageCode>
+            label={t('support.writtenIn')}
+            value={writtenIn}
+            options={LANGUAGES.map((item) => ({
+              value: item.code,
+              label: item.nativeName,
+            }))}
+            onChange={setWrittenIn}
+          />
+          <Text style={styles.languageHint}>{t('support.writtenInHint')}</Text>
+
           <Button
             label={t('support.send')}
             icon="send"
@@ -183,6 +220,11 @@ export function SupportScreen() {
                 <Text style={styles.requestDate}>{relativeTime(request.createdAt)}</Text>
               </View>
               <Text style={styles.requestSubject}>{request.subject}</Text>
+              {request.rating ? (
+                <View style={{ marginBottom: spacing.xs }}>
+                  <RatingBadge value={request.rating} />
+                </View>
+              ) : null}
               <Text style={styles.requestMessage}>{request.message}</Text>
 
               {request.reply ? (
@@ -260,6 +302,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     paddingVertical: spacing.md,
     lineHeight: 20,
+  },
+  languageHint: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: -spacing.md,
+    marginBottom: spacing.lg,
+    lineHeight: 16,
   },
   kindHint: {
     fontSize: fontSize.xs,

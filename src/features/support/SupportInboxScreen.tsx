@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -10,7 +10,9 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import { relativeTime } from '@/utils/date';
 import * as support from '@/services/supportService';
-import type { SupportRequest, SupportStatus } from '@/types';
+import { LANGUAGES } from '@/constants/app';
+import { translate, TranslationUnavailable } from '@/services/translateService';
+import type { LanguageCode, SupportRequest, SupportStatus } from '@/types';
 import {
   AppHeader,
   Button,
@@ -19,6 +21,7 @@ import {
   EmptyState,
   FormSheet,
   IconButton,
+  RatingBadge,
   Screen,
   SkeletonList,
   TextField,
@@ -111,7 +114,14 @@ export function SupportInboxScreen() {
               </View>
 
               <Text style={styles.subject}>{request.subject}</Text>
-              <Text style={styles.message}>{request.message}</Text>
+
+              {request.rating ? (
+                <View style={{ marginBottom: spacing.sm }}>
+                  <RatingBadge value={request.rating} />
+                </View>
+              ) : null}
+
+              <Message request={request} />
 
               <View style={styles.fromRow}>
                 <Ionicons name="person-circle-outline" size={16} color={colors.textMuted} />
@@ -196,12 +206,116 @@ function capitalise(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+/**
+ * A message, and a way to read it when it is not in your language.
+ *
+ * The inbox is worked by a handful of admins; the people writing into it are
+ * students across four languages. Before this, a complaint in Tamil reaching an
+ * admin who reads English was a paragraph they could not act on, and the honest
+ * outcome was that it got skipped.
+ *
+ * The original is never replaced, only added to. A machine translation of a
+ * complaint is a rough gloss, and an admin about to reply to somebody upset
+ * needs to be able to see the words they actually used — so both are on screen,
+ * and the translation is labelled as one.
+ */
+function Message({ request }: { request: SupportRequest }) {
+  const { t, i18n } = useTranslation();
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  const reading = (i18n.language || 'en').split('-')[0] as LanguageCode;
+  const wrote = request.language ?? null;
+  const worthTranslating = Boolean(wrote && wrote !== reading);
+
+  const run = async () => {
+    if (!wrote) return;
+    setBusy(true);
+    setFailed(null);
+    try {
+      setTranslated(await translate(request.message, wrote, reading));
+    } catch (error) {
+      // Same three sentences the scripture screens use — the failures are the
+      // same failures, and a second set of words for them would only be a
+      // second set to keep translated.
+      const reason = error instanceof TranslationUnavailable ? error.reason : 'network';
+      setFailed(`scripture.translateFailed_${reason}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Text style={styles.message}>{request.message}</Text>
+
+      {wrote ? (
+        <View style={styles.languageRow}>
+          <Ionicons name="language-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.languageText}>
+            {LANGUAGES.find((item) => item.code === wrote)?.nativeName ?? wrote}
+          </Text>
+          {worthTranslating && !translated ? (
+            <Pressable onPress={run} disabled={busy} accessibilityRole="button">
+              <Text style={styles.translateAction}>
+                {busy ? t('common.loading') : t('support.translate')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
+      {translated ? (
+        <View style={styles.translation}>
+          <Text style={styles.translationLabel}>{t('support.machineTranslation')}</Text>
+          <Text style={styles.translationText}>{translated}</Text>
+        </View>
+      ) : null}
+
+      {failed ? <Text style={styles.translationFailed}>{t(failed)}</Text> : null}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   card: { marginBottom: spacing.md },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  languageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  languageText: { fontSize: fontSize.xs, color: colors.textMuted },
+  translateAction: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+    marginLeft: spacing.sm,
+  },
+  translation: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  translationLabel: {
+    fontSize: 10,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  translationText: { fontSize: fontSize.sm, color: colors.text, lineHeight: 20 },
+  translationFailed: {
+    fontSize: fontSize.xs,
+    color: colors.danger,
     marginBottom: spacing.sm,
   },
   kindChip: {

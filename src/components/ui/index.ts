@@ -2,6 +2,7 @@ export { Button, IconButton, type ButtonVariant, type ButtonSize } from './Butto
 export { Card, Badge, StatusBadge, StatCard, SectionHeader, DetailRow, Divider } from './Card';
 export { TextField, PasswordField, EmailField, SearchField, ToggleRow } from './Input';
 export { Select, ChipGroup, type Option } from './Select';
+export { Rating, RatingBadge } from './Rating';
 export {
   LoadingState,
   Skeleton,

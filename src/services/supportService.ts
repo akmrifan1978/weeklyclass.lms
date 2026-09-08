@@ -1,6 +1,7 @@
 import { COLLECTIONS } from '@/constants/app';
 import type {
   AppUser,
+  LanguageCode,
   QaQuestion,
   SupportKind,
   SupportRequest,
@@ -60,7 +61,14 @@ export function listMyRequests(user: AppUser): Promise<Page<SupportRequest>> {
 }
 
 export async function submitRequest(
-  input: { kind: SupportKind; subject: string; message: string },
+  input: {
+    kind: SupportKind;
+    subject: string;
+    message: string;
+    /** 1-5, and only meaningful on a `feedback` request. */
+    rating?: number | null;
+    language?: LanguageCode | null;
+  },
   user: AppUser
 ): Promise<string> {
   const id = await createDoc(
@@ -69,6 +77,11 @@ export async function submitRequest(
       kind: input.kind,
       subject: input.subject.trim(),
       message: input.message.trim(),
+      // Stored only where it means something. A star rating attached to a
+      // complaint would be counted in the average alongside actual feedback and
+      // quietly make it a different number.
+      rating: input.kind === 'feedback' ? (input.rating ?? null) : null,
+      language: input.language ?? null,
       userId: user.uid,
       userName: user.fullName,
       userRole: user.role,

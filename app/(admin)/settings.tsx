@@ -14,7 +14,8 @@ import { friendlyMessage } from '@/utils/errors';
 import { getSettings, updateSettings } from '@/services/settingsService';
 import { PermissionGuard } from '@/components/shared/RoleGuard';
 import { ImageField } from '@/components/shared/ImageField';
-import type { AppSettings, IslamicFeature, LanguageCode } from '@/types';
+import { hijriIsApproximate } from '@/utils/hijri';
+import type { AppSettings, CalendarSystem, IslamicFeature, LanguageCode } from '@/types';
 import {
   AsyncBoundary,
   Button,
@@ -312,6 +313,39 @@ function SettingsScreen() {
             hint={t('settings.tickerHint')}
             containerStyle={{ marginBottom: 0 }}
           />
+        </Card>
+
+        <Spacer />
+
+        <SectionHeader title={t('settings.calendar')} icon="calendar-outline" />
+        <Card>
+          <Select<CalendarSystem>
+            label={t('settings.calendarSystem')}
+            value={form.calendarSystem ?? 'gregorian'}
+            options={[
+              {
+                value: 'gregorian',
+                label: t('settings.calendar_gregorian'),
+                description: t('settings.calendar_gregorianHint'),
+              },
+              {
+                value: 'both',
+                label: t('settings.calendar_both'),
+                description: t('settings.calendar_bothHint'),
+              },
+              {
+                value: 'hijri',
+                label: t('settings.calendar_hijri'),
+                description: t('settings.calendar_hijriHint'),
+              },
+            ]}
+            onChange={(v) => set('calendarSystem', v)}
+            containerStyle={{ marginBottom: spacing.sm }}
+          />
+          <Text style={styles.sectionHint}>
+            {t('settings.calendarNote')}
+            {hijriIsApproximate() ? ` ${t('settings.calendarApproximate')}` : ''}
+          </Text>
         </Card>
 
         <Spacer />

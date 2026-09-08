@@ -17,6 +17,7 @@ import { initAnalytics } from '@/firebase/analytics';
 import { initAppCheck } from '@/firebase/appCheck';
 import { addNotificationResponseListener } from '@/services/pushService';
 import { brand } from '@/constants/theme';
+import { useCalendarSystem } from '@/hooks/useCalendarSystem';
 import { LoadingState } from '@/components/ui';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -135,6 +136,11 @@ function ScopeLanguageSync() {
 
 function RootNavigator() {
   const router = useRouter();
+
+  // Mounted here and nowhere else: the whole app prints dates through the same
+  // formatters, so the calendar setting is read once at the root and every
+  // screen below picks it up.
+  useCalendarSystem();
 
   // Opening a push notification jumps straight to the relevant screen.
   useEffect(() => {

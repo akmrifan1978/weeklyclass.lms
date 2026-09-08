@@ -497,6 +497,23 @@ export interface SupportRequest extends BaseDoc {
   classId?: string | null;
   branchId?: string | null;
   status: SupportStatus;
+  /**
+   * A star rating, 1-5, on a `feedback` request only.
+   *
+   * Kept beside the message rather than in a collection of its own, because a
+   * rating without the sentence explaining it is a number nobody can act on,
+   * and the two arrive together.
+   */
+  rating?: number | null;
+  /**
+   * The language it was written in, as the writer said so themselves.
+   *
+   * Not guessed from the text. It is recorded so the inbox can say what an
+   * admin is about to read before they read it, and so a message in a language
+   * they do not have can be offered for translation rather than left as a
+   * paragraph they will quietly skip.
+   */
+  language?: LanguageCode | null;
   /** The admin's reply, visible to the person who wrote in. */
   reply?: string | null;
   repliedBy?: string | null;
@@ -741,6 +758,15 @@ export interface AppLanguage extends BaseDoc {
   order: number;
 }
 
+/**
+ * Which calendar the app prints dates in. See `utils/hijri.ts`.
+ *
+ * `both` shows the Gregorian date with the Hijri one beside it, which is what
+ * most people here actually want: one date to act on, one to place it in the
+ * Islamic year.
+ */
+export type CalendarSystem = 'gregorian' | 'hijri' | 'both';
+
 export interface AppSettings {
   appName: string;
   tagline: string;
@@ -843,6 +869,14 @@ export interface AppSettings {
    * release should not silently lose sections it was already showing.
    */
   islamicFeatures?: Partial<Record<IslamicFeature, boolean>>;
+  /**
+   * Which calendar dates are printed in, everywhere at once.
+   *
+   * Organisation-wide rather than per person, because a date on a ticket, a
+   * poster and a lesson card has to be the same date in every conversation
+   * about it. See `utils/hijri.ts` for what the Hijri date is and is not.
+   */
+  calendarSystem?: CalendarSystem;
   updatedAt?: FireDate;
   updatedBy?: string;
 }
