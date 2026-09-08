@@ -1,8 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePathname, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useLanguageScope } from '@/hooks/useLanguageScope';
@@ -30,6 +38,8 @@ import { AppHeader, Card, ErrorState, Screen, SkeletonList } from '@/components/
  */
 
 const SIZE_KEY = '@weeklyclass/quran/textSize';
+/** Where the reader stopped. One bookmark, because a reader has one place. */
+export const BOOKMARK_KEY = '@weeklyclass/quran/bookmark';
 const MIN_SIZE = 20;
 const MAX_SIZE = 46;
 const STEP = 3;
@@ -69,7 +79,74 @@ export function SurahScreen({
   const [chosenSize, setChosenSize] = useState<number | null>(null);
   const size = chosenSize ?? defaultSizeFor(width);
   const [translating, setTranslating] = useState(false);
+  const [juzOpen, setJuzOpen] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
   const recitation = useRecitation();
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  /**
+   * Jumping to another juz.
+   *
+   * The banner named the juz you were in and there was no way to go to another,
+   * which for somebody working through the Qur'an a juz at a time is the one
+   * piece of navigation they actually use.
+   *
+   * The route is built by replacing the last segment of the current path rather
+   * than from a known prefix, because this same screen is mounted under three
+   * different role groups and only the path knows which one is showing.
+   */
+  const goToJuz = useCallback(
+    async (juz: number) => {
+      setJuzOpen(false);
+      try {
+        const start = await quranService.juzStart(juz);
+        // Anchored on "/quran/" rather than "everything before the last slash".
+        // The loose version produced "/4" from a path that did not end in a
+        // surah id, which routed nowhere and dumped the reader on the sign-in
+        // screen. If this screen is somewhere without that segment, staying put
+        // is the correct answer.
+        const marker = pathname.lastIndexOf('/quran/');
+        if (marker < 0) return;
+        const base = pathname.slice(0, marker + '/quran'.length);
+        router.push(`${base}/${start.surah}` as never);
+      } catch {
+        // Offline and never opened this juz. Leaving the reader where it is is
+        // better than an error screen over a page they were reading.
+      }
+    },
+    [pathname, router]
+  );
+
+  // Whether this surah is the one bookmarked, so the button shows the truth.
+  useEffect(() => {
+    void AsyncStorage.getItem(BOOKMARK_KEY)
+      .then((raw) => {
+        const saved = raw ? (JSON.parse(raw) as { surah?: number }) : null;
+        setBookmarked(saved?.surah === number);
+      })
+      .catch(() => undefined);
+  }, [number]);
+
+  const toggleBookmark = useCallback(() => {
+    if (!data) return;
+    if (bookmarked) {
+      setBookmarked(false);
+      void AsyncStorage.removeItem(BOOKMARK_KEY).catch(() => undefined);
+      return;
+    }
+    setBookmarked(true);
+    void AsyncStorage.setItem(
+      BOOKMARK_KEY,
+      JSON.stringify({
+        surah: data.number,
+        name: data.englishName,
+        arabicName: data.name,
+        at: Date.now(),
+      })
+    ).catch(() => undefined);
+  }, [data, bookmarked]);
 
   // Reading size is a property of the reader's eyes, not of the surah, so it is
   // remembered rather than reset each time one is opened.
@@ -149,9 +226,22 @@ export function SurahScreen({
                 where you are in the thirty parts, whose reading you are
                 hearing, and which surah this is. */}
             <View style={styles.banner}>
-              <Text style={styles.bannerCell} numberOfLines={1}>
-                {t('quran.juzNumber', { juz: data.ayahs[0]?.juz ?? 1 })}
-              </Text>
+              <Pressable
+                onPress={() => setJuzOpen((open) => !open)}
+                accessibilityRole="button"
+                accessibilityLabel={t('quran.chooseJuz')}
+                accessibilityState={{ expanded: juzOpen }}
+                style={styles.juzCell}
+              >
+                <Text style={styles.bannerCell} numberOfLines={1}>
+                  {t('quran.juzNumber', { juz: data.ayahs[0]?.juz ?? 1 })}
+                </Text>
+                <Ionicons
+                  name={juzOpen ? 'chevron-up' : 'chevron-down'}
+                  size={13}
+                  color={mushaf.label}
+                />
+              </Pressable>
               <View style={styles.bannerRule} />
               <Text style={[styles.bannerCell, styles.bannerCentre]} numberOfLines={1}>
                 {quranService.RECITER_NAME}
@@ -161,6 +251,34 @@ export function SurahScreen({
                 {data.name}
               </Text>
             </View>
+
+            {/* Thirty chips rather than a dropdown: a juz is chosen by its
+                number, they all fit on one line that scrolls, and it is one
+                tap instead of three. */}
+            {juzOpen ? (
+              <View style={styles.juzTray}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {Array.from({ length: quranService.TOTAL_JUZ }, (_, index) => index + 1).map(
+                    (juz) => {
+                      const current = juz === (data.ayahs[0]?.juz ?? 1);
+                      return (
+                        <Pressable
+                          key={juz}
+                          onPress={() => void goToJuz(juz)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('quran.juzNumber', { juz })}
+                          style={[styles.juzChip, current && styles.juzChipOn]}
+                        >
+                          <Text style={[styles.juzChipText, current && styles.juzChipTextOn]}>
+                            {arabicNumber(juz)}
+                          </Text>
+                        </Pressable>
+                      );
+                    }
+                  )}
+                </ScrollView>
+              </View>
+            ) : null}
 
             {recitation.failed ? (
               <Text style={styles.notice}>{t('quran.audioUnavailable')}</Text>
@@ -240,6 +358,16 @@ export function SurahScreen({
             label={t('quran.largerText')}
             onPress={() => zoom(STEP)}
             disabled={size >= MAX_SIZE}
+          />
+
+          <View style={styles.toolbarRule} />
+
+          <ToolButton
+            icon={bookmarked ? 'bookmark' : 'bookmark-outline'}
+            label={t(bookmarked ? 'quran.removeBookmark' : 'quran.addBookmark')}
+            onPress={toggleBookmark}
+            disabled={!data}
+            active={bookmarked}
           />
 
           <View style={styles.toolbarRule} />
@@ -334,6 +462,28 @@ const styles = StyleSheet.create({
     color: mushaf.label,
   },
   bannerCentre: { textAlign: 'center' },
+  juzCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  juzTray: {
+    backgroundColor: mushaf.paper,
+    borderWidth: 1,
+    borderColor: mushaf.frameSoft,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  juzChip: {
+    minWidth: 38,
+    height: 34,
+    paddingHorizontal: spacing.sm,
+    marginRight: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: mushaf.paperEdge,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  juzChipOn: { backgroundColor: mushaf.frame },
+  juzChipText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: mushaf.label },
+  juzChipTextOn: { color: colors.textInverse },
   bannerArabic: { textAlign: 'right', writingDirection: 'rtl', fontSize: fontSize.sm },
   bannerRule: { width: 1, alignSelf: 'stretch', backgroundColor: mushaf.frameSoft },
 

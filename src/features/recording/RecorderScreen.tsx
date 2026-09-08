@@ -286,6 +286,15 @@ function WebCaptureStage({
             ) : null}
           </View>
 
+          {/* Said plainly, because the alternative is a teacher who thinks
+              they recorded twenty minutes and finds a still photograph. */}
+          {recorder.interrupted ? (
+            <View style={styles.interrupted}>
+              <Ionicons name="alert-circle" size={16} color={brand.orangeDark} />
+              <Text style={styles.interruptedText}>{t('record.backgroundPaused')}</Text>
+            </View>
+          ) : null}
+
           <Spacer size={spacing.md} />
 
           <View style={styles.buttonRow}>
@@ -927,6 +936,21 @@ const styles = StyleSheet.create({
    * along the bottom, which is 13% of the frame.
    */
   flip: { position: 'absolute', bottom: '18%', right: spacing.md },
+  interrupted: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.warningSoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  interruptedText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.text,
+    lineHeight: 18,
+  },
   meterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

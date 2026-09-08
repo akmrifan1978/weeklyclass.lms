@@ -417,7 +417,8 @@
     "publishNote": "Publishing puts the lesson in Recorded Lessons and notifies your students. A draft stays yours alone until you publish it.",
     "back": "Back to the recording",
     "published": "Published, and your students have been told",
-    "drafted": "Saved as a draft"
+    "drafted": "Saved as a draft",
+    "backgroundPaused": "Recording paused because the app left the screen. A browser cannot keep the camera running in the background, so this is paused rather than recording a still picture. Tap Resume to carry on — nothing recorded so far is lost."
   },
   "article": {
     "title": "Articles",
@@ -872,7 +873,10 @@
     "daysRead": "Days",
     "streak_one": "{{count}} day",
     "streak_other": "{{count}} days",
-    "resumesAt": "Continues from page {{page}}"
+    "resumesAt": "Continues from page {{page}}",
+    "chooseJuz": "Choose a juz",
+    "addBookmark": "Bookmark",
+    "removeBookmark": "Remove bookmark"
   },
   "tajweed": {
     "searchRule": "Search a rule",

@@ -357,6 +357,51 @@ export function useLessonRecorder({ branding, brandingEnabled }: Options) {
     QUALITY_PRESETS[quality].videoBitsPerSecond + QUALITY_PRESETS[quality].audioBitsPerSecond;
   const used = bytesUsed(bytes, seconds, bitsPerSecond);
 
+  /**
+   * Why a recording dies when you look away, and what can be done about it.
+   *
+   * The picture being recorded is a canvas, and the canvas is painted by
+   * requestAnimationFrame. Browsers stop firing that the instant the page is
+   * hidden — screen off, app switched, another tab — so the canvas stops being
+   * painted while MediaRecorder carries on faithfully recording it. The result
+   * is a take that looks fine until you play it: a frozen frame with audio over
+   * the top, or nothing at all. On iOS it is worse, because the whole page is
+   * suspended and the camera track with it.
+   *
+   * TRUE BACKGROUND RECORDING IS NOT POSSIBLE HERE. A web page does not get to
+   * keep the camera running while it is not on screen; that is a platform rule,
+   * not something this code can work around. So the two things that CAN be done
+   * are done instead, and between them they cover what actually goes wrong:
+   *
+   *   KEEP THE SCREEN ON. By far the commonest way a recording is lost is the
+   *   phone locking itself after a minute of nobody touching it. A screen wake
+   *   lock prevents exactly that, and is supported on Android and on iOS 16.4
+   *   and later — which is where these recordings are being made.
+   *
+   *   FAIL LOUDLY. If the page is hidden anyway, the recording is paused and
+   *   said so, rather than continuing against a canvas nobody is painting. A
+   *   take that stops early and says why can be resumed; a take that silently
+   *   recorded a still photograph for twenty minutes cannot be recovered.
+   */
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const [interrupted, setInterrupted] = useState(false);
+
+  const acquireWakeLock = useCallback(async () => {
+    try {
+      const wakeLock = (navigator as Navigator & { wakeLock?: WakeLock }).wakeLock;
+      if (!wakeLock) return;
+      wakeLockRef.current = await wakeLock.request('screen');
+    } catch {
+      // Refused, or unsupported. The recording still works; the screen may
+      // simply sleep, which the visibility handler below then catches.
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    void wakeLockRef.current?.release().catch(() => undefined);
+    wakeLockRef.current = null;
+  }, []);
+
   const start = useCallback(() => {
     const canvas = canvasElRef.current;
     const audio = audioStreamRef.current;
@@ -425,31 +470,71 @@ export function useLessonRecorder({ branding, brandingEnabled }: Options) {
     // time remaining — a measurement rather than an estimate.
     recorder.start(1000);
     recorderRef.current = recorder;
+    setInterrupted(false);
+    void acquireWakeLock();
     setPhase('recording');
-  }, [mimeType, quality, budgetBytes]);
+  }, [mimeType, quality, budgetBytes, acquireWakeLock]);
 
   const pause = useCallback(() => {
     const recorder = recorderRef.current;
     if (recorder?.state !== 'recording') return;
     recorder.pause();
     elapsedRef.current += Date.now() - segmentStartRef.current;
+    releaseWakeLock();
     setPhase('paused');
-  }, []);
+  }, [releaseWakeLock]);
 
   const resume = useCallback(() => {
     const recorder = recorderRef.current;
     if (recorder?.state !== 'paused') return;
     segmentStartRef.current = Date.now();
     recorder.resume();
+    setInterrupted(false);
+    void acquireWakeLock();
     setPhase('recording');
-  }, []);
+  }, [acquireWakeLock]);
 
   const stop = useCallback(() => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === 'inactive') return;
     if (recorder.state === 'recording') elapsedRef.current += Date.now() - segmentStartRef.current;
+    releaseWakeLock();
     recorder.stop();
-  }, []);
+  }, [releaseWakeLock]);
+
+  /**
+   * Leaving the screen mid-take.
+   *
+   * Pausing is the honest response. The canvas is about to stop being painted
+   * whatever this code does, so carrying on would record a still frame; pausing
+   * keeps everything recorded so far and lets the person pick up where they
+   * left off.
+   *
+   * A wake lock is dropped by the browser whenever the page hides, so coming
+   * back has to take a fresh one rather than assuming the old one survived.
+   */
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        if (recorderRef.current?.state === 'recording') {
+          setInterrupted(true);
+          pause();
+        }
+        return;
+      }
+      // Back on screen. Still recording only if the person resumed, but the
+      // lock is gone either way.
+      if (recorderRef.current?.state === 'recording') void acquireWakeLock();
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [pause, acquireWakeLock]);
+
+  // Nothing should hold the screen awake once this screen is gone.
+  useEffect(() => releaseWakeLock, [releaseWakeLock]);
 
   /** Throws the take away and returns to the camera, ready to go again. */
   const discard = useCallback(() => {
@@ -629,6 +714,8 @@ export function useLessonRecorder({ branding, brandingEnabled }: Options) {
     resume,
     stop,
     discard,
+    /** True when the recording was paused because the app left the screen. */
+    interrupted,
 
     take,
     captureThumbnail,

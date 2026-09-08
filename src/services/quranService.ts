@@ -381,3 +381,48 @@ export function splitBasmala(
   if (!clean.startsWith(BASMALA)) return { basmala: null, text: clean };
   return { basmala: BASMALA, text: clean.slice(BASMALA.length).trimStart() };
 }
+
+// ---------------------------------------------------------------------------
+// Moving around by juz
+// ---------------------------------------------------------------------------
+
+export interface JuzStart {
+  surah: number;
+  surahName: string;
+  ayah: number;
+  page: number;
+}
+
+/**
+ * Where a juz begins.
+ *
+ * The reader's banner names the juz they are in but had no way to go to another
+ * one, which for anybody working through the Qur'an a juz at a time is the
+ * navigation they actually use. The juz endpoint answers this directly and the
+ * answer never changes, so it is cached for good.
+ */
+export async function juzStart(juz: number): Promise<JuzStart> {
+  const cacheKey = `${CACHE_PREFIX}juz/${juz}`;
+  const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
+  if (cached) return JSON.parse(cached) as JuzStart;
+
+  const data = await fetchJson<{
+    ayahs: {
+      numberInSurah: number;
+      page: number;
+      surah: { number: number; englishName: string };
+    }[];
+  }>(`/juz/${juz}/${ARABIC_EDITION}`);
+
+  const first = data.ayahs?.[0];
+  if (!first) throw new AppError('errors.generic', 'quran/juz-empty');
+
+  const start: JuzStart = {
+    surah: first.surah.number,
+    surahName: first.surah.englishName,
+    ayah: first.numberInSurah,
+    page: first.page,
+  };
+  void AsyncStorage.setItem(cacheKey, JSON.stringify(start)).catch(() => undefined);
+  return start;
+}
