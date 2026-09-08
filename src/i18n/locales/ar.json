@@ -141,8 +141,8 @@
     "nationality": "الجنسية",
     "classId": "رقم الفصل",
     "classIdHint": "الرمز الذي تعطيه للطلاب ليكتبوه عند التسجيل، مثل JDC-A1.",
-    "classIdEnter": "رقم الفصل",
-    "classIdEnterHint": "الرمز الذي أعطاك إياه معلمك، مثل JDC-A1.",
+    "classIdEnter": "معرّف صف JDC",
+    "classIdEnterHint": "الرمز الذي أعطاك إياه معلمك، مثل JDC-ADM.",
     "classIdUnknown": "لا يوجد فصل بهذا الرقم. راجعه مع معلمك.",
     "classIdMatched": "الانضمام إلى {{name}}"
   },

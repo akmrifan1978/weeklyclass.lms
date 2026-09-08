@@ -141,8 +141,8 @@
     "nationality": "Nationality",
     "classId": "Class ID",
     "classIdHint": "The code you give students to type at registration, e.g. JDC-A1.",
-    "classIdEnter": "Class ID",
-    "classIdEnterHint": "The code your teacher gave you, e.g. JDC-A1.",
+    "classIdEnter": "JDC-Class ID",
+    "classIdEnterHint": "The code your teacher gave you, e.g. JDC-ADM.",
     "classIdUnknown": "No class has that ID. Check it with your teacher.",
     "classIdMatched": "Joining {{name}}"
   },

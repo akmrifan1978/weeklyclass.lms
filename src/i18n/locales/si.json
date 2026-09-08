@@ -141,8 +141,8 @@
     "nationality": "ජාතිකත්වය",
     "classId": "පන්ති අංකය",
     "classIdHint": "ලියාපදිංචියේදී සිසුන් ටයිප් කිරීමට ඔබ දෙන කේතය, උදා: JDC-A1.",
-    "classIdEnter": "පන්ති අංකය",
-    "classIdEnterHint": "ඔබේ ගුරුවරයා දුන් කේතය, උදා: JDC-A1.",
+    "classIdEnter": "JDC-පන්ති ID",
+    "classIdEnterHint": "ඔබේ ගුරුවරයා දුන් කේතය, උදා: JDC-ADM.",
     "classIdUnknown": "එම අංකයට පන්තියක් නැත. ගුරුවරයාගෙන් විමසන්න.",
     "classIdMatched": "{{name}} පන්තියට එක් වේ"
   },
