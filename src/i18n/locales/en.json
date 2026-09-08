@@ -562,7 +562,11 @@
     "enablePush": "Enable push notifications",
     "pushEnabled": "Push notifications are on",
     "pushDenied": "Push notifications are blocked in your device settings.",
-    "scheduledNote": "Scheduled notifications appear in the app at the chosen time. Device push delivery for scheduled items requires Cloud Functions — see the documentation."
+    "scheduledNote": "Scheduled notifications appear in the app at the chosen time. Device push delivery for scheduled items requires Cloud Functions — see the documentation.",
+    "deleteTitle": "Delete these notifications?",
+    "deleteMessage": "{{count}} will be removed from the history. They stay in the record, so what went out is never lost.",
+    "deletedCount": "{{count}} deleted",
+    "deletedPartly": "{{removed}} deleted, {{failed}} could not be removed"
   },
   "announcement": {
     "title": "Announcements",

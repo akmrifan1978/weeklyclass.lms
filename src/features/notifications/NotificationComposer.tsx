@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,7 @@ import {
   cancelScheduled,
   listAllNotifications,
   send,
+  deleteNotifications,
 } from '@/services/notificationService';
 import { listBranches, listClasses } from '@/services/orgService';
 import { listUsers } from '@/services/userService';
@@ -80,6 +81,8 @@ const EMPTY: ComposeForm = {
 export function NotificationComposer() {
   const { t } = useTranslation();
   const { user, can } = useAuth();
+  // The delete rule is `isAdmin()`, so the control is offered to exactly that.
+  const isAdmin = user?.role === 'admin';
   const { language } = useLanguage();
   const toast = useToast();
   const router = useRouter();
@@ -142,6 +145,60 @@ export function NotificationComposer() {
       })),
     [refs?.people]
   );
+
+  /**
+   * Tidying the history.
+   *
+   * Selection is entered deliberately rather than a checkbox sitting beside
+   * every notification: this screen is mostly used to write one and to check
+   * what went out, and a permanent column of tick boxes turns a record into a
+   * form. The same shape as the Help & feedback inbox, so the gesture is
+   * learned once.
+   */
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const toggleSelected = (id: string) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const leaveSelection = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
+
+  const removeSelected = async () => {
+    if (!user || selected.size === 0) return;
+    setConfirmDelete(false);
+    setDeleting(true);
+    try {
+      const outcome = await deleteNotifications([...selected], user);
+      // Two different outcomes, two different sentences. "Deleted" when they
+      // all went; the count of survivors when some did not.
+      if (outcome.failed.length === 0) {
+        toast.success(t('notification.deletedCount', { count: outcome.removed }));
+      } else {
+        toast.error(
+          t('notification.deletedPartly', {
+            removed: outcome.removed,
+            failed: outcome.failed.length,
+          })
+        );
+      }
+      leaveSelection();
+      void reload();
+    } catch (error) {
+      toast.error(friendlyMessage(error, t));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const set = <K extends keyof ComposeForm>(key: K, value: ComposeForm[K]) => {
     setForm((previous) => ({ ...previous, [key]: value }));
@@ -252,6 +309,49 @@ export function NotificationComposer() {
 
       <SectionHeader title={t('dashboard.recentActivity')} icon="time-outline" />
 
+      {/* Only offered when there is something to select, and only to an
+          admin — the rules allow the delete to nobody else. */}
+      {isAdmin && (history ?? []).length > 0 ? (
+        <View style={styles.selectBar}>
+          {selecting ? (
+            <>
+              <Pressable onPress={leaveSelection} accessibilityRole="button">
+                <Text style={styles.selectAction}>{t('common.cancel')}</Text>
+              </Pressable>
+              <Text style={styles.selectCount}>
+                {t('support.selectedCount', { count: selected.size })}
+              </Text>
+              <Pressable
+                onPress={() => setSelected(new Set((history ?? []).map((item) => item.id)))}
+                accessibilityRole="button"
+              >
+                <Text style={styles.selectAction}>{t('support.selectAll')}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setConfirmDelete(true)}
+                disabled={selected.size === 0 || deleting}
+                accessibilityRole="button"
+              >
+                <Text
+                  style={[styles.selectDelete, selected.size === 0 && styles.selectDisabled]}
+                >
+                  {t('common.delete')}
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              onPress={() => setSelecting(true)}
+              accessibilityRole="button"
+              style={styles.selectStart}
+            >
+              <Ionicons name="checkbox-outline" size={15} color={colors.primary} />
+              <Text style={styles.selectAction}>{t('support.select')}</Text>
+            </Pressable>
+          )}
+        </View>
+      ) : null}
+
       <AsyncBoundary
         loading={loading}
         error={error}
@@ -263,6 +363,25 @@ export function NotificationComposer() {
         <View style={{ gap: spacing.md }}>
           {(history ?? []).map((item) => (
             <Card key={item.id}>
+              {selecting ? (
+                <Pressable
+                  onPress={() => toggleSelected(item.id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected.has(item.id) }}
+                  accessibilityLabel={item.title}
+                  style={styles.tickRow}
+                >
+                  <Ionicons
+                    name={selected.has(item.id) ? 'checkbox' : 'square-outline'}
+                    size={20}
+                    color={selected.has(item.id) ? colors.primary : colors.borderStrong}
+                  />
+                  <Text style={styles.tickLabel} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                </Pressable>
+              ) : null}
+
               <View style={styles.historyHeader}>
                 <Text style={styles.historyTitle} numberOfLines={2}>
                   {item.title}
@@ -424,6 +543,17 @@ export function NotificationComposer() {
       </FormSheet>
 
       <ConfirmDialog
+        visible={confirmDelete}
+        title={t('notification.deleteTitle')}
+        message={t('notification.deleteMessage', { count: selected.size })}
+        confirmLabel={t('common.delete')}
+        destructive
+        loading={deleting}
+        onConfirm={() => void removeSelected()}
+        onCancel={() => setConfirmDelete(false)}
+      />
+
+      <ConfirmDialog
         visible={Boolean(cancelTarget)}
         title={t('common.cancel')}
         message={cancelTarget?.title}
@@ -449,6 +579,27 @@ const styles = StyleSheet.create({
   outcomeCard: { marginTop: spacing.lg, backgroundColor: colors.infoSoft },
   outcomeRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   outcomeText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  selectBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  selectStart: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  selectAction: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  selectCount: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary },
+  selectDelete: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.danger },
+  selectDisabled: { color: colors.textMuted },
+  tickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+    marginBottom: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  tickLabel: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary },
   historyHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',

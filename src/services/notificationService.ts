@@ -382,6 +382,52 @@ export async function saveAnnouncement(
   return newId;
 }
 
+/**
+ * Removes notifications from the history, one call for however many.
+ *
+ * Soft-deleted, like everything else: a notification is a record that people
+ * were told something, and an admin tidying the list should not be able to
+ * erase the evidence that a message went out. It stops appearing, which is
+ * what "delete" means from where they are standing.
+ *
+ * The rules already allowed this — `allow delete: if isAdmin()` — there was
+ * simply no way to ask for it from the app.
+ *
+ * Reported per id. Deleting twenty and having three refused should say which
+ * three rather than discarding the seventeen that worked.
+ */
+export async function deleteNotifications(
+  ids: string[],
+  actor: AppUser
+): Promise<{ removed: number; failed: string[] }> {
+  const failed: string[] = [];
+  let removed = 0;
+
+  for (const id of ids) {
+    try {
+      await softDelete(COLLECTIONS.notifications, id, actor.uid);
+      removed += 1;
+    } catch (error) {
+      console.warn(`[WeeklyClass] could not delete notifications/${id}:`, error);
+      failed.push(id);
+    }
+  }
+
+  if (removed > 0) {
+    await audit
+      .log({
+        actor,
+        action: 'DELETE',
+        collection: COLLECTIONS.notifications,
+        documentId: ids[0] ?? '',
+        summary: `Removed ${removed} notification(s) from the history`,
+      })
+      .catch(() => undefined);
+  }
+
+  return { removed, failed };
+}
+
 export async function deleteAnnouncement(id: string, actor: AppUser): Promise<void> {
   await softDelete(COLLECTIONS.announcements, id, actor.uid);
   await audit.log({
