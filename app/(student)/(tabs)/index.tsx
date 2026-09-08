@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
+import { NotificationBell } from '@/components/shared/NotificationBell';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme';
@@ -155,6 +156,10 @@ export default function StudentHome() {
             </View>
           ) : null}
         </View>
+        {/* Unread messages, on the screen everybody lands on. The tab bar
+            carries the same count, but only once you are looking at it — this
+            is the corner people actually glance at. */}
+        <NotificationBell tint={colors.textSecondary} size={24} />
         <LanguageMenu
           value={dashboardLanguage}
           onChange={setDashboardLanguage}
