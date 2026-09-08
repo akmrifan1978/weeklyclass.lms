@@ -360,7 +360,14 @@ export async function login(identifier: string, password: string): Promise<Login
   // Every Firestore call below depends on request.auth being populated.
   await waitForAuthToken(credential.user);
 
-  let profile = await fetchProfile(credential.user.uid);
+  // Both reads at once. They do not depend on each other, and run in
+  // sequence they put two full round-trips between the password being accepted
+  // and the dashboard appearing.
+  const [fetched, bootstrapClosed] = await Promise.all([
+    fetchProfile(credential.user.uid),
+    bootstrapIsClosed(),
+  ]);
+  let profile = fetched;
 
   // On an unconfigured platform the first successful sign-in becomes the
   // administrator, whether or not a partial profile already exists. A half
@@ -377,7 +384,6 @@ export async function login(identifier: string, password: string): Promise<Login
   // and is trustworthy when it succeeds. If the read itself fails we fall back
   // to the old behaviour and try anyway: a failed read must not be able to
   // strand the very first administrator, which is the whole point of the window.
-  const bootstrapClosed = await bootstrapIsClosed();
   let bootstrapError: unknown = null;
 
   if (!profile && !bootstrapClosed) {
@@ -434,7 +440,10 @@ export async function login(identifier: string, password: string): Promise<Login
     throw new AppError(LOGIN_BLOCKED[profile.status], 'auth/user-disabled');
   }
 
-  await updateDoc(doc(db, COLLECTIONS.users, profile.uid), {
+  // Not awaited. Recording when somebody last signed in is bookkeeping, and
+  // nothing on the screen depends on it — waiting for the server to confirm it
+  // held the whole login open for a round-trip that bought the person nothing.
+  void updateDoc(doc(db, COLLECTIONS.users, profile.uid), {
     lastLoginAt: serverTimestamp(),
   }).catch(() => undefined);
 
@@ -454,7 +463,9 @@ export async function login(identifier: string, password: string): Promise<Login
     void repairIdentityIndex(profile, credential.user.email).catch(() => undefined);
   }
 
-  await audit.log({
+  // Same again: the audit entry is a record of the login, not part of it, and
+  // `audit.log` already swallows its own failures.
+  void audit.log({
     actor: profile,
     action: 'LOGIN',
     collection: COLLECTIONS.users,
@@ -498,15 +509,39 @@ async function repairIdentityIndex(
   });
 }
 
+/**
+ * Resolves when `work` finishes or when `ms` elapses, whichever is first, and
+ * never rejects. For a side effect that is worth waiting a moment for and not
+ * worth waiting indefinitely for.
+ */
+function atMost<T>(work: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    work.catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
+/** How long logout will wait for the audit entry before going anyway. */
+const LOGOUT_AUDIT_BUDGET_MS = 1200;
+
 export async function logout(actor?: AppUser | null): Promise<void> {
   if (actor) {
-    await audit.log({
-      actor,
-      action: 'LOGOUT',
-      collection: COLLECTIONS.users,
-      documentId: actor.uid,
-      summary: `${actor.fullName} signed out`,
-    });
+    // Bounded, not awaited outright. The entry has to be written while the
+    // person is still signed in — the rules require it — so it cannot simply be
+    // fired afterwards. But waiting for the server to confirm it is what made
+    // signing out on a weak connection look like the app had frozen: a write
+    // that never came back held the whole thing open with nothing on screen to
+    // explain why. It gets a moment; then logout proceeds regardless.
+    await atMost(
+      audit.log({
+        actor,
+        action: 'LOGOUT',
+        collection: COLLECTIONS.users,
+        documentId: actor.uid,
+        summary: `${actor.fullName} signed out`,
+      }),
+      LOGOUT_AUDIT_BUDGET_MS
+    );
   }
   await fbSignOut(auth);
 }

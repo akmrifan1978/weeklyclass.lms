@@ -54,17 +54,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialising, setInitialising] = useState(true);
   const [busy, setBusy] = useState(false);
   const profileUnsubscribe = useRef<(() => void) | null>(null);
+  /** Who the live listener is currently following, so it is not rebuilt. */
+  const watchedUid = useRef<string | null>(null);
 
   const stopWatching = useCallback(() => {
     profileUnsubscribe.current?.();
     profileUnsubscribe.current = null;
+    watchedUid.current = null;
   }, []);
 
   /** Keeps the profile in sync and signs the user out if access is revoked. */
   const watchProfile = useCallback(
     (uid: string) =>
       new Promise<void>((resolve) => {
+        // Already following this person. Signing in used to build this listener
+        // three times over — once from `login`, once when the auth state change
+        // it caused fired, and once more if the profile document changed — and
+        // each rebuild is a fresh read of a document already on screen.
+        if (watchedUid.current === uid && profileUnsubscribe.current) {
+          resolve();
+          return;
+        }
+
         stopWatching();
+        watchedUid.current = uid;
         let settled = false;
         profileUnsubscribe.current = watchDoc<AppUser>(
           COLLECTIONS.users,
@@ -127,7 +140,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBusy(true);
       try {
         const { user: profile } = await authService.login(identifier, password);
-        await watchProfile(profile.uid);
+
+        // Show the dashboard from the profile the sign-in already fetched,
+        // rather than holding the login screen open for a listener to re-read
+        // the same document. The listener still starts — it is what makes a
+        // revoked permission take effect without signing out — it just is not
+        // something the person has to wait behind.
+        setUser(profile);
+        void watchProfile(profile.uid);
+
         logEvent(AnalyticsEvents.login, { role: profile.role });
         return profile;
       } finally {
@@ -141,10 +162,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBusy(true);
     try {
       logEvent(AnalyticsEvents.logout);
-      await pushService.cancelAllLocal();
-      await authService.logout(user);
+
+      // The session ends here, on screen, before any of the tidying up. It used
+      // to end last: the person waited for scheduled notifications to be
+      // cancelled and for an audit write to come back from the server, with the
+      // dashboard still in front of them and nothing indicating anything was
+      // happening. On a weak connection that reads as a frozen app.
+      //
+      // Dropping the listener first also stops it firing a permission error
+      // against a session that is in the middle of being ended.
       stopWatching();
       setUser(null);
+
+      // Local reminders on the device. Nothing remote, nothing anybody waits
+      // for, and a failure costs a stale reminder rather than a stuck logout.
+      void pushService.cancelAllLocal().catch(() => undefined);
+
+      await authService.logout(user);
     } finally {
       setBusy(false);
     }
