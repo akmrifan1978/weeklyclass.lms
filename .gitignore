@@ -50,3 +50,6 @@ yarn-error.log*
 
 # The service-account key. Never commit this — it is full admin access.
 serviceAccount.json
+
+# Service logs from the notification sender.
+logs/

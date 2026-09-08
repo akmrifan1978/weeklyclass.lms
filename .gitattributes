@@ -1,0 +1,6 @@
+# Windows batch and script files must keep CRLF: cmd.exe mis-parses a .cmd
+# with Unix line endings, and the failure is a garbled command rather than a
+# clear error.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.vbs text eol=crlf
