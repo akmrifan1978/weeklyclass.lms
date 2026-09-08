@@ -8,9 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
-import { useAsync } from '@/hooks/useAsync';
 import { relativeTime } from '@/utils/date';
-import { inboxFor, markAllRead, markRead } from '@/services/notificationService';
+import { markAllRead, markRead } from '@/services/notificationService';
+import { useNotifications } from '@/contexts/NotificationsContext';
 import type { AppNotification, NotificationCategory } from '@/types';
 import {
   AppHeader,
@@ -47,24 +47,23 @@ export function NotificationList() {
   const router = useRouter();
   const [enablingPush, setEnablingPush] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!user) return [] as AppNotification[];
-    return inboxFor(user, 40);
-  }, [user]);
+  /**
+   * Live, not fetched.
+   *
+   * A notification an admin deletes has to leave this list at the moment it is
+   * deleted — not the next time somebody happens to pull down to refresh. A
+   * notice about a cancelled class that goes on standing is worse than no
+   * notice at all.
+   */
+  const { items, loading, error, reload } = useNotifications();
 
-  const { data, loading, refreshing, error, refresh, reload, setData } = useAsync(load, [user?.uid]);
-
-  const items = data ?? [];
   const unread = items.filter((item) => !(item.readBy ?? []).includes(user?.uid ?? ''));
 
   const handleOpen = async (item: AppNotification) => {
+    // No local echo of the read state: the listener carries the write back,
+    // and setting it here as well made the row flicker between the two.
     if (user && !(item.readBy ?? []).includes(user.uid)) {
       await markRead(item.id, user.uid);
-      setData(
-        items.map((row) =>
-          row.id === item.id ? { ...row, readBy: [...(row.readBy ?? []), user.uid] } : row
-        )
-      );
     }
     if (item.route) router.push(item.route as never);
   };
@@ -72,7 +71,6 @@ export function NotificationList() {
   const handleMarkAll = async () => {
     if (!user) return;
     await markAllRead(items, user.uid);
-    setData(items.map((row) => ({ ...row, readBy: [...(row.readBy ?? []), user.uid] })));
     toast.success(t('common.success'));
   };
 
@@ -107,7 +105,7 @@ export function NotificationList() {
         }
       />
 
-      <Screen refreshing={refreshing} onRefresh={refresh}>
+      <Screen>
         <Button
           label={t('notification.enablePush')}
           icon="notifications-outline"

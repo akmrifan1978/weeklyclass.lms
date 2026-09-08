@@ -1,40 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { useAuth } from '@/contexts/AuthContext';
 import { brand, colors, fontSize, fontWeight, layout } from '@/constants/theme';
-import { inboxFor, unreadCount } from '@/services/notificationService';
+import { useNotifications } from '@/contexts/NotificationsContext';
 
 export default function StudentTabsLayout() {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const [unread, setUnread] = useState(0);
-
-  // A light poll keeps the badge fresh without holding a listener open on a
-  // collection the user only partially matches.
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-
-    const refresh = async () => {
-      try {
-        const items = await inboxFor(user, 30);
-        if (!cancelled) setUnread(unreadCount(items, user.uid));
-      } catch {
-        // Badge is cosmetic; failures stay silent.
-      }
-    };
-
-    void refresh();
-    const timer = setInterval(refresh, 120_000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [user]);
+  /**
+   * The badge reads the app's one live subscription rather than polling.
+   *
+   * It used to re-fetch the whole inbox every two minutes, which cost four
+   * or five reads whether or not anything had happened and still left the
+   * count up to two minutes stale — so a notification an admin had deleted
+   * went on being counted. Now it changes when the data does.
+   */
+  const { unread } = useNotifications();
 
   return (
     <Tabs
