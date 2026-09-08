@@ -14,6 +14,7 @@ import { COLLECTIONS, STORAGE_KEYS } from '@/constants/app';
 import { watchDoc } from '@/services/firestore';
 import * as authService from '@/services/authService';
 import * as pushService from '@/services/pushService';
+import { resetDashboardStats } from '@/services/statsService';
 import { setAnalyticsUser, logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { allPermissions } from '@/types/permissions';
@@ -174,6 +175,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBusy(true);
     try {
       logEvent(AnalyticsEvents.logout);
+      // The dashboard counters are held in memory for a minute. Dropping them
+      // here means the next person to sign in on this device never sees the
+      // last one's figures.
+      resetDashboardStats();
 
       // The session ends here, on screen, before any of the tidying up. It used
       // to end last: the person waited for scheduled notifications to be

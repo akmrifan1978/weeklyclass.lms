@@ -9,7 +9,31 @@ import { countWhere } from './firestore';
  * read per 1,000 matched documents instead of one per document. The whole
  * dashboard is ~11 reads regardless of how large the platform grows.
  */
-export async function loadDashboardStats(): Promise<DashboardStats> {
+/**
+ * The last set of counters, and when they were taken.
+ *
+ * `useAsync` refetches whenever the screen mounts, so walking Home -> Messages
+ * -> Home re-ran all eleven aggregations for numbers that had not moved. In
+ * memory rather than on disk on purpose: these are counts of other people's
+ * records, they go stale by the minute, and a figure surviving a reload would
+ * be worse than one that simply gets fetched again.
+ */
+let cache: { at: number; value: DashboardStats } | null = null;
+
+/** Long enough to cover moving around the app, short enough to stay true. */
+const CACHE_MS = 60_000;
+
+/** Drops the counters. Called when the session ends, so the next person in
+ *  never sees the last one's dashboard. */
+export function resetDashboardStats(): void {
+  cache = null;
+}
+
+export async function loadDashboardStats(
+  options: { force?: boolean } = {}
+): Promise<DashboardStats> {
+  if (!options.force && cache && Date.now() - cache.at < CACHE_MS) return cache.value;
+
   const [
     totalStudents,
     activeStudents,
@@ -42,7 +66,7 @@ export async function loadDashboardStats(): Promise<DashboardStats> {
     countWhere(COLLECTIONS.notifications, [['status', '==', 'sent']]),
   ]);
 
-  return {
+  const value: DashboardStats = {
     totalStudents,
     activeStudents,
     totalTeachers,
@@ -55,6 +79,9 @@ export async function loadDashboardStats(): Promise<DashboardStats> {
     pendingRegistrations,
     notificationsSent,
   };
+
+  cache = { at: Date.now(), value };
+  return value;
 }
 
 /** Counters for a teacher, scoped to the classes they are assigned to. */

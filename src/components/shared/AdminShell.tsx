@@ -19,6 +19,7 @@ import {
   TOUCH_TARGET,
 } from '@/constants/theme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { NotificationBell } from '@/components/shared/NotificationBell';
 import { Avatar, ConfirmDialog } from '@/components/ui';
 import type { Permission } from '@/types';
 
@@ -255,6 +256,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <Text style={styles.mobileTitle} numberOfLines={1}>
           {APP_NAME}
         </Text>
+        {/* The corner of the bar, where a message arriving has to be visible
+            without going looking for it. The admin shell has no tab bar, so
+            until now nothing here said anything had come in. */}
+        <NotificationBell />
         <Avatar name={user?.fullName ?? '?'} uri={user?.profileImage} size={32} />
         <Pressable
           onPress={() => setConfirmLogout(true)}
