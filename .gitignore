@@ -53,3 +53,6 @@ serviceAccount.json
 
 # Service logs from the notification sender.
 logs/
+
+# Database backups contain real personal data. Never commit them.
+backups/
