@@ -48,8 +48,10 @@
     "@types/react": "~19.2.2",
     "@types/react-dom": "^19.2.5",
     "eslint": "^10.9.1",
+    "firebase-admin": "^14.3.0",
     "prettier": "^3.9.6",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "web-push": "^3.6.7"
   },
   "scripts": {
     "start": "expo start",

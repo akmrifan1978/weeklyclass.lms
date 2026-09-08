@@ -16,6 +16,7 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { initAnalytics } from '@/firebase/analytics';
 import { initAppCheck } from '@/firebase/appCheck';
 import { addNotificationResponseListener } from '@/services/pushService';
+import { startDeviceNotifications } from '@/services/deviceNotify';
 import { brand } from '@/constants/theme';
 import { useCalendarSystem } from '@/hooks/useCalendarSystem';
 import { LoadingState } from '@/components/ui';
@@ -103,6 +104,33 @@ function RoleGate({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * Announces new notifications on the device while the app is open or merely in
+ * the background.
+ *
+ * Mounted here rather than on a screen so it survives navigation: a listener
+ * that restarts every time somebody changes page would re-take its baseline
+ * each time and announce nothing.
+ *
+ * Torn down and restarted when the person changes, so one account's
+ * notifications never reach the next person to sign in on the same phone.
+ */
+function DeviceNotifications() {
+  const { user } = useAuth();
+  const uid = user?.uid;
+
+  useEffect(() => {
+    if (!user || !uid) return undefined;
+    return startDeviceNotifications(user);
+    // Keyed on the uid, not the user object: the profile document changes on
+    // every read of it, and rebuilding five listeners each time would be a
+    // quiet waste of the free quota.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid]);
+
+  return null;
+}
+
+/**
  * Pulls the per-dashboard language choices off the profile once it loads, so a
  * person signing in on a new device finds their dashboards already in the
  * languages they chose. The device's own stored choices still win — see
@@ -153,6 +181,7 @@ function RootNavigator() {
   return (
     <RoleGate>
       <ScopeLanguageSync />
+      <DeviceNotifications />
       {/* Above the navigator so it cannot be present on one screen and missing
           on the next. */}
       <OfflineBanner />

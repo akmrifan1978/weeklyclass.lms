@@ -108,6 +108,10 @@ async function sendOne(webpush, db, doc) {
 
   let sent = 0;
   let gone = 0;
+  // Kept, not just printed. A run that reported "1 device, 0 sent" and put the
+  // reason only on a console nobody was watching is why this went unexplained
+  // for days — the record has to carry enough to diagnose it later.
+  const errors = [];
 
   for (const sub of subscriptions) {
     const row = sub.data();
@@ -130,14 +134,21 @@ async function sendOne(webpush, db, doc) {
         await sub.ref.update({ deleted: true, retiredAt: new Date() });
         gone += 1;
       } else {
-        console.warn(`  ! ${row.userName || row.userId}: ${status || error.message}`);
+        const reason = `${status || ''} ${error.body || error.message || error}`.trim();
+        errors.push({ user: row.userName || row.userId || '?', reason: reason.slice(0, 200) });
+        console.warn(`  ! ${row.userName || row.userId}: ${reason}`);
       }
     }
   }
 
   await doc.ref.update({
     pushedAt: new Date(),
-    pushReport: { devices: subscriptions.length, sent, retired: gone },
+    pushReport: {
+      devices: subscriptions.length,
+      sent,
+      retired: gone,
+      errors: errors.slice(0, 5),
+    },
   });
 
   console.log(

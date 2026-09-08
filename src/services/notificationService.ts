@@ -18,7 +18,9 @@ import {
   listPage,
   softDelete,
   updateDocById,
+  watchList,
   type Cursor,
+  type ListOptions,
   type Page,
 } from './firestore';
 import { sendExpoPush, type PushSendReport } from './pushService';
@@ -184,53 +186,28 @@ export async function send(input: SendInput, actor: AppUser): Promise<SendOutcom
  * one small query and the results are merged. That is 3-4 reads per refresh,
  * which is well inside the free daily quota.
  */
-export async function inboxFor(user: AppUser, pageSize = 30): Promise<AppNotification[]> {
-  const now = new Date();
+function inboxQueries(user: AppUser, pageSize: number): ListOptions[] {
   const audience: NotificationTarget = user.role === 'teacher' ? 'teachers' : 'students';
+  const base = { orderByField: 'createdAt', direction: 'desc' as const, pageSize };
 
-  const queries: Promise<AppNotification[]>[] = [
-    listAll<AppNotification>(COLLECTIONS.notifications, {
-      filters: [['targetRole', '==', 'all']],
-      orderByField: 'createdAt',
-      direction: 'desc',
-      pageSize,
-    }),
-    listAll<AppNotification>(COLLECTIONS.notifications, {
-      filters: [['targetRole', '==', audience]],
-      orderByField: 'createdAt',
-      direction: 'desc',
-      pageSize,
-    }),
-    listAll<AppNotification>(COLLECTIONS.notifications, {
-      filters: [['userId', '==', user.uid]],
-      orderByField: 'createdAt',
-      direction: 'desc',
-      pageSize,
-    }),
+  // Annotated rather than inferred: without it the literal filters widen to
+  // string[][] and stop matching the tuple ListOptions expects.
+  const specs: (ListOptions | null)[] = [
+    { ...base, filters: [['targetRole', '==', 'all']] },
+    { ...base, filters: [['targetRole', '==', audience]] },
+    { ...base, filters: [['userId', '==', user.uid]] },
+    user.classId ? { ...base, filters: [['targetClassId', '==', user.classId]] } : null,
+    user.branchId ? { ...base, filters: [['targetBranchId', '==', user.branchId]] } : null,
   ];
+  return specs.filter((spec): spec is ListOptions => spec !== null);
+}
 
-  if (user.classId) {
-    queries.push(
-      listAll<AppNotification>(COLLECTIONS.notifications, {
-        filters: [['targetClassId', '==', user.classId]],
-        orderByField: 'createdAt',
-        direction: 'desc',
-        pageSize,
-      })
-    );
-  }
-  if (user.branchId) {
-    queries.push(
-      listAll<AppNotification>(COLLECTIONS.notifications, {
-        filters: [['targetBranchId', '==', user.branchId]],
-        orderByField: 'createdAt',
-        direction: 'desc',
-        pageSize,
-      })
-    );
-  }
-
-  const groups = await Promise.all(queries);
+/** Merges the audience queries into the one list a reader should see. */
+function mergeInbox(
+  groups: AppNotification[][],
+  pageSize: number,
+  now = new Date()
+): AppNotification[] {
   const merged = new Map<string, AppNotification>();
   for (const item of groups.flat()) {
     // A scheduled notification stays hidden until its moment arrives.
@@ -245,6 +222,51 @@ export async function inboxFor(user: AppUser, pageSize = 30): Promise<AppNotific
   return Array.from(merged.values())
     .sort((a, b) => sortKey(b) - sortKey(a))
     .slice(0, pageSize);
+}
+
+export async function inboxFor(user: AppUser, pageSize = 30): Promise<AppNotification[]> {
+  const groups = await Promise.all(
+    inboxQueries(user, pageSize).map((spec) =>
+      listAll<AppNotification>(COLLECTIONS.notifications, spec)
+    )
+  );
+  return mergeInbox(groups, pageSize);
+}
+
+/**
+ * The same inbox, live.
+ *
+ * A listener rather than a poll, and the difference is not stylistic. Polling
+ * `inboxFor` costs four to five reads every time it runs whether or not
+ * anything happened; at one minute apart across a class that alone would eat
+ * the free daily quota. A listener is charged for documents actually delivered,
+ * so an idle hour costs nothing.
+ *
+ * This is what lets the app raise a real notification on the phone the moment
+ * one is written, with no server anywhere — see `deviceNotify`.
+ */
+export function watchInbox(
+  user: AppUser,
+  onNext: (items: AppNotification[]) => void,
+  options: { pageSize?: number; onError?: (error: unknown) => void } = {}
+): () => void {
+  const pageSize = options.pageSize ?? 30;
+  const specs = inboxQueries(user, pageSize);
+  const groups: AppNotification[][] = specs.map(() => []);
+
+  const unsubscribes = specs.map((spec, index) =>
+    watchList<AppNotification>(
+      COLLECTIONS.notifications,
+      spec,
+      (items) => {
+        groups[index] = items;
+        onNext(mergeInbox(groups, pageSize));
+      },
+      options.onError
+    )
+  );
+
+  return () => unsubscribes.forEach((stop) => stop());
 }
 
 function sortKey(item: AppNotification): number {
