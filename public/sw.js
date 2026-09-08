@@ -23,7 +23,25 @@
  * student another student's answer. So only same-origin static assets are ever
  * stored here.
  */
-const VERSION = 'weeklyclass-v2';
+/**
+ * The build this worker belongs to.
+ *
+ * THIS LINE IS REWRITTEN AT EXPORT TIME by scripts/stamp-sw.js, and everything
+ * about updating an installed app depends on it changing.
+ *
+ * A browser decides whether to install a new worker by comparing the bytes of
+ * sw.js with the copy it already has. This file used to be identical in every
+ * deploy, so `registration.update()` fetched it, found nothing new, and stopped
+ * there: no new worker, no `controllerchange`, and so the reload that picks up
+ * the new bundle never happened. The app asked for updates perfectly and had
+ * no way to notice one had arrived.
+ *
+ * The stamp is the entry bundle's content hash, not a timestamp, so the bytes
+ * change when the app changes and not when it is merely redeployed — a deploy
+ * of identical code does not reload anybody's phone for nothing.
+ */
+const BUILD = 'dev';
+const VERSION = 'weeklyclass-' + BUILD;
 const SHELL = '/index.html';
 
 const OFFLINE_PAGE =

@@ -56,7 +56,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "expo export --platform web",
+    "build:web": "expo export --platform web && node scripts/stamp-sw.js",
     "typecheck": "tsc --noEmit",
     "seed": "node scripts/seed.js",
     "set-claims": "node scripts/set-claims.js",
@@ -64,7 +64,7 @@
     "firebase:indexes": "firebase deploy --only firestore:indexes",
     "firebase:deploy": "firebase deploy --only firestore:rules,firestore:indexes",
     "emulators": "firebase emulators:start",
-    "deploy:web": "expo export --platform web && firebase deploy --only hosting",
+    "deploy:web": "npm run build:web && firebase deploy --only hosting",
     "reset-link": "node scripts/reset-link.js --key ./serviceAccount.json --user",
     "push": "node scripts/send-push.js --key ./serviceAccount.json",
     "push:watch": "node scripts/send-push.js --key ./serviceAccount.json --watch"
