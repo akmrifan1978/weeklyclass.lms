@@ -263,7 +263,14 @@ service cloud.firestore {
                            // people write for themselves.
                            'dashboardLanguages', 'quranPlan',
                            'dateOfBirth', 'gender', 'qualification',
-                           'pushTokens', 'lastLoginAt', 'searchTokens', 'updatedAt'
+                           'pushTokens', 'lastLoginAt', 'searchTokens', 'updatedAt',
+                           // Cleared by the app once a new password has been
+                           // set. A prompt rather than a boundary: somebody
+                           // could clear it without changing anything, and all
+                           // they would gain is skipping a screen on their own
+                           // account with a password they already know. An
+                           // admin is the only one who can set it.
+                           'mustChangePassword'
                          ])
                     )
                     // First-run only: an account that registered before any

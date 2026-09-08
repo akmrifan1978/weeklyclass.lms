@@ -16,6 +16,8 @@ import {
   createUserAsAdmin,
   listUsers,
   removeUser,
+  requirePasswordChange,
+  requirePasswordChangeForAll,
   sendResetEmail,
   setStatus,
   updateUser,
@@ -74,6 +76,9 @@ export function UserManager({
   const [selected, setSelected] = useState<AppUser | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
+  /** Set while the "everyone" version is waiting to be confirmed. */
+  const [confirmResetAll, setConfirmResetAll] = useState(false);
+
   const [confirm, setConfirm] = useState<{ user: AppUser; action: 'delete' | 'deactivate' } | null>(
     null
   );
@@ -166,6 +171,18 @@ export function UserManager({
         <Text style={styles.title} accessibilityRole="header">
           {title}
         </Text>
+        {/* Requiring it of everybody at once. Beside Add rather than buried
+            in a menu, because it is a thing an admin does deliberately after
+            something has gone wrong and needs to be findable then. */}
+        {can('MANAGE_USERS') ? (
+          <Button
+            label={t('auth.requireResetAll')}
+            icon="key-outline"
+            variant="outline"
+            size="sm"
+            onPress={() => setConfirmResetAll(true)}
+          />
+        ) : null}
         {canCreate ? (
           <Button
             label={t('common.add')}
@@ -313,6 +330,31 @@ export function UserManager({
 
             <SectionHeader title={t('common.actions')} icon="options-outline" />
             <View style={{ gap: spacing.md }}>
+              {/* Requires a new password of this one person. Their current one
+                  keeps working until they set it — see requirePasswordChange
+                  for why a client cannot do more than that. */}
+              {can('MANAGE_USERS') ? (
+                <Button
+                  label={t('auth.requireReset')}
+                  icon="key-outline"
+                  variant="outline"
+                  fullWidth
+                  loading={busy}
+                  onPress={() => {
+                    const target = selected;
+                    setSelected(null);
+                    void (async () => {
+                      try {
+                        await requirePasswordChange([target.uid], actor!);
+                        toast.success(t('auth.requireResetDone', { count: 1 }));
+                      } catch (error) {
+                        toast.error(friendlyMessage(error, t));
+                      }
+                    })();
+                  }}
+                />
+              ) : null}
+
               {canEdit ? (
                 <Button
                   label={t('common.edit')}
@@ -411,6 +453,30 @@ export function UserManager({
           setCreating(false);
           setEditing(null);
           await list.reload();
+        }}
+      />
+
+      {/* The message says plainly that existing passwords keep working. An
+          admin reaching for this is usually reacting to a leak, and letting
+          them believe it cuts access off would be the harmful kind of wrong. */}
+      <ConfirmDialog
+        visible={confirmResetAll}
+        title={t('auth.requireResetAll')}
+        message={t('auth.requireResetConfirm')}
+        confirmLabel={t('common.confirm')}
+        loading={busy}
+        onCancel={() => setConfirmResetAll(false)}
+        onConfirm={() => {
+          setConfirmResetAll(false);
+          void (async () => {
+            try {
+              const count = await requirePasswordChangeForAll(actor!);
+              toast.success(t('auth.requireResetDone', { count }));
+              list.refresh();
+            } catch (error) {
+              toast.error(friendlyMessage(error, t));
+            }
+          })();
         }}
       />
 

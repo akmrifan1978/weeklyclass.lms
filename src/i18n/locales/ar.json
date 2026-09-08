@@ -144,7 +144,18 @@
     "classIdEnter": "معرّف صف JDC",
     "classIdEnterHint": "الرمز الذي أعطاك إياه معلمك، مثل JDC-ADM.",
     "classIdUnknown": "لا يوجد فصل بهذا الرقم. راجعه مع معلمك.",
-    "classIdMatched": "الانضمام إلى {{name}}"
+    "classIdMatched": "الانضمام إلى {{name}}",
+    "mustChangeTitle": "اختر كلمة مرور جديدة",
+    "mustChangeBody": "طلب المشرف من الجميع تعيين كلمة مرور جديدة. لا يمكنك المتابعة قبل ذلك.",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة المرور الجديدة",
+    "setNewPassword": "تعيين كلمة المرور",
+    "passwordMustDiffer": "يجب أن تختلف كلمة المرور الجديدة عن الحالية.",
+    "requireReset": "طلب كلمة مرور جديدة",
+    "requireResetAll": "طلب كلمة مرور جديدة من الجميع",
+    "requireResetConfirm": "سيُطلب من الجميع عداك تعيين كلمة مرور جديدة عند تسجيل الدخول التالي. تظل كلمات مرورهم الحالية صالحة حتى يفعلوا ذلك — ولا يمكن إيقافها من هنا.",
+    "requireResetDone_one": "سيُطلب ذلك من حساب {{count}} عند تسجيل الدخول التالي.",
+    "requireResetDone_other": "سيُطلب ذلك من {{count}} حسابًا عند تسجيل الدخول التالي."
   },
   "validation": {
     "identifierRequired": "أدخل بريدك الإلكتروني أو اسم المستخدم",

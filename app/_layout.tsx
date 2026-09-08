@@ -17,6 +17,7 @@ import { initAnalytics } from '@/firebase/analytics';
 import { initAppCheck } from '@/firebase/appCheck';
 import { addNotificationResponseListener } from '@/services/pushService';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import { PasswordChangeGate } from '@/components/shared/PasswordChangeGate';
 import { brand } from '@/constants/theme';
 import { useCalendarSystem } from '@/hooks/useCalendarSystem';
 import { LoadingState } from '@/components/ui';
@@ -157,13 +158,18 @@ function RootNavigator() {
       {/* Above the navigator so it cannot be present on one screen and missing
           on the next. */}
       <OfflineBanner />
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(student)" />
-        <Stack.Screen name="(teacher)" />
-        <Stack.Screen name="(admin)" />
-      </Stack>
+      {/* Wraps the navigator rather than sitting on a screen: a person who
+          owes a new password must not be able to reach any route at all, and
+          a gate inside one screen is a gate with a way around it. */}
+      <PasswordChangeGate>
+        <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(student)" />
+          <Stack.Screen name="(teacher)" />
+          <Stack.Screen name="(admin)" />
+        </Stack>
+      </PasswordChangeGate>
     </RoleGate>
   );
 }

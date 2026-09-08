@@ -144,7 +144,18 @@
     "classIdEnter": "JDC-පන්ති ID",
     "classIdEnterHint": "ඔබේ ගුරුවරයා දුන් කේතය, උදා: JDC-ADM.",
     "classIdUnknown": "එම අංකයට පන්තියක් නැත. ගුරුවරයාගෙන් විමසන්න.",
-    "classIdMatched": "{{name}} පන්තියට එක් වේ"
+    "classIdMatched": "{{name}} පන්තියට එක් වේ",
+    "mustChangeTitle": "නව මුරපදයක් තෝරන්න",
+    "mustChangeBody": "සැමට නව මුරපදයක් සැකසීමට පරිපාලක ඉල්ලා ඇත. එය කරන තුරු ඔබට ඉදිරියට යා නොහැක.",
+    "currentPassword": "වත්මන් මුරපදය",
+    "newPassword": "නව මුරපදය",
+    "setNewPassword": "නව මුරපදය සකසන්න",
+    "passwordMustDiffer": "නව මුරපදය වත්මන් එකට වඩා වෙනස් විය යුතුය.",
+    "requireReset": "නව මුරපදයක් අවශ්‍ය කරන්න",
+    "requireResetAll": "සැමගෙන් නව මුරපදයක් අවශ්‍ය කරන්න",
+    "requireResetConfirm": "ඔබ හැර සැමගෙන් ඊළඟ වර පිවිසෙන විට නව මුරපදයක් සැකසීමට ඉල්ලනු ලැබේ. එතෙක් ඔවුන්ගේ වත්මන් මුරපද ක්‍රියා කරයි — ඒවා මෙතැනින් නැවැත්විය නොහැක.",
+    "requireResetDone_one": "ගිණුම් {{count}} කට ඊළඟ පිවිසුමේදී ඉල්ලනු ලැබේ.",
+    "requireResetDone_other": "ගිණුම් {{count}} කට ඊළඟ පිවිසුමේදී ඉල්ලනු ලැබේ."
   },
   "validation": {
     "identifierRequired": "විද්‍යුත් තැපෑල හෝ පරිශීලක නාමය ඇතුළත් කරන්න",

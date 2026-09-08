@@ -14,7 +14,16 @@ import { AppError } from '@/utils/errors';
 import { DEFAULT_TEACHER_PERMISSIONS, allPermissions } from '@/types/permissions';
 import type { AppUser, LanguageCode, Permission, PermissionMap, UserRole, UserStatus } from '@/types';
 
-import { getById, listPage, softDelete, updateDocById, type Cursor, type Page } from './firestore';
+import {
+  batchWrite,
+  getById,
+  listAll,
+  listPage,
+  softDelete,
+  updateDocById,
+  type Cursor,
+  type Page,
+} from './firestore';
 import {
   authEmailForMobile,
   claimIdentity,
@@ -358,4 +367,76 @@ export async function saveDashboardLanguage(
   } catch {
     // Nothing to do — the choice already applies on this device.
   }
+}
+
+// ---------------------------------------------------------------------------
+// Requiring a new password
+// ---------------------------------------------------------------------------
+
+/**
+ * Marks accounts as needing a new password at their next sign-in.
+ *
+ * WHAT THIS DOES AND, IMPORTANTLY, WHAT IT DOES NOT. It sets a flag that the
+ * app honours: the person signs in as usual and is then held on a change-
+ * password screen until they set a new one. It does NOT invalidate the old
+ * password, because a client cannot. Only the Firebase Admin SDK can set
+ * another account's password, and that needs a trusted machine — see
+ * scripts/send-push.js for the pattern if that is ever wanted.
+ *
+ * So this is the honest shape of it: everybody is forced to choose a new
+ * password before they can use the app again, and the old one still opens the
+ * door until they do. For "everyone must re-secure their account" that is
+ * enough. For "this password is compromised and must stop working this second"
+ * it is not, and nothing that runs in a browser could be.
+ *
+ * Nobody's existing password is read, shown or stored anywhere by this.
+ */
+export async function requirePasswordChange(
+  uids: string[],
+  actor: AppUser
+): Promise<number> {
+  if (uids.length === 0) return 0;
+
+  await batchWrite(
+    uids.map((uid) => ({
+      type: 'update' as const,
+      path: COLLECTIONS.users,
+      id: uid,
+      data: { mustChangePassword: true, updatedAt: serverTimestamp() },
+    }))
+  );
+
+  await audit.log({
+    actor,
+    action: 'UPDATE',
+    collection: COLLECTIONS.users,
+    documentId: uids.length === 1 ? uids[0] : undefined,
+    summary:
+      uids.length === 1
+        ? 'Required a new password at next sign-in'
+        : `Required a new password at next sign-in for ${uids.length} accounts`,
+  });
+
+  return uids.length;
+}
+
+/**
+ * The same, for everybody.
+ *
+ * The actor is skipped. An admin locking themselves out of the tool they are
+ * standing in, in the same click that secures everybody else, is not a helpful
+ * outcome — they can require it of themselves individually if they mean to.
+ */
+export async function requirePasswordChangeForAll(actor: AppUser): Promise<number> {
+  const everyone = await listAll<AppUser>(COLLECTIONS.users, { pageSize: 1000 });
+  const targets = everyone.map((row) => row.uid).filter((uid) => uid && uid !== actor.uid);
+  return requirePasswordChange(targets, actor);
+}
+
+/** Clears the flag. Called once a new password has actually been set. */
+export async function clearPasswordChangeRequirement(uid: string): Promise<void> {
+  await updateDoc(doc(db, COLLECTIONS.users, uid), {
+    mustChangePassword: false,
+    updatedAt: serverTimestamp(),
+  }).catch(() => undefined);
 }

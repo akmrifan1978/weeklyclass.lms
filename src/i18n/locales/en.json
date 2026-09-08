@@ -144,7 +144,18 @@
     "classIdEnter": "JDC-Class ID",
     "classIdEnterHint": "The code your teacher gave you, e.g. JDC-ADM.",
     "classIdUnknown": "No class has that ID. Check it with your teacher.",
-    "classIdMatched": "Joining {{name}}"
+    "classIdMatched": "Joining {{name}}",
+    "mustChangeTitle": "Choose a new password",
+    "mustChangeBody": "An administrator has asked everyone to set a new password. You cannot continue until you do.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "setNewPassword": "Set new password",
+    "passwordMustDiffer": "The new password must be different from the current one.",
+    "requireReset": "Require a new password",
+    "requireResetAll": "Require a new password from everyone",
+    "requireResetConfirm": "Everyone except you will be asked to set a new password the next time they sign in. Their current passwords keep working until they do — this cannot switch them off from here.",
+    "requireResetDone_one": "{{count}} account will be asked at next sign-in.",
+    "requireResetDone_other": "{{count}} accounts will be asked at next sign-in."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",

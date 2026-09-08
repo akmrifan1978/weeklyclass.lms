@@ -812,6 +812,15 @@ export async function changePassword(
   const credential = EmailAuthProvider.credential(user.email, currentPassword);
   await reauthenticateWithCredential(user, credential);
   await updatePassword(user, newPassword);
+
+  // The requirement is satisfied the moment a new password is actually set,
+  // and only then — clearing it before updatePassword resolves would let a
+  // failed change count as a done one. Not awaited: the password has changed
+  // whether or not the flag write lands, and holding the screen open for it
+  // would be waiting on bookkeeping.
+  void updateDoc(doc(db, COLLECTIONS.users, user.uid), {
+    mustChangePassword: false,
+  }).catch(() => undefined);
 }
 
 /**

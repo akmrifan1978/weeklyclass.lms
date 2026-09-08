@@ -59,6 +59,14 @@ export interface AppUser extends BaseDoc {
   classIds?: string[];
   permissions?: PermissionMap;
   lastLoginAt?: FireDate;
+  /**
+   * Set by an admin to force a new password at the next sign-in.
+   *
+   * A flag, not a lock: it holds the person on a change-password screen until
+   * they choose a new one. It cannot invalidate the old password, because only
+   * the Admin SDK can do that — see userService.requirePasswordChange.
+   */
+  mustChangePassword?: boolean;
 
   // Student-specific
   studentId?: string;
