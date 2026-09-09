@@ -83,7 +83,21 @@ const EDITIONS: Record<LanguageCode, (collection: string) => string | null> = {
   si: () => null,
 };
 
-const TAMIL_AVAILABLE = new Set(['bukhari', 'muslim']);
+/*
+ * Tamil exists for Bukhari and NOT for Muslim.
+ *
+ * Muslim was listed here because `tam-muslim` is a real file in the dataset. It
+ * is an empty one — every section of it carries entries with no text at all,
+ * checked across the whole collection. Claiming Tamil for it meant a Tamil
+ * reader got the Arabic and nothing else, while the English translation that
+ * would have helped them was never even offered, because the app believed it
+ * had already found them something better.
+ *
+ * The runtime check below now catches this class of fault on its own, so this
+ * list going stale again costs a wasted request rather than a missing
+ * translation.
+ */
+const TAMIL_AVAILABLE = new Set(['bukhari']);
 
 /** Named translators, so a reader can weigh the rendering they are given. */
 const EDITION_SOURCE: Record<string, string> = {
@@ -165,6 +179,11 @@ async function fetchJson<T>(url: string): Promise<T> {
   } finally {
     clearTimeout(deadline);
   }
+}
+
+/** True when a section payload carries at least one non-empty narration. */
+function hasAnyText(payload: { hadiths?: { text?: string }[] }): boolean {
+  return (payload.hadiths ?? []).some((h) => (h.text ?? '').trim().length > 0);
 }
 
 interface EditionsPayload {
@@ -280,7 +299,7 @@ export async function getSection(
     collection,
     language
   );
-  const cacheKey = `${CACHE_PREFIX}${collection}/${section}/${edition ?? 'ar-only'}/v3`;
+  const cacheKey = `${CACHE_PREFIX}${collection}/${section}/${edition ?? 'ar-only'}/v4`;
 
   const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
   if (cached) return JSON.parse(cached) as HadithSection;
@@ -304,16 +323,51 @@ export async function getSection(
     translationByNumber.set(h.hadithnumber, h.text);
   }
 
+  /*
+   * The edition existed but had nothing in it.
+   *
+   * A file that is present and empty is indistinguishable from a real one until
+   * it is opened, and the dataset contains several. Rather than trusting the
+   * list above for ever, an empty result falls back to English here — the same
+   * outcome as if the language had never been claimed, arrived at from
+   * evidence rather than from a constant somebody has to remember to update.
+   *
+   * English falling back to English is skipped: there is nowhere further to go,
+   * and the request would be the same one again.
+   */
+  let effectiveEdition = edition;
+  let effectiveLanguage = editionLanguage;
+  let effectiveSource = source;
+  let effectiveFallback = isFallback;
+
+  if (edition && translationData && !hasAnyText(translationData) && language !== 'en') {
+    const english = EDITIONS.en(collection);
+    if (english && english !== edition) {
+      const rescued = await fetchJson<SectionPayload>(
+        `${CDN}/editions/${english}/${section}.json`
+      ).catch(() => null);
+
+      if (rescued && hasAnyText(rescued)) {
+        translationByNumber.clear();
+        for (const h of rescued.hadiths ?? []) translationByNumber.set(h.hadithnumber, h.text);
+        effectiveEdition = english;
+        effectiveLanguage = 'en';
+        effectiveSource = EDITION_SOURCE[english];
+        effectiveFallback = true;
+      }
+    }
+  }
+
   const sectionNames = arabicData.metadata.section ?? {};
   const result: HadithSection = {
     collection,
     collectionName: arabicData.metadata.name,
     section,
     sectionName: Object.values(sectionNames)[0] ?? String(section),
-    hasTranslation: Boolean(edition),
-    translationLanguage: editionLanguage,
-    isFallbackLanguage: isFallback,
-    translationSource: source,
+    hasTranslation: Boolean(effectiveEdition),
+    translationLanguage: effectiveLanguage,
+    isFallbackLanguage: effectiveFallback,
+    translationSource: effectiveSource,
     sectionCount: Object.keys(arabicData.metadata.sections ?? sectionNames).length || 0,
     // Entries with no Arabic are dropped: the dataset carries placeholders for
     // sections it has no text for, and a placeholder is not a narration. Left
