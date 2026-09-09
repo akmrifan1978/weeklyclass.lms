@@ -200,10 +200,17 @@ export default function SplashScreen() {
             <Text style={styles.appName} accessibilityRole="header">
               {settings?.appName?.trim() || APP_NAME}
             </Text>
+            {/* The same line, set as a badge rather than as a caption.
+                It is the one piece of context a first-time visitor needs —
+                where this is — and as plain grey text under the title it read
+                as small print. */}
             {settings?.venue?.trim() ? (
-              <Text style={styles.venue}>
-                {withVenueLabel(settings.venue, t('settings.venueLabel'))}
-              </Text>
+              <View style={styles.venueBadge}>
+                <Ionicons name="location" size={12} color={brand.orangeLight} />
+                <Text style={styles.venue} numberOfLines={2}>
+                  {withVenueLabel(settings.venue, t('settings.venueLabel'))}
+                </Text>
+              </View>
             ) : null}
             <View style={styles.rule} />
             <Text style={styles.tagline}>
@@ -426,8 +433,8 @@ const styles = StyleSheet.create({
   inner: { width: '100%', maxWidth: 460, alignSelf: 'center' },
   brandBlock: { alignItems: 'center' },
   logo: {
-    width: 84,
-    height: 84,
+    width: 88,
+    height: 88,
     borderRadius: radius.xxl,
     backgroundColor: colors.surface,
     alignItems: 'center',
@@ -442,7 +449,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.display,
     fontWeight: fontWeight.heavy,
     color: colors.textInverse,
-    letterSpacing: 0.4,
+    // Display sizes want tightening, not spacing out. The positive tracking
+    // here was inherited from body-text defaults and made the title look
+    // stretched at the one size where letterforms already have room.
+    letterSpacing: -0.5,
+    lineHeight: fontSize.display * 1.1,
     textAlign: 'center',
   },
   rule: {
@@ -452,17 +463,33 @@ const styles = StyleSheet.create({
     backgroundColor: brand.orange,
     marginVertical: spacing.lg,
   },
+  venueBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
   venue: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
     color: brand.sandLight,
     textAlign: 'center',
-    marginTop: 6,
+    letterSpacing: 0.3,
   },
   tagline: {
     fontSize: fontSize.md,
-    color: brand.sandLight,
+    // A step back from the badge and the title, so the three read in order
+    // rather than competing.
+    color: 'rgba(229,197,160,0.78)',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
     paddingHorizontal: spacing.lg,
   },
   sectionLabel: {
@@ -474,7 +501,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     textAlign: 'center',
   },
-  roleBlock: { marginBottom: spacing.xl },
+  roleBlock: { marginBottom: spacing.lg },
   staffRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -488,8 +515,12 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    paddingHorizontal: spacing.md,
+    // A shade stronger, and on a ground of its own: at 0.22 on navy the
+    // outline was almost not there, and the two secondary buttons read as
+    // floating text rather than as things to press.
+    borderColor: 'rgba(255,255,255,0.30)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: spacing.lg,
     // Short of the 44pt guideline on purpose is NOT what this is: the row is
     // padded to a comfortable tap target while reading as secondary.
     paddingVertical: 9,
@@ -500,11 +531,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    // Softer than the cards behind it, which is what makes the primary action
+    // read as a button rather than as another panel.
+    borderRadius: radius.xl,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     marginBottom: spacing.md,
-    minHeight: 62,
+    minHeight: 66,
     ...shadow.md,
   },
   roleIcon: {
