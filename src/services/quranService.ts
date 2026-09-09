@@ -426,3 +426,65 @@ export async function juzStart(juz: number): Promise<JuzStart> {
   void AsyncStorage.setItem(cacheKey, JSON.stringify(start)).catch(() => undefined);
   return start;
 }
+
+// ---------------------------------------------------------------------------
+// A single ayah
+// ---------------------------------------------------------------------------
+
+export interface SingleAyah {
+  surah: number;
+  surahName: string;
+  ayah: number;
+  arabic: string;
+  translation: string | null;
+  translationSource?: string;
+}
+
+/**
+ * One verse, with the approved translation for `language`.
+ *
+ * Exists for the Qur'anic supplications on the Duas screen. Fetching the whole
+ * surah to show one verse of Al-Baqara would be absurd, and TYPING the verse
+ * into a constants file would be worse — scripture that somebody keyed in by
+ * hand is scripture with a typo waiting in it. This takes both the Arabic and
+ * the translation from the same approved editions the reader sees everywhere
+ * else, so a supplication cannot drift from the text it came from.
+ *
+ * Cached for good: neither the verse nor its published translation changes.
+ */
+export async function getAyah(
+  surah: number,
+  ayah: number,
+  language: LanguageCode
+): Promise<SingleAyah> {
+  const translationEdition = TRANSLATIONS[language] ?? null;
+  const cacheKey = `${CACHE_PREFIX}ayah/${surah}:${ayah}/${translationEdition ?? 'ar'}`;
+
+  const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
+  if (cached) return JSON.parse(cached) as SingleAyah;
+
+  const editions = translationEdition
+    ? `${ARABIC_EDITION},${translationEdition}`
+    : ARABIC_EDITION;
+
+  const data = await fetchJson<
+    { text: string; numberInSurah: number; surah: { number: number; englishName: string }; edition: { identifier: string } }[]
+  >(`/ayah/${surah}:${ayah}/editions/${editions}`);
+
+  const arabic = data.find((e) => e.edition.identifier === ARABIC_EDITION) ?? data[0];
+  const translated = translationEdition
+    ? data.find((e) => e.edition.identifier === translationEdition)
+    : undefined;
+
+  const result: SingleAyah = {
+    surah: arabic.surah.number,
+    surahName: arabic.surah.englishName,
+    ayah: arabic.numberInSurah,
+    arabic: arabic.text.replace(/^\uFEFF/, ''),
+    translation: translated?.text ?? null,
+    translationSource: translationEdition ? TRANSLATION_SOURCE[translationEdition] : undefined,
+  };
+
+  void AsyncStorage.setItem(cacheKey, JSON.stringify(result)).catch(() => undefined);
+  return result;
+}

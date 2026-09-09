@@ -1163,7 +1163,20 @@
     "morningEveningMeaning": "",
     "sayyidulIstighfarMeaning": "",
     "refugeMeaning": "",
-    "arabicOnlyNotice": "මේ දක්වා අර්ථ ඉංග්‍රීසියෙන් ලියා ඇත. වෙනත් භාෂාවලදී පරීක්ෂා නොකළ පරිවර්තනයක් වෙනුවට අරාබි පමණක් පෙන්වයි."
+    "arabicOnlyNotice": "මේ දක්වා අර්ථ ඉංග්‍රීසියෙන් ලියා ඇත. වෙනත් භාෂාවලදී පරීක්ෂා නොකළ පරිවර්තනයක් වෙනුවට අරාබි පමණක් පෙන්වයි.",
+    "fromQuran": "අල් කුර්ආනයෙන්",
+    "fromSunnah": "සුන්නාහයෙන්",
+    "quranWholeVerseNote": "එක් එක් අවතීර්ණ වූ ආකාරයටම සම්පූර්ණ වාක්‍යය ලෙස, අනුමත පරිවර්තනයක් සමඟ පෙන්වයි. සමහරක් ප්‍රාර්ථනාවට පෙර විස්තරයකින් ආරම්භ වේ.",
+    "quranGoodBothWorlds": "මෙලොව හා පරලොව යහපත",
+    "quranBurdenForgiveness": "බර නොපටවනු මැනවි — සමාව දෙනු මැනවි",
+    "quranSteadfastHeart": "අපගේ හදවත් නොපිළිකෙව් කරනු මැනවි",
+    "quranWrongedOurselves": "අපට අපමය අයුතුකම් කළෙමු",
+    "quranEstablisherOfPrayer": "සලාතය ස්ථාපිත කරන්නෙකු කරනු මැනවි",
+    "quranMercyForParents": "දෙමාපියන්ට කරුණාව",
+    "quranExpandMyBreast": "මාගේ පපුව විවෘත කරනු මැනවි",
+    "quranIncreaseKnowledge": "දැනුම වර්ධනය කරනු මැනවි",
+    "quranForgiveAndMercy": "සමාව දී කරුණාව දක්වනු මැනවි",
+    "quranComfortOfEyes": "පවුලෙන් නෙත් සිසිලස"
   },
   "scripture": {
     "originalArabic": "මුල් අරාබි",

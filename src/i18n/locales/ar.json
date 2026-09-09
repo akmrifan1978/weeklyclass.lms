@@ -1163,7 +1163,20 @@
     "sayyidulIstighfarMeaning": "اللهم أنت ربي لا إله إلا أنت، خلقتني وأنا عبدك، وأنا على عهدك ووعدك ما استطعت.",
     "refuge": "الاستعاذة",
     "refugeMeaning": "أعوذ بكلمات الله التامات من شر ما خلق.",
-    "arabicOnlyNotice": "كُتبت المعاني بالإنجليزية حتى الآن، وفي اللغات الأخرى يُعرض النص العربي وحده بدلًا من ترجمة غير مدققة."
+    "arabicOnlyNotice": "كُتبت المعاني بالإنجليزية حتى الآن، وفي اللغات الأخرى يُعرض النص العربي وحده بدلًا من ترجمة غير مدققة.",
+    "fromQuran": "من القرآن",
+    "fromSunnah": "من السنة",
+    "quranWholeVerseNote": "تُعرض كل آية كاملة كما أُنزلت، ومعها ترجمة معتمدة. وبعضها يبدأ بسياق قبل الدعاء نفسه.",
+    "quranGoodBothWorlds": "حسنة في الدنيا والآخرة",
+    "quranBurdenForgiveness": "لا تحمّلنا — واعف واغفر لنا",
+    "quranSteadfastHeart": "لا تزغ قلوبنا",
+    "quranWrongedOurselves": "ظلمنا أنفسنا",
+    "quranEstablisherOfPrayer": "اجعلني مقيم الصلاة",
+    "quranMercyForParents": "الرحمة بالوالدين",
+    "quranExpandMyBreast": "اشرح لي صدري",
+    "quranIncreaseKnowledge": "زدني علمًا",
+    "quranForgiveAndMercy": "اغفر لنا وارحمنا",
+    "quranComfortOfEyes": "قرة أعين من الأهل"
   },
   "scripture": {
     "originalArabic": "النص العربي الأصلي",

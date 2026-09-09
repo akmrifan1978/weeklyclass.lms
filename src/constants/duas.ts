@@ -52,6 +52,39 @@ export const DUA_CATEGORY_KEYS: Record<DuaCategory, string> = {
   protection: 'dua.categoryProtection',
 };
 
+/**
+ * Supplications that are themselves Qur'an.
+ *
+ * Kept as references rather than as text. The verse and its meaning are pulled
+ * from the same approved editions the Qur'an screen uses, so a supplication
+ * here can never drift from the text it came from — and nothing anybody typed
+ * by hand is ever presented as revelation.
+ *
+ * THE WHOLE VERSE IS SHOWN, not the supplicating clause on its own. Several of
+ * these open with narration — "and among them is he who says", "those who say"
+ * — and cutting that away to leave a tidier du'a would be editing the Qur'an to
+ * fit a screen. The title says what each is for; the verse says what it says.
+ */
+export interface QuranDua {
+  id: string;
+  titleKey: string;
+  surah: number;
+  ayah: number;
+}
+
+export const QURAN_DUAS: QuranDua[] = [
+  { id: 'q-2-201', titleKey: 'dua.quranGoodBothWorlds', surah: 2, ayah: 201 },
+  { id: 'q-2-286', titleKey: 'dua.quranBurdenForgiveness', surah: 2, ayah: 286 },
+  { id: 'q-3-8', titleKey: 'dua.quranSteadfastHeart', surah: 3, ayah: 8 },
+  { id: 'q-7-23', titleKey: 'dua.quranWrongedOurselves', surah: 7, ayah: 23 },
+  { id: 'q-14-40', titleKey: 'dua.quranEstablisherOfPrayer', surah: 14, ayah: 40 },
+  { id: 'q-17-24', titleKey: 'dua.quranMercyForParents', surah: 17, ayah: 24 },
+  { id: 'q-20-25', titleKey: 'dua.quranExpandMyBreast', surah: 20, ayah: 25 },
+  { id: 'q-20-114', titleKey: 'dua.quranIncreaseKnowledge', surah: 20, ayah: 114 },
+  { id: 'q-23-109', titleKey: 'dua.quranForgiveAndMercy', surah: 23, ayah: 109 },
+  { id: 'q-25-74', titleKey: 'dua.quranComfortOfEyes', surah: 25, ayah: 74 },
+];
+
 export const DUAS: Dua[] = [
   // --- Daily ---------------------------------------------------------------
   {

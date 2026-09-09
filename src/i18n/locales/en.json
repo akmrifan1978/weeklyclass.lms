@@ -1163,7 +1163,20 @@
     "sayyidulIstighfarMeaning": "O Allah, You are my Lord, there is no god but You. You created me and I am Your servant, and I keep to Your covenant and promise as much as I am able.",
     "refuge": "Seeking refuge",
     "refugeMeaning": "I seek refuge in the perfect words of Allah from the evil of what He has created.",
-    "arabicOnlyNotice": "Meanings have been written in English so far. In other languages the Arabic is shown on its own rather than an unchecked translation."
+    "arabicOnlyNotice": "Meanings have been written in English so far. In other languages the Arabic is shown on its own rather than an unchecked translation.",
+    "fromQuran": "From the Qur’an",
+    "fromSunnah": "From the Sunnah",
+    "quranWholeVerseNote": "Each is shown as the complete verse, exactly as revealed, with an approved translation beside it. Some open with narration before the supplication itself.",
+    "quranGoodBothWorlds": "Good in this world and the next",
+    "quranBurdenForgiveness": "Do not burden us — pardon and forgive",
+    "quranSteadfastHeart": "Let not our hearts deviate",
+    "quranWrongedOurselves": "We have wronged ourselves",
+    "quranEstablisherOfPrayer": "Make me an establisher of prayer",
+    "quranMercyForParents": "Mercy for my parents",
+    "quranExpandMyBreast": "Expand my breast for me",
+    "quranIncreaseKnowledge": "Increase me in knowledge",
+    "quranForgiveAndMercy": "Forgive us and have mercy",
+    "quranComfortOfEyes": "Comfort of the eyes from family"
   },
   "scripture": {
     "originalArabic": "Original Arabic",

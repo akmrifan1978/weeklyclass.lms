@@ -4,16 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useLanguageScope } from '@/hooks/useLanguageScope';
+import { useAsync } from '@/hooks/useAsync';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { matchesSearch } from '@/utils/format';
 import {
   DUAS,
   DUA_CATEGORY_KEYS,
+  QURAN_DUAS,
   hasApprovedMeaning,
   type DuaCategory,
 } from '@/constants/duas';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import * as translateService from '@/services/translateService';
+import * as quranService from '@/services/quranService';
 import { ScriptureText } from './ScriptureText';
 import {
   AppHeader,
@@ -84,6 +87,39 @@ export function DuaScreen({ headerTint }: { headerTint?: string }) {
     [language, t]
   );
 
+  /**
+   * The Qur'anic supplications, fetched rather than bundled.
+   *
+   * Both the verse and its meaning come from the approved editions the Qur'an
+   * screen uses, so nothing here is typed by hand or machine-translated — which
+   * for revelation is not a preference but the rule this app is built on.
+   *
+   * All ten at once and cached after the first time, so the section costs one
+   * round of small requests ever rather than one per supplication per visit.
+   */
+  const loadQuranDuas = useCallback(
+    () =>
+      Promise.all(
+        QURAN_DUAS.map(async (dua) => ({
+          ...dua,
+          verse: await quranService.getAyah(dua.surah, dua.ayah, language),
+        }))
+      ),
+    [language]
+  );
+  const { data: quranDuas } = useAsync(loadQuranDuas, [loadQuranDuas]);
+
+  /** Qur'anic supplications matching the search, or all of them when empty. */
+  const quranMatching = useMemo(
+    () =>
+      (quranDuas ?? []).filter(
+        (dua) =>
+          !search.trim() ||
+          matchesSearch(search, t(dua.titleKey), dua.verse.arabic, dua.verse.translation ?? '')
+      ),
+    [quranDuas, search, t]
+  );
+
   const grouped = useMemo(() => {
     const matching = DUAS.filter((dua) =>
       matchesSearch(
@@ -124,7 +160,53 @@ export function DuaScreen({ headerTint }: { headerTint?: string }) {
           <Text style={styles.noticeText}>{t('dua.sourceNote')}</Text>
         </Card>
 
-        {grouped.length === 0 ? (
+        {/* The Qur'an first, and separately, because a supplication that is
+            revelation is not the same kind of thing as one a Companion
+            narrated — and a reader is entitled to see which is which without
+            having to read a reference line to find out. */}
+        {quranMatching.length > 0 ? (
+          <>
+            <SectionHeader title={t('dua.fromQuran')} icon="book-outline" />
+            <Card style={styles.notice}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.info} />
+              <Text style={styles.noticeText}>{t('dua.quranWholeVerseNote')}</Text>
+            </Card>
+
+            {quranMatching.map((dua) => (
+              <Card key={dua.id} style={styles.card}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.title}>{t(dua.titleKey)}</Text>
+                </View>
+
+                <ScriptureText
+                  arabic={dua.verse.arabic}
+                  arabicSize={24}
+                  translation={
+                    dua.verse.translation
+                      ? {
+                          text: dua.verse.translation,
+                          language,
+                          source: dua.verse.translationSource,
+                        }
+                      : null
+                  }
+                />
+
+                <Text style={styles.reference}>
+                  {dua.verse.surahName} {dua.verse.surah}:{dua.verse.ayah}
+                </Text>
+              </Card>
+            ))}
+          </>
+        ) : null}
+
+        {/* Everything narrated, under its own heading so the split is stated
+            rather than implied by ordering. */}
+        {grouped.length > 0 ? (
+          <SectionHeader title={t('dua.fromSunnah')} icon="sparkles-outline" />
+        ) : null}
+
+        {grouped.length === 0 && quranMatching.length === 0 ? (
           <EmptyState icon="search-outline" title={t('empty.noResults')} />
         ) : (
           grouped.map((group) => (
