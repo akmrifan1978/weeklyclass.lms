@@ -31,6 +31,7 @@ import {
   normaliseUsername,
 } from './identityService';
 import * as audit from './auditService';
+import { syncPublicTeacher } from './publicSiteService';
 
 /**
  * User management for admins (and for teachers holding the matching
@@ -107,6 +108,11 @@ export async function updateUser(
   }
 
   await updateDocById<AppUser>(COLLECTIONS.users, uid, payload);
+  // Keeps the public website in step with the account. Merged with `before`
+  // because a save that touches only the name still has to know whether this
+  // person is published, and a save that switches publishing off has to be
+  // able to take the profile down.
+  await syncPublicTeacher(uid, { ...before, ...payload });
   await audit.log({
     actor,
     action: 'UPDATE',
@@ -129,6 +135,9 @@ export async function setStatus(
   if (!before) throw new AppError('errors.notFound', 'not-found');
 
   await updateDoc(doc(db, COLLECTIONS.users, uid), { status, updatedAt: serverTimestamp() });
+  // Suspending a teacher takes their public profile down with them. An account
+  // that can no longer sign in should not still be advertised as staff.
+  await syncPublicTeacher(uid, { ...before, status });
   await audit.log({
     actor,
     action: status === 'active' ? 'ACTIVATE' : 'DEACTIVATE',
@@ -187,6 +196,7 @@ export async function removeUser(uid: string, actor: AppUser): Promise<void> {
   const before = await getUser(uid);
   await softDelete(COLLECTIONS.users, uid, actor.uid);
   await updateDoc(doc(db, COLLECTIONS.users, uid), { status: 'inactive' });
+  await syncPublicTeacher(uid, { ...before, publicProfile: false });
   await audit.log({
     actor,
     action: 'DELETE',

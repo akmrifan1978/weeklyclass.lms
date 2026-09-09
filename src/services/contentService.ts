@@ -13,6 +13,7 @@ import {
 import * as audit from './auditService';
 import { cached } from './offlineCache';
 import { announce } from './announceService';
+import { removePublicLesson, syncPublicLesson } from './publicSiteService';
 
 /** Lessons, articles and study materials. */
 
@@ -90,6 +91,10 @@ export async function saveLesson(
   if (id) {
     const before = await getLesson(id);
     await updateDocById<Lesson>(COLLECTIONS.lessons, id, payload);
+    // The website's copy of the syllabus, kept in step. Unpublishing a lesson
+    // withdraws it here in the same action rather than leaving the public page
+    // advertising something the class can no longer open.
+    await syncPublicLesson(id, { ...(before ?? {}), ...payload });
     await audit.log({
       actor,
       action: 'UPDATE',
@@ -115,6 +120,7 @@ export async function saveLesson(
   }
 
   const newId = await createDoc(COLLECTIONS.lessons, payload, { actorId: actor.uid });
+  await syncPublicLesson(newId, payload);
 
   // The class is told as soon as it is published. Fire-and-forget by design:
   // the lesson is saved either way, and a failed push must not undo it.
@@ -140,6 +146,7 @@ export async function saveLesson(
 export async function deleteLesson(id: string, actor: AppUser): Promise<void> {
   const before = await getLesson(id);
   await softDelete(COLLECTIONS.lessons, id, actor.uid);
+  await removePublicLesson(id);
   await audit.log({
     actor,
     action: 'DELETE',

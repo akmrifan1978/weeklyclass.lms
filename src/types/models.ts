@@ -76,6 +76,17 @@ export interface AppUser extends BaseDoc {
   // Teacher-specific
   teacherId?: string;
   qualification?: string;
+  /**
+   * Whether this teacher appears on the public website.
+   *
+   * Opt-in and off by default. Nothing about a member of staff reaches a
+   * signed-out visitor until an admin turns this on for them personally —
+   * see publicSiteService for what is copied across when they do, and for
+   * why the address and the mobile number never are.
+   */
+  publicProfile?: boolean;
+  /** What they teach, in their own words, for that public profile. */
+  publicSubjects?: string;
 
   /** Expo / FCM push tokens, keyed by device id. */
   pushTokens?: Record<string, string>;
@@ -181,6 +192,38 @@ export interface ClassRoom extends BaseDoc {
   schedule?: string;
   studentCount?: number;
   status: 'active' | 'inactive';
+}
+
+/**
+ * `publicTeachers/{uid}` — the profile a visitor may read.
+ *
+ * A deliberate subset of AppUser. Every field here is one an admin chose to
+ * publish; everything else about the account, contact details included, stays
+ * in `users` where only signed-in staff can reach it.
+ */
+export interface PublicTeacher extends BaseDoc {
+  name: string;
+  qualification?: string | null;
+  /** Free text, typed by the admin: "Aqeedah, Tajweed". */
+  subjects?: string | null;
+}
+
+/**
+ * `publicLessons/{lessonId}` — the syllabus line for one lesson.
+ *
+ * Title, subject, week and length: what a prospectus prints. The description,
+ * the video, the audio and the PDF are all absent, so the public page can list
+ * the curriculum while the material stays with the class it was written for.
+ */
+export interface PublicLesson extends BaseDoc {
+  title: string;
+  subject?: string | null;
+  weekNumber: number;
+  duration?: number | null;
+  language: LanguageCode;
+  className?: string | null;
+  /** Only present where that teacher has a public profile of their own. */
+  teacherName?: string | null;
 }
 
 export interface Subject extends BaseDoc {

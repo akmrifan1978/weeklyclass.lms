@@ -273,7 +273,8 @@
     "notes": "Notes",
     "myClass": "My class",
     "myWork": "My work",
-    "more": "More"
+    "more": "More",
+    "contact": "Contact"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -311,7 +312,7 @@
     "addArticle": "Add article",
     "addEvent": "Add event",
     "sendNotification": "Send notification",
-    "upcomingClasses": "Upcoming events"
+    "upcomingClasses": "Upcoming Events & Workshops"
   },
   "calendar": {
     "title": "Calendar",
@@ -676,7 +677,10 @@
     "auditWhen": "When",
     "noAuditLogs": "No activity recorded yet",
     "pendingApprovals": "Pending approvals",
-    "approveUserConfirm": "Approve {{name}} and activate their account?"
+    "approveUserConfirm": "Approve {{name}} and activate their account?",
+    "publicProfile": "Show on the public website",
+    "publicProfileHint": "Publishes this teacher’s name, qualification and subjects on the public Teachers page. Their email address and mobile number are never published.",
+    "publicSubjects": "Subjects taught (shown publicly)"
   },
   "settings": {
     "title": "Settings",
@@ -1432,5 +1436,74 @@
     "assignedTeachers": "Taught by {{names}}",
     "yourTeachers": "Your teacher: {{names}}",
     "noTeacherYet": "No teacher assigned yet"
+  },
+  "public": {
+    "brandLine": "Islamic Learning LMS",
+    "classes": {
+      "badge": "Academic Offerings",
+      "title": "Our Weekly Classes",
+      "lead": "Age-appropriate classes designed for systematic Islamic learning.",
+      "search": "Search classes or teachers...",
+      "emptyTitle": "No classes listed",
+      "emptyBody": "Active class groups appear here as soon as they are set up.",
+      "join": "Register to join"
+    },
+    "contact": {
+      "badge": "Get In Touch",
+      "title": "Contact Us",
+      "lead": "Questions about the programme, or about joining a class? Write to us.",
+      "website": "Website",
+      "emptyTitle": "No contact details yet",
+      "emptyBody": "An admin can add an address, a phone number and social links in Settings.",
+      "supportNote": "Already a student? Support inside the app reaches us with your account attached, so a reply finds you."
+    },
+    "events": {
+      "badge": "Community Gatherings",
+      "lead": "Join our Islamic seminars, Ramadan intensives and community workshops.",
+      "search": "Search events, speakers...",
+      "emptyTitle": "Nothing on the calendar",
+      "emptyBody": "Events open to everybody appear here as soon as they are announced.",
+      "registrationOpen": "Registration open",
+      "bookNote": "Booking a place happens inside the app, where your seat and your details stay with your account."
+    },
+    "home": {
+      "badge": "Weekly Islamic Classes",
+      "explore": "Explore the site"
+    },
+    "lessons": {
+      "badge": "Islamic Curriculum",
+      "title": "Weekly Lessons",
+      "lead": "The syllabus week by week, across every class we run.",
+      "search": "Search topics, subjects...",
+      "allClasses": "All classes",
+      "minutes": "{{value}} minutes reading",
+      "emptyTitle": "No lessons published yet",
+      "emptyBody": "Published lessons appear here week by week.",
+      "notesNote": "Full lesson notes, recordings and attachments belong to the students of the class. Sign in to open them."
+    },
+    "quran": {
+      "badge": "The Noble Quran",
+      "title": "Read the Quran",
+      "lead": "All 114 surahs, with the meaning of each name and where it was revealed.",
+      "emptyTitle": "Could not load the surah list",
+      "emptyBody": "This page needs a connection. Try again in a moment.",
+      "readerNote": "Translation in four languages, recitation and the daily reading plan are inside the app."
+    },
+    "teachers": {
+      "badge": "Islamic Faculty",
+      "title": "Our Respected Faculty",
+      "lead": "Learn from dedicated, certified scholars and experienced educators.",
+      "search": "Search teachers, subjects...",
+      "emptyTitle": "No profiles published yet",
+      "emptyBody": "A teacher appears here once an admin switches their profile on. Open the teacher in the admin panel and turn on \"Show on the public website\"."
+    },
+    "videos": {
+      "badge": "Media Vault",
+      "title": "Recorded Video Lectures",
+      "lead": "Watch our archive of weekly lectures, special programmes and workshops.",
+      "search": "Search lectures, topics...",
+      "emptyTitle": "Nothing released yet",
+      "emptyBody": "Published recordings appear here as soon as they go out."
+    }
   }
 }

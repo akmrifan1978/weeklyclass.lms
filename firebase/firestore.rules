@@ -326,6 +326,26 @@ service cloud.firestore {
       allow write: if can('MANAGE_CALENDAR');
     }
 
+    // Two more thin public copies, for the same reason and under the same rule
+    // as publicSchedule above: a document is granted whole or not at all, so
+    // anything a stranger may read has to be a document holding only that.
+    //
+    // publicTeachers holds a name, a qualification and a line of subjects, and
+    // exists for one teacher only once an admin has switched their profile on.
+    // It never holds an address or a mobile number, and no setting adds one.
+    match /publicTeachers/{uid} {
+      allow read: if true;
+      allow write: if can('EDIT_TEACHERS');
+    }
+
+    // publicLessons holds a title, a subject, a week and a length — a syllabus
+    // line. The description, the video, the audio and the PDF stay in
+    // /lessons, which no signed-out reader can touch.
+    match /publicLessons/{lessonId} {
+      allow read: if true;
+      allow write: if can('EDIT_LESSONS') || can('CREATE_LESSONS');
+    }
+
     match /languages/{code} {
       allow read: if true;
       allow write: if can('MANAGE_LANGUAGES');

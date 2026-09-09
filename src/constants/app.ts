@@ -39,6 +39,15 @@ export const COLLECTIONS = {
   counters: 'counters',
   notes: 'notes',
   publicSchedule: 'publicSchedule',
+  /**
+   * Thin public mirrors, written by an admin and readable by anybody.
+   *
+   * They exist because a security rule grants a whole document or none of
+   * it: publishing a lesson's title without its notes, or a teacher's name
+   * without their mobile number, has to be a different document.
+   */
+  publicTeachers: 'publicTeachers',
+  publicLessons: 'publicLessons',
 } as const;
 
 /** `settings/{APP_SETTINGS_DOC}` holds the single global settings document. */

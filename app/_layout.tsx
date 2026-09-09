@@ -46,7 +46,7 @@ function RoleGate({ children }: { children: React.ReactNode }) {
     if (booting) return;
 
     const group = segments[0];
-    const inPublicArea = group === undefined || group === '(auth)';
+    const inPublicArea = group === undefined || group === '(auth)' || group === '(public)';
 
     /**
      * The one public screen a signed-in person is NOT bounced off.
@@ -62,9 +62,15 @@ function RoleGate({ children }: { children: React.ReactNode }) {
      * fired the redirect before the route had settled. The page appeared and
      * then threw the reader out again.
      */
-    // The two public reading screens. Everything else under `(auth)` is a way
-    // in, and somebody already signed in has no business on those.
+    // The public reading screens. Everything else under `(auth)` is a way in,
+    // and somebody already signed in has no business on those.
+    //
+    // The whole `(public)` group joins About and the guest view here for the
+    // same reason: the website is something to read, and throwing a signed-in
+    // student back to their dashboard the moment they tap Teachers would make
+    // it unreadable to exactly the people who joined because of it.
     if (
+      group === '(public)' ||
       pathname === '/about' ||
       pathname.endsWith('/about') ||
       pathname === '/guest' ||
@@ -180,6 +186,7 @@ function RootNavigator() {
         <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(public)" />
           <Stack.Screen name="(student)" />
           <Stack.Screen name="(teacher)" />
           <Stack.Screen name="(admin)" />
