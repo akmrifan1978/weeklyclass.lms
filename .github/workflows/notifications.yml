@@ -56,6 +56,18 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
           PASSWORD_PRIVATE_KEY: ${{ secrets.PASSWORD_PRIVATE_KEY }}
+          # The same names read from the OTHER tab of that settings page.
+          #
+          # "Secrets and variables" is one page with two tabs, and a value typed
+          # into Variables is invisible to `secrets.*` — the job then behaves
+          # exactly as though nothing was ever added. Only whether each name is
+          # PRESENT is read here; the values are never printed, and a private
+          # key does not belong in Variables in any case, because that tab shows
+          # its contents in plain text to anyone who can open the page.
+          VAR_FIREBASE_SERVICE_ACCOUNT: ${{ vars.FIREBASE_SERVICE_ACCOUNT }}
+          VAR_VAPID_PRIVATE_KEY: ${{ vars.VAPID_PRIVATE_KEY }}
+          VAR_VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          VAR_VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
         run: |
           missing=""
           for name in FIREBASE_SERVICE_ACCOUNT VAPID_PRIVATE_KEY VAPID_PUBLIC_KEY VAPID_SUBJECT; do
@@ -67,6 +79,29 @@ jobs:
           # Optional. Absent, admin-set passwords are simply not applied.
           if [ -z "$PASSWORD_PRIVATE_KEY" ]; then
             echo "note: PASSWORD_PRIVATE_KEY is not set - admin-set passwords will be skipped"
+          fi
+
+          # Found in the wrong tab, which looks identical to not being added.
+          wrong=""
+          for name in FIREBASE_SERVICE_ACCOUNT VAPID_PRIVATE_KEY VAPID_PUBLIC_KEY VAPID_SUBJECT; do
+            eval "here=\${$name}"
+            eval "there=\${VAR_$name}"
+            if [ -z "$here" ] && [ -n "$there" ]; then wrong="$wrong  - $name
+"; fi
+          done
+
+          if [ -n "$wrong" ]; then
+            {
+              echo "## These are in the wrong tab"
+              echo ""
+              printf "$wrong"
+              echo ""
+              echo "They were added under **Variables**. They must be under **Secrets**."
+              echo "Delete them from the Variables tab and add them again as"
+              echo "*New repository secret* on the Secrets tab."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Added under Variables instead of Secrets:"
+            printf "$wrong"
           fi
 
           if [ -n "$missing" ]; then
