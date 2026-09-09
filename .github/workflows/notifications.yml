@@ -33,11 +33,11 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
 
       # Three packages, not the whole project. `npm ci` here would install Expo,
       # React Native and the rest of a mobile toolchain to send an email, and
@@ -70,6 +70,16 @@ jobs:
           fi
 
           if [ -n "$missing" ]; then
+            # Written to the run's summary as well as the log. The log needs
+            # three clicks to reach and the summary is the first thing on the
+            # page, which matters when the reader is not a developer.
+            {
+              echo "## Secrets missing"
+              echo ""
+              printf "$missing"
+              echo ""
+              echo "Add them under **Settings > Secrets and variables > Actions**."
+            } >> "$GITHUB_STEP_SUMMARY"
             echo "These repository secrets are missing:"
             printf "$missing"
             echo ""
@@ -81,7 +91,11 @@ jobs:
           # one here beats a stack trace from inside firebase-admin.
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > /tmp/key-check.json
           if ! node -e "const k=require('/tmp/key-check.json'); if(!k.private_key||!k.client_email) throw new Error('missing private_key or client_email')"; then
-            echo ""
+            {
+              echo "## FIREBASE_SERVICE_ACCOUNT is not a complete key"
+              echo ""
+              echo "Paste the WHOLE of serviceAccount.json, from the opening { to the closing }."
+            } >> "$GITHUB_STEP_SUMMARY"
             echo "FIREBASE_SERVICE_ACCOUNT is not a complete service account key."
             echo "Paste the WHOLE of serviceAccount.json, from the opening { to the closing }."
             exit 1
@@ -111,7 +125,15 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
-        run: node scripts/send-push.js
+        run: |
+          node scripts/send-push.js | tee /tmp/deliver.log
+          {
+            echo "## Delivery run"
+            echo ""
+            echo '```'
+            tail -20 /tmp/deliver.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Whatever happened, the key does not outlive the job. Belt and braces:
       # the runner is thrown away anyway.
