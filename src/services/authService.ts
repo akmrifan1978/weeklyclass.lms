@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -248,11 +249,39 @@ async function tryBootstrapFirstAdmin(user: FirebaseUser): Promise<AppUser | nul
  * Deliberately returns false when the check itself fails, so an unreachable or
  * refused read never blocks the one flow that can configure a new platform.
  */
+/**
+ * Remembered on the device, because the answer is one-way.
+ *
+ * The first-run window shuts once and can never reopen — creating the first
+ * admin writes `settings/bootstrap` and nothing deletes it. So once this has
+ * been true it is true for ever, and asking again is a round trip spent
+ * confirming something already known.
+ *
+ * That matters more here than it looks. Measured against this project, a single
+ * Firestore read costs between half a second and three, because the database
+ * sits in Mumbai and the people using it are in Jeddah. Removing one read from
+ * every sign-in removes real seconds from it, not milliseconds.
+ *
+ * Only the TRUE answer is cached. A false one means the platform may still be
+ * unconfigured, and getting that wrong would strand the very first
+ * administrator — so it is re-checked every time until it goes true.
+ */
+const BOOTSTRAP_CLOSED_KEY = '@weeklyclass/bootstrap-closed';
+
 async function bootstrapIsClosed(): Promise<boolean> {
+  const remembered = await AsyncStorage.getItem(BOOTSTRAP_CLOSED_KEY).catch(() => null);
+  if (remembered === 'yes') return true;
+
   try {
     const snap = await getDoc(doc(db, COLLECTIONS.settings, 'bootstrap'));
-    return snap.exists();
+    if (snap.exists()) {
+      void AsyncStorage.setItem(BOOTSTRAP_CLOSED_KEY, 'yes').catch(() => undefined);
+      return true;
+    }
+    return false;
   } catch {
+    // Deliberately false when the check itself fails, so an unreachable or
+    // refused read never blocks the one flow that can configure a new platform.
     return false;
   }
 }
