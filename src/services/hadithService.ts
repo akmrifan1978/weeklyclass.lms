@@ -198,6 +198,7 @@ export async function listCollections(
   }));
 
   void AsyncStorage.setItem(cacheKey, JSON.stringify(result)).catch(() => undefined);
+
   return result;
 }
 
@@ -252,10 +253,28 @@ interface SectionPayload {
 }
 
 /** One section (book) of a collection, in the closest available language. */
+/** How far to look for a section with something in it before giving up. */
+const MAX_EMPTY_SKIP = 6;
+
 export async function getSection(
   collection: string,
   section: number,
-  language: LanguageCode
+  language: LanguageCode,
+  /**
+   * Move past sections that contain no narration.
+   *
+   * Sahih Muslim opens on an "Introduction" whose only entry has empty text,
+   * and the two sections after it are the same. The screen opened every
+   * collection at section 1, so Muslim looked broken — it was reported as not
+   * appearing at all — while Bukhari, whose section 1 is Revelation with seven
+   * narrations, was fine.
+   *
+   * Only set when a collection is first opened. Pressing Next onto an empty
+   * section should show it as empty rather than silently skipping, because
+   * then the reader is navigating and is owed an honest answer about where
+   * they are.
+   */
+  options: { skipEmpty?: boolean } = {}
 ): Promise<HadithSection> {
   const { edition, source, language: editionLanguage, isFallback } = editionFor(
     collection,
@@ -296,16 +315,33 @@ export async function getSection(
     isFallbackLanguage: isFallback,
     translationSource: source,
     sectionCount: Object.keys(arabicData.metadata.sections ?? sectionNames).length || 0,
-    hadiths: arabicData.hadiths.map((h) => ({
-      number: h.hadithnumber,
-      arabic: h.text,
-      translation: translationByNumber.get(h.hadithnumber) ?? null,
-      reference: h.reference
-        ? `${h.reference.book}:${h.reference.hadith}`
-        : String(h.hadithnumber),
-    })),
+    // Entries with no Arabic are dropped: the dataset carries placeholders for
+    // sections it has no text for, and a placeholder is not a narration. Left
+    // in, they rendered as blank cards that looked like a loading failure.
+    hadiths: arabicData.hadiths
+      .filter((h) => (h.text ?? '').trim().length > 0)
+      .map((h) => ({
+        number: h.hadithnumber,
+        arabic: h.text,
+        translation: translationByNumber.get(h.hadithnumber) ?? null,
+        reference: h.reference
+          ? `${h.reference.book}:${h.reference.hadith}`
+          : String(h.hadithnumber),
+      })),
   };
 
   void AsyncStorage.setItem(cacheKey, JSON.stringify(result)).catch(() => undefined);
+
+  // Nothing readable here. Try the next one, up to a limit — a collection that
+  // is empty all the way down is a broken source, not something to page
+  // through for ever.
+  if (
+    options.skipEmpty &&
+    result.hadiths.length === 0 &&
+    section < MAX_EMPTY_SKIP
+  ) {
+    return getSection(collection, section + 1, language, options);
+  }
+
   return result;
 }

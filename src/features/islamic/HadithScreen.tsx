@@ -82,12 +82,24 @@ export function HadithScreen({ headerTint }: { headerTint?: string }) {
     loadCollections,
   ]);
 
+  /**
+   * True only for the section a collection opens on.
+   *
+   * Opening is allowed to skip past empty sections — Sahih Muslim begins with
+   * three that carry no narration, which made it look broken. Pressing Next is
+   * not: somebody navigating deliberately is owed the section they asked for,
+   * even when it turns out to be empty.
+   */
+  const isOpeningSection = section === 1;
+
   const loadSection = useCallback(
     () =>
       collection
-        ? hadithService.getSection(collection, section, language)
+        ? hadithService.getSection(collection, section, language, {
+            skipEmpty: isOpeningSection,
+          })
         : Promise.resolve(null),
-    [collection, section, language]
+    [collection, section, language, isOpeningSection]
   );
   const {
     data: current,
