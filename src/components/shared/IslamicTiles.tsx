@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useIslamicFeatures } from '@/hooks/useIslamicFeatures';
 import { brand, spacing } from '@/constants/theme';
 import { QuickAccessTile } from '@/components/shared/ContentCards';
-import { Grid, SectionHeader, Spacer } from '@/components/ui';
+import { Spacer } from '@/components/ui';
+import { CollapsibleGrid } from '@/components/shared/CollapsibleGrid';
 import type { IslamicFeature } from '@/types';
 
 /**
@@ -114,8 +115,7 @@ export function IslamicTiles({
   return (
     <>
       <Spacer size={spacing.xxl} />
-      <SectionHeader title={t('nav.islamic')} icon="moon-outline" />
-      <Grid minItemWidth={105} gap={spacing.md}>
+      <CollapsibleGrid title={t('nav.islamic')} icon="moon-outline" minItemWidth={105}>
         {visible.map((tile) => (
           <QuickAccessTile
             key={tile.feature}
@@ -125,7 +125,7 @@ export function IslamicTiles({
             onPress={() => router.push(`${basePath}${tile.path}` as never)}
           />
         ))}
-      </Grid>
+      </CollapsibleGrid>
     </>
   );
 }

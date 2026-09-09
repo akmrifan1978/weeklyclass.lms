@@ -37,6 +37,7 @@ import {
   VideoRow,
 } from '@/components/shared/ContentCards';
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
+import { CollapsibleGrid } from '@/components/shared/CollapsibleGrid';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
 import { UpcomingClasses } from '@/components/shared/UpcomingClasses';
@@ -328,8 +329,7 @@ export default function StudentHome() {
           ) : null}
 
           <Spacer size={spacing.xxl} />
-          <SectionHeader title={t('dashboard.quickAccess')} icon="grid-outline" />
-          <Grid minItemWidth={100} gap={spacing.md}>
+          <CollapsibleGrid title={t('dashboard.quickAccess')} icon="grid-outline">
             {/* First, because this is the one somebody reaches for
                 mid-lesson, when the thought is about to be lost. */}
             <QuickAccessTile
@@ -410,7 +410,7 @@ export default function StudentHome() {
               tint={brand.sand}
               onPress={() => router.push('/(student)/support')}
             />
-          </Grid>
+          </CollapsibleGrid>
 
           <IslamicTiles basePath="/(student)" />
 

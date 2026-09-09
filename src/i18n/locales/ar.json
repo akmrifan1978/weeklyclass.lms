@@ -69,7 +69,9 @@
     "undo": "تراجع",
     "remove": "إزالة",
     "copy": "نسخ",
-    "done": "تم"
+    "done": "تم",
+    "showLess": "عرض أقل",
+    "showAllCount": "عرض {{count}} أخرى"
   },
   "auth": {
     "studentLogin": "دخول الطالب",

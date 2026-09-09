@@ -69,7 +69,9 @@
     "undo": "Undo",
     "remove": "Remove",
     "copy": "Copy",
-    "done": "Done"
+    "done": "Done",
+    "showLess": "Show less",
+    "showAllCount": "Show {{count}} more"
   },
   "auth": {
     "studentLogin": "Student Login",
