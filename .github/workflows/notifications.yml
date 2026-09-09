@@ -45,6 +45,50 @@ jobs:
       - name: Install what the service needs
         run: npm install --no-save --no-audit --no-fund firebase-admin web-push nodemailer
 
+      # Named, not guessed. Without this the script exits on the first thing it
+      # cannot find and the log says "VAPID_PRIVATE_KEY is not set", which is
+      # true and unhelpful when the real answer is that three of five secrets
+      # were never added. This checks all of them and lists what is missing.
+      - name: Check the secrets are present
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          PASSWORD_PRIVATE_KEY: ${{ secrets.PASSWORD_PRIVATE_KEY }}
+        run: |
+          missing=""
+          for name in FIREBASE_SERVICE_ACCOUNT VAPID_PRIVATE_KEY VAPID_PUBLIC_KEY VAPID_SUBJECT; do
+            eval "value=\${$name}"
+            if [ -z "$value" ]; then missing="$missing  - $name
+"; fi
+          done
+
+          # Optional. Absent, admin-set passwords are simply not applied.
+          if [ -z "$PASSWORD_PRIVATE_KEY" ]; then
+            echo "note: PASSWORD_PRIVATE_KEY is not set - admin-set passwords will be skipped"
+          fi
+
+          if [ -n "$missing" ]; then
+            echo "These repository secrets are missing:"
+            printf "$missing"
+            echo ""
+            echo "Add them under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          # A service account key is JSON. Catching a truncated or half-pasted
+          # one here beats a stack trace from inside firebase-admin.
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > /tmp/key-check.json
+          if ! node -e "const k=require('/tmp/key-check.json'); if(!k.private_key||!k.client_email) throw new Error('missing private_key or client_email')"; then
+            echo ""
+            echo "FIREBASE_SERVICE_ACCOUNT is not a complete service account key."
+            echo "Paste the WHOLE of serviceAccount.json, from the opening { to the closing }."
+            exit 1
+          fi
+          rm -f /tmp/key-check.json
+          echo "All required secrets are present."
+
       # Written to the workspace and never committed: the file is in
       # .gitignore, and the workspace is destroyed when the job ends.
       - name: Write the service account key
