@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -124,6 +125,21 @@ export default function SplashScreen() {
   const router = useRouter();
   const { language, available, setLanguage } = useLanguage();
   const [switchingLanguage, setSwitchingLanguage] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  /** Everywhere a visitor can go before signing in. */
+  const publicLinks = [
+    { labelKey: 'about.title', route: '/(auth)/about' },
+    { labelKey: 'guest.enter', route: '/(auth)/guest' },
+    { labelKey: 'auth.register', route: '/(auth)/register' },
+    { labelKey: 'auth.forgotUsername', route: '/(auth)/forgot-username' },
+    { labelKey: 'auth.forgotPassword', route: '/(auth)/forgot-password' },
+  ] as const;
+
+  const go = (route: string) => {
+    setMenuOpen(false);
+    router.push(route as never);
+  };
 
   const handleLanguage = async (code: LanguageCode) => {
     if (switchingLanguage) return;
@@ -137,6 +153,46 @@ export default function SplashScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* A bar, the way a site has one.
+          The page used to open straight onto the sign-in choice, which is the
+          right first screen for somebody who already has an account and the
+          wrong one for somebody deciding whether to want one. The mark stays
+          put at the top and the rest of the way in is behind the menu. */}
+      <View style={styles.topBar}>
+        <View style={styles.wordmarkRow}>
+          <View style={styles.markBox}>
+            {settings?.logoUrl ? (
+              <Image
+                source={{ uri: settings.logoUrl }}
+                style={styles.markImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
+            ) : (
+              <Ionicons name="book" size={20} color={colors.textInverse} />
+            )}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.wordmark} numberOfLines={1}>
+              {settings?.appName?.trim() || APP_NAME}
+            </Text>
+            <Text style={styles.wordmarkSub} numberOfLines={1}>
+              {t('app.tagline')}
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          onPress={() => setMenuOpen(true)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.menu')}
+          style={({ pressed }) => [styles.menuButton, pressed && { opacity: 0.6 }]}
+        >
+          <Ionicons name="menu" size={22} color={colors.text} />
+        </Pressable>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -150,30 +206,6 @@ export default function SplashScreen() {
               have to find it before any of the rest of the page is useful to
               them. Right-aligned and compact so it reads as a control rather
               than a section. */}
-          <View style={styles.languageBar}>
-            {available.map((option) => {
-              const active = option.code === language;
-              return (
-                <Pressable
-                  key={option.code}
-                  onPress={() => handleLanguage(option.code as LanguageCode)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={option.name}
-                  style={({ pressed }) => [
-                    styles.languageChip,
-                    active ? styles.languageChipActive : null,
-                    { opacity: pressed ? 0.8 : 1 },
-                  ]}
-                >
-                  <Text style={[styles.languageText, active ? styles.languageTextActive : null]}>
-                    {option.nativeName}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
           <View style={[styles.brandBlock, { marginBottom: blockGap }]}>
             {/* The organisation's own mark when they have set one. The book is
                 a placeholder for a platform nobody has branded yet, and it
@@ -248,7 +280,7 @@ export default function SplashScreen() {
                   accessibilityLabel={t(item.labelKey)}
                   style={({ pressed }) => [styles.staffButton, { opacity: pressed ? 0.7 : 1 }]}
                 >
-                  <Ionicons name={item.icon} size={15} color={brand.sandLight} />
+                  <Ionicons name={item.icon} size={15} color={colors.textSecondary} />
                   <Text style={styles.staffLabel} numberOfLines={1}>
                     {t(item.labelKey)}
                   </Text>
@@ -374,6 +406,84 @@ export default function SplashScreen() {
 
         </View>
       </ScrollView>
+
+      {/* Everything else a visitor might want, and the language picker, behind
+          the one button. It is a sheet rather than a full screen so the page
+          stays visible behind it — somebody opening a menu has not left. */}
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)} />
+
+        <SafeAreaView style={styles.menuSheet} edges={['top']}>
+          <View style={styles.menuHead}>
+            <View style={styles.wordmarkRow}>
+              <View style={styles.markBox}>
+                <Ionicons name="book" size={18} color={colors.textInverse} />
+              </View>
+              <Text style={styles.wordmark} numberOfLines={1}>
+                {settings?.appName?.trim() || APP_NAME}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setMenuOpen(false)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+              style={({ pressed }) => [styles.menuButton, pressed && { opacity: 0.6 }]}
+            >
+              <Ionicons name="close" size={20} color={colors.text} />
+            </Pressable>
+          </View>
+
+          {/* Two columns, as in the reference. Ten short labels down one
+              column is a list you scroll; across two it is a list you read. */}
+          <View style={styles.menuGrid}>
+            {publicLinks.map((link) => (
+              <Pressable
+                key={link.route}
+                onPress={() => go(link.route)}
+                accessibilityRole="link"
+                accessibilityLabel={t(link.labelKey)}
+                style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+              >
+                <Text style={styles.menuItemText} numberOfLines={1}>
+                  {t(link.labelKey)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={styles.menuFooter}>
+            <View style={styles.languageBar}>
+              {available.map((option) => {
+                const active = option.code === language;
+                return (
+                  <Pressable
+                    key={option.code}
+                    onPress={() => handleLanguage(option.code as LanguageCode)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={option.name}
+                    style={({ pressed }) => [
+                      styles.languageChip,
+                      active ? styles.languageChipActive : null,
+                      { opacity: pressed ? 0.8 : 1 },
+                    ]}
+                  >
+                    <Text style={[styles.languageText, active ? styles.languageTextActive : null]}>
+                      {option.nativeName}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -394,7 +504,7 @@ function LinkButton({
       accessibilityLabel={label}
       style={({ pressed }) => [styles.link, { opacity: pressed ? 0.65 : 1 }]}
     >
-      <Ionicons name={icon} size={15} color={brand.sandLight} />
+      <Ionicons name={icon} size={15} color={colors.textSecondary} />
       <Text style={styles.linkText}>{label}</Text>
     </Pressable>
   );
@@ -412,7 +522,9 @@ const styles = StyleSheet.create({
     // sat exactly at the edge and looked clipped rather than scrollable. At
     // 196 the next one peeks in, which is what tells somebody to swipe.
     width: 196,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.lg,
     padding: spacing.sm,
     gap: 3,
@@ -420,15 +532,114 @@ const styles = StyleSheet.create({
   classCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   classPhoto: { width: 38, height: 38, borderRadius: radius.sm, backgroundColor: colors.surface },
   classPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
-  classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textInverse },
+  classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.text },
   classBlurb: {
     fontSize: fontSize.xs,
-    color: 'rgba(255,255,255,0.62)',
+    color: colors.textMuted,
     lineHeight: 15,
     marginTop: 2,
   },
-  classFact: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.72)', marginTop: 2 },
-  container: { flex: 1, backgroundColor: brand.navyDeep },
+  classFact: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  /*
+   * Light, from the reference.
+   *
+   * The page was navy end to end, which suits a sign-in screen and does not
+   * suit a landing page: on navy every panel has to be a translucent white
+   * rectangle, and a stack of those reads as one heavy block rather than as
+   * separate things. On a light ground the panels can be white and the
+   * separation comes from the ground itself.
+   *
+   * The brand does not change. Navy and orange are still the marks; they are
+   * now on the type and the buttons rather than under everything.
+   */
+  container: { flex: 1, backgroundColor: colors.background },
+
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  wordmarkRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  markBox: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: brand.navyDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  markImage: { width: 30, height: 30 },
+  wordmark: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.heavy,
+    color: colors.text,
+    letterSpacing: -0.2,
+  },
+  wordmarkSub: {
+    fontSize: 9,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginTop: 1,
+  },
+  menuButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  menuBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.overlay },
+  menuSheet: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+    paddingBottom: spacing.lg,
+    ...shadow.lg,
+  },
+  menuHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+  },
+  menuItem: {
+    width: '50%',
+    minHeight: TOUCH_TARGET,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+  },
+  menuItemPressed: { backgroundColor: colors.surfaceMuted },
+  menuItemText: { fontSize: fontSize.sm, color: colors.text },
+  menuFooter: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
   inner: { width: '100%', maxWidth: 460, alignSelf: 'center' },
   brandBlock: { alignItems: 'center' },
@@ -448,7 +659,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: fontSize.display,
     fontWeight: fontWeight.heavy,
-    color: colors.textInverse,
+    color: brand.navyDeep,
     // Display sizes want tightening, not spacing out. The positive tracking
     // here was inherited from body-text defaults and made the title look
     // stretched at the one size where letterforms already have room.
@@ -472,14 +683,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: colors.accentSoft,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
+    borderColor: 'rgba(237,91,3,0.22)',
   },
   venue: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
-    color: brand.sandLight,
+    color: brand.orangeDark,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
@@ -487,7 +698,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     // A step back from the badge and the title, so the three read in order
     // rather than competing.
-    color: 'rgba(229,197,160,0.78)',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: spacing.lg,
@@ -518,14 +729,14 @@ const styles = StyleSheet.create({
     // A shade stronger, and on a ground of its own: at 0.22 on navy the
     // outline was almost not there, and the two secondary buttons read as
     // floating text rather than as things to press.
-    borderColor: 'rgba(255,255,255,0.30)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
     // Short of the 44pt guideline on purpose is NOT what this is: the row is
     // padded to a comfortable tap target while reading as secondary.
     paddingVertical: 9,
   },
-  staffLabel: { fontSize: fontSize.xs, color: brand.sandLight, fontWeight: fontWeight.semibold },
+  staffLabel: { fontSize: fontSize.xs, color: colors.text, fontWeight: fontWeight.semibold },
   roleButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -571,7 +782,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: fontSize.md,
-    color: brand.sandLight,
+    color: colors.textSecondary,
     fontWeight: fontWeight.semibold,
   },
   languageBar: {
@@ -593,11 +804,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: colors.borderStrong,
     minHeight: 38,
     justifyContent: 'center',
   },
   languageChipActive: { backgroundColor: brand.orange, borderColor: brand.orange },
-  languageText: { color: brand.sandLight, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  languageText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   languageTextActive: { color: colors.textInverse, fontWeight: fontWeight.bold },
 });
