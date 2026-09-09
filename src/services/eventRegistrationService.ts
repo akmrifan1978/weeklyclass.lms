@@ -283,6 +283,10 @@ export async function confirmBooking(
   const eventRef = doc(db, COLLECTIONS.calendarEvents, registration.eventId);
   const bookingRef = doc(db, COLLECTIONS.eventRegistrations, registration.id);
 
+  // Read inside the transaction and used after it: the event is already being
+  // fetched there, and a second read afterwards could see a different one.
+  let whatsappLink: string | null = null;
+
   await runTransaction(db, async (tx) => {
     const fresh = await tx.get(eventRef);
     if (!fresh.exists()) throw new AppError('errors.notFound', 'not-found');
@@ -290,6 +294,7 @@ export async function confirmBooking(
     const current = fresh.data() as CalendarEvent;
     const taken = current.registeredCount ?? 0;
     const capacity = current.registration?.capacity ?? null;
+    whatsappLink = current.registration?.whatsappLink ?? null;
 
     // Refused rather than silently oversold. An organiser who genuinely wants
     // to go over capacity raises the capacity, which is a decision with a
@@ -311,11 +316,19 @@ export async function confirmBooking(
   // notification that fails to send must not undo a confirmation that already
   // happened, so the admin is not told it failed either — the booking is
   // confirmed, which is what they asked for.
+  // The group link rides along with the confirmation, because the moment
+  // somebody learns they have a place is the moment they will join. Left unset
+  // by the organiser, the sentence is simply absent — no empty heading, no
+  // dead link.
+  const joinLine = whatsappLink ? ` Join the event's WhatsApp group: ${whatsappLink}` : '';
+
   await notify(
     registration,
     actor,
     'Booking confirmed',
-    `Your place at "${registration.eventTitle}" is confirmed. Ticket ${ticketCode(registration.id)}.`
+    `Your place at "${registration.eventTitle}" is confirmed. Ticket ${ticketCode(
+      registration.id
+    )}.${joinLine}`
   );
 
   await audit.log({

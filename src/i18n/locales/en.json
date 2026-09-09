@@ -1322,7 +1322,11 @@
     "cannotRejectConfirmed": "Cancel a confirmed booking instead — declining it would leave the seat held.",
     "awaitingDecision": "Waiting for the organiser ({{seats}} place(s))",
     "ageAssumed": "Your profile has no date of birth, so the adult rate is used. Add it in your profile if that is wrong.",
-    "registerToBook": "Register to book"
+    "registerToBook": "Register to book",
+    "whatsappLink": "WhatsApp group link",
+    "whatsappLinkHint": "Create the group in WhatsApp, copy its invite link and paste it here. Everyone whose booking is confirmed gets a Join button on their ticket. Leave it empty and no WhatsApp appears anywhere.",
+    "whatsappLinkInvalid": "That is not a group invite link. Open the group in WhatsApp, tap Invite via link, and paste the link that starts with https://chat.whatsapp.com/",
+    "joinWhatsapp": "Join WhatsApp Group"
   },
   "notes": {
     "new": "New note",

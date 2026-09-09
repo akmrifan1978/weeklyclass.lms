@@ -398,6 +398,21 @@ export interface EventRegistrationSettings {
   referenceLabel?: string | null;
   /** Shown in place of the usual "registration closed" wording. */
   note?: string | null;
+  /**
+   * An invite link to the event's WhatsApp group, handed to people who book.
+   *
+   * A link the organiser creates in WhatsApp and pastes here. Nothing is
+   * automated and nothing could be: WhatsApp has no free interface for making
+   * a group or adding somebody to one, so the honest version of "add attendees
+   * to the group" is to give each of them the door and let them walk through
+   * it.
+   *
+   * It lives inside `registration` rather than on the event because it is for
+   * people who booked. That also keeps it out of the public schedule copy,
+   * which only ever carries a boolean saying whether an event takes bookings —
+   * an invite link on a page a stranger can read would let anybody join.
+   */
+  whatsappLink?: string | null;
 }
 
 /**

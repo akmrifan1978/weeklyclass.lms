@@ -141,6 +141,35 @@ export function isEmail(value: string): boolean {
 }
 
 /** Strips characters that would break a Firestore document id. */
+/**
+ * A WhatsApp GROUP invite link, or nothing.
+ *
+ * Only `chat.whatsapp.com` links are accepted, and deliberately so. The obvious
+ * mistake here is pasting a `wa.me/<number>` link, which is a private chat with
+ * whoever set the event up — handing every attendee an organiser's personal
+ * number instead of a group. That is a mistake worth refusing rather than
+ * storing, so this returns null and the form says why.
+ *
+ * Returns the trimmed link when it is one, null when the field is empty, and
+ * throws nothing: the caller decides whether an unusable value is an error or
+ * simply an empty field.
+ */
+export function whatsappGroupLink(value: string): { link: string | null; invalid: boolean } {
+  const trimmed = value.trim();
+  if (!trimmed) return { link: null, invalid: false };
+
+  try {
+    const url = new URL(trimmed);
+    const ok =
+      url.protocol === 'https:' &&
+      url.hostname.toLowerCase() === 'chat.whatsapp.com' &&
+      url.pathname.replace(/\/+$/, '').length > 1;
+    return ok ? { link: trimmed, invalid: false } : { link: null, invalid: true };
+  } catch {
+    return { link: null, invalid: true };
+  }
+}
+
 export function sanitiseDocId(value: string): string {
   return value.trim().replace(/[/\\.#$[\]]/g, '_').slice(0, 120);
 }

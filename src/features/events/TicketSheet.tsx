@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +37,15 @@ export function TicketSheet({
 
   const code = bookings.ticketCode(registration.id);
   const paid = registration.paid === true;
+
+  /**
+   * Read from the event rather than copied onto the booking.
+   *
+   * An organiser who has to remake the group — it happens — pastes the new
+   * link once and every ticket already issued points at the new group. A copy
+   * frozen at booking time would send half the attendees somewhere nobody is.
+   */
+  const whatsapp = event?.registration?.whatsappLink ?? null;
 
   return (
     <FormSheet
@@ -139,6 +148,18 @@ export function TicketSheet({
         </View>
       </View>
 
+      {whatsapp ? (
+        <Pressable
+          onPress={() => Linking.openURL(whatsapp).catch(() => undefined)}
+          accessibilityRole="link"
+          accessibilityLabel={t('event.joinWhatsapp')}
+          style={({ pressed }) => [styles.whatsapp, { opacity: pressed ? 0.85 : 1 }]}
+        >
+          <Ionicons name="logo-whatsapp" size={18} color={colors.textInverse} />
+          <Text style={styles.whatsappText}>{t('event.joinWhatsapp')}</Text>
+        </Pressable>
+      ) : null}
+
       <Text style={styles.note}>{t('event.ticketNote')}</Text>
     </FormSheet>
   );
@@ -157,7 +178,27 @@ function Fact({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: stri
 const QR_SIZE = 132;
 const QR_QUIET_ZONE = 10;
 
+/** WhatsApp's own green. Borrowed knowingly: a button that opens WhatsApp is
+ *  recognised by its colour before its label is read, and in four languages
+ *  that matters more than usual here. */
+const WHATSAPP_GREEN = '#25D366';
+
 const styles = StyleSheet.create({
+  whatsapp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    minHeight: 48,
+    borderRadius: radius.md,
+    backgroundColor: WHATSAPP_GREEN,
+  },
+  whatsappText: {
+    color: colors.textInverse,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+  },
   ticket: {
     borderRadius: radius.lg,
     overflow: 'hidden',

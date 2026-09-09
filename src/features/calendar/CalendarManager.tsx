@@ -17,6 +17,7 @@ import {
 import { listBranches, listClasses } from '@/services/orgService';
 import { getSettings, watchSettings } from '@/services/settingsService';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import { whatsappGroupLink } from '@/utils/validation';
 import type {
   AudienceRole,
   CalendarEvent,
@@ -73,6 +74,7 @@ interface EventForm {
   bandedPricing: boolean;
   prices: Record<AgeGroup, string>;
   referenceLabel: string;
+  whatsappLink: string;
 }
 
 const EMPTY: EventForm = {
@@ -101,6 +103,7 @@ const EMPTY: EventForm = {
   bandedPricing: false,
   prices: { infant: '', child: '', teenage: '', adult: '' },
   referenceLabel: '',
+  whatsappLink: '',
 };
 
 /** True once the moment an event starts has already gone by. */
@@ -268,6 +271,7 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
         bandedPricing: Boolean(event.registration?.pricesByAgeGroup),
         prices: bandsToForm(event.registration?.pricesByAgeGroup),
         referenceLabel: event.registration?.referenceLabel ?? '',
+        whatsappLink: event.registration?.whatsappLink ?? '',
         status: event.status,
       })}
       validate={(form) => {
@@ -319,6 +323,7 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
                     ? bandsFromForm(form.prices)
                     : undefined,
                   referenceLabel: form.referenceLabel.trim() || null,
+                  whatsappLink: whatsappGroupLink(form.whatsappLink).link,
                 }
               : undefined,
             teacherId: user.role === 'teacher' ? user.uid : (existing?.teacherId ?? null),
@@ -597,6 +602,25 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
                 onChangeText={(v) => set('referenceLabel', v)}
                 icon="card-outline"
                 hint={t('event.referenceLabelHint')}
+              />
+
+              {/* Handed to people who book, and to nobody else. Left empty, no
+                  WhatsApp appears anywhere — on the ticket, in the confirmation
+                  or in the booking details. */}
+              <TextField
+                label={t('event.whatsappLink')}
+                value={form.whatsappLink}
+                onChangeText={(v) => set('whatsappLink', v)}
+                icon="logo-whatsapp"
+                autoCapitalize="none"
+                keyboardType="url"
+                placeholder="https://chat.whatsapp.com/..."
+                hint={t('event.whatsappLinkHint')}
+                error={
+                  whatsappGroupLink(form.whatsappLink).invalid
+                    ? t('event.whatsappLinkInvalid')
+                    : undefined
+                }
               />
             </>
           ) : null}
