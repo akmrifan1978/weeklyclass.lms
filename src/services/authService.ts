@@ -575,39 +575,32 @@ async function repairIdentityIndex(
   });
 }
 
-/**
- * Resolves when `work` finishes or when `ms` elapses, whichever is first, and
- * never rejects. For a side effect that is worth waiting a moment for and not
- * worth waiting indefinitely for.
- */
-function atMost<T>(work: Promise<T>, ms: number): Promise<T | null> {
-  return Promise.race([
-    work.catch(() => null),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
-  ]);
-}
-
-/** How long logout will wait for the audit entry before going anyway. */
-const LOGOUT_AUDIT_BUDGET_MS = 1200;
-
 export async function logout(actor?: AppUser | null): Promise<void> {
   if (actor) {
-    // Bounded, not awaited outright. The entry has to be written while the
-    // person is still signed in — the rules require it — so it cannot simply be
-    // fired afterwards. But waiting for the server to confirm it is what made
-    // signing out on a weak connection look like the app had frozen: a write
-    // that never came back held the whole thing open with nothing on screen to
-    // explain why. It gets a moment; then logout proceeds regardless.
-    await atMost(
-      audit.log({
-        actor,
-        action: 'LOGOUT',
-        collection: COLLECTIONS.users,
-        documentId: actor.uid,
-        summary: `${actor.fullName} signed out`,
-      }),
-      LOGOUT_AUDIT_BUDGET_MS
-    );
+    /*
+     * Started, not waited for.
+     *
+     * This used to give the audit write up to 1200ms to come back before
+     * signing out. Measured against this project a single write costs between
+     * half a second and a second and a half, so that budget was not a safety
+     * valve — it was spent in full nearly every time, and it was the whole of
+     * why signing out felt slow. Sign-out itself takes about a millisecond.
+     *
+     * The write is issued first so it carries a valid token, and the SDK sends
+     * it from its own queue. On a slow connection some entries will be lost to
+     * the sign-out that follows, and that is the trade being made deliberately:
+     * a record that somebody left is worth less than every person who leaves
+     * waiting a second and a half to find out they have.
+     *
+     * Logins are unaffected and still recorded, so sessions remain traceable.
+     */
+    void audit.log({
+      actor,
+      action: 'LOGOUT',
+      collection: COLLECTIONS.users,
+      documentId: actor.uid,
+      summary: `${actor.fullName} signed out`,
+    });
   }
   await fbSignOut(auth);
 }

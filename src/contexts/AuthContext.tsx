@@ -35,6 +35,15 @@ interface AuthContextValue {
   initialising: boolean;
   /** True while a login/logout call is in flight. */
   busy: boolean;
+  /**
+   * True only while signing OUT.
+   *
+   * Separate from `busy` because the two want opposite things on screen.
+   * Signing in should leave the form visible — it is where the error goes
+   * when the password is wrong — while signing out has nothing left to show
+   * and a blank gap where the dashboard used to be.
+   */
+  signingOut: boolean;
   permissions: PermissionMap;
   can: (permission: Permission) => boolean;
   canAny: (...permissions: Permission[]) => boolean;
@@ -54,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [initialising, setInitialising] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const profileUnsubscribe = useRef<(() => void) | null>(null);
   /** Who the live listener is currently following, so it is not rebuilt. */
   const watchedUid = useRef<string | null>(null);
@@ -173,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     setBusy(true);
+    setSigningOut(true);
     try {
       logEvent(AnalyticsEvents.logout);
       // The dashboard counters are held in memory for a minute. Dropping them
@@ -198,6 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await authService.logout(user);
     } finally {
       setBusy(false);
+      setSigningOut(false);
     }
   }, [stopWatching, user]);
 
@@ -249,6 +261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       initialising,
+      signingOut,
       busy,
       permissions,
       can,
@@ -261,7 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refresh,
       enablePush,
     }),
-    [user, initialising, busy, permissions, can, canAny, login, logout, refresh, enablePush]
+    [user, initialising, busy, signingOut, permissions, can, canAny, login, logout, refresh, enablePush]
   );
 
   return (

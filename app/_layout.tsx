@@ -30,7 +30,7 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
  * boundary is Firestore Security Rules.
  */
 function RoleGate({ children }: { children: React.ReactNode }) {
-  const { user, initialising } = useAuth();
+  const { user, initialising, signingOut } = useAuth();
   const { ready: languageReady } = useLanguage();
   const segments = useSegments();
   const pathname = usePathname();
@@ -93,7 +93,22 @@ function RoleGate({ children }: { children: React.ReactNode }) {
     }
   }, [booting, user, segments, pathname, router]);
 
-  if (booting) {
+  /**
+   * Signing out, and the gap it used to leave.
+   *
+   * Clearing the session and arriving at the sign-in page are two separate
+   * things, and between them the dashboard has unmounted while the router has
+   * not yet finished. That gap rendered as a white screen — which read as a
+   * crash rather than as progress, and was reported as one.
+   *
+   * A flag of its own, not `busy`: that is also true while signing IN, and
+   * covering the sign-in form would hide the very field an error belongs in.
+   * Showing the panel the app boots with turns the gap into an obviously
+   * deliberate moment. It is brief
+   * now that sign-out no longer waits on an audit write, but brief and blank is
+   * still worse than brief and explained.
+   */
+  if (booting || signingOut) {
     return (
       <View style={{ flex: 1, backgroundColor: brand.navyDeep, justifyContent: 'center' }}>
         <LoadingState />
