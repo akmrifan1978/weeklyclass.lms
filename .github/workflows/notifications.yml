@@ -126,14 +126,20 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
         run: |
-          node scripts/send-push.js | tee /tmp/deliver.log
+          # pipefail, or the pipe into tee reports tee's success and a failed
+          # delivery is recorded as a green run. The default shell here is
+          # `bash -e`, which does not include it.
+          set -o pipefail
+          status=0
+          node scripts/send-push.js 2>&1 | tee /tmp/deliver.log || status=$?
           {
             echo "## Delivery run"
             echo ""
             echo '```'
-            tail -20 /tmp/deliver.log
+            tail -25 /tmp/deliver.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
 
       # Whatever happened, the key does not outlive the job. Belt and braces:
       # the runner is thrown away anyway.
