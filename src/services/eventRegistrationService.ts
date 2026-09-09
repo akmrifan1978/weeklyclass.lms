@@ -233,6 +233,9 @@ export async function book(
       // `requireBookingApproval` on, and then nothing self-confirms.
       status: requireApproval || !roomFor ? 'pending' : 'confirmed',
       paid: false,
+      // Null, not absent: this is the queue the mail service reads, and a
+      // missing field is not something Firestore can filter on.
+      confirmationEmailedAt: null,
       deleted: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -305,6 +308,9 @@ export async function confirmBooking(
 
     tx.update(bookingRef, {
       status: 'confirmed',
+      // Re-queued on confirmation, which also picks up bookings made before
+      // the field existed.
+      confirmationEmailedAt: null,
       confirmedAt: serverTimestamp(),
       confirmedBy: actor.uid,
       updatedAt: serverTimestamp(),

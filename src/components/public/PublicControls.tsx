@@ -127,6 +127,34 @@ export function PublicCard({
   );
 }
 
+/**
+ * What a card should say about booking, or nothing at all.
+ *
+ * Kept here rather than in each page because the front page strip and the
+ * events page both draw it, and two copies of this would drift the moment one
+ * of them learned about a fourth state.
+ *
+ * An event with no registration block says nothing — it is an announcement, not
+ * a ticketed event. An older public copy with no status falls back to the way
+ * it read before the status existed.
+ */
+export function bookingLabelKey(row: {
+  takesBookings?: boolean;
+  registrationStatus?: string | null;
+}): string | null {
+  if (!row.takesBookings) return null;
+  switch (row.registrationStatus) {
+    case 'open':
+      return 'event.status_open';
+    case 'openingSoon':
+      return 'event.status_openingSoon';
+    case 'closed':
+      return 'event.status_closed';
+    default:
+      return 'event.status_open';
+  }
+}
+
 /** The small category label at the top of a card. */
 export function Tag({ label, tone = 'accent' }: { label: string; tone?: 'accent' | 'muted' }) {
   return (

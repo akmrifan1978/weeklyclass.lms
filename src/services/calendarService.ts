@@ -1,6 +1,11 @@
 import { COLLECTIONS } from '@/constants/app';
 import { combineDateTime, toISODate } from '@/utils/date';
-import type { AppUser, CalendarEvent, MeetingProvider } from '@/types';
+import type {
+  AppUser,
+  CalendarEvent,
+  MeetingProvider,
+  RegistrationStatus,
+} from '@/types';
 import { db } from '@/firebase/config';
 import { doc, deleteDoc, setDoc } from 'firebase/firestore';
 import {
@@ -206,6 +211,8 @@ async function syncPublicSchedule(id: string, event: Partial<CalendarEvent>): Pr
       // registration block: the seat count, the price and the bookings stay
       // behind a sign-in where they belong.
       takesBookings: Boolean(event.registration),
+      // Published as the organiser set it. Opening soon says opening soon.
+      registrationStatus: event.registration?.status ?? null,
       startsAt: combineDateTime(event.date ?? '', event.startTime ?? ''),
       deleted: false,
     });
@@ -302,6 +309,19 @@ export interface PublicClass {
   bannerUrl?: string | null;
   /** True when this event takes bookings, so the card can offer a way in. */
   takesBookings?: boolean;
+  /**
+   * Whether booking is open, opening soon, or closed.
+   *
+   * `takesBookings` alone said only that an event HAS a registration block,
+   * which the public page then advertised as "Registration open" — including
+   * for an event whose organiser had deliberately set it to opening soon. An
+   * announcement that misstates whether you can book yet is worse than no
+   * announcement.
+   *
+   * Optional because events saved before this existed have no such field, and
+   * those keep the old reading until they are next saved.
+   */
+  registrationStatus?: RegistrationStatus | null;
 }
 
 /**

@@ -1,102 +1,115 @@
 #!/usr/bin/env node
 /**
- * Rebuilds `publicSchedule` from `calendarEvents`.
+ * Rewrites the public copy of every event from the event itself.
  *
- * The public copy is written whenever an event is saved, so it is normally
- * correct without anyone thinking about it. This exists for the one case that
- * breaks: the rules for what gets mirrored changed, and events saved under the
- * old rules are still filed under it. Re-saving every event by hand in the
- * admin screen would do the same job, one click at a time.
+ * The public schedule is written as a side effect of saving an event, which
+ * means a field added to that copy only reaches events somebody happens to
+ * save afterwards. `registrationStatus` was added so the website could say
+ * "Opening soon" instead of announcing that booking was open when it was not —
+ * and until this runs, every event saved before that change still reads the old
+ * way.
  *
- * The current rule, which this applies:
- *   mirrored     - anything open to everybody, class or ticketed event
- *   not mirrored - anything scoped to a single class, which is a private
- *                  arrangement and not a public advertisement
+ * Safe to run whenever, and safe to run twice: it writes the same document the
+ * app would have written, derived from the same source. It creates nothing for
+ * an event that should not be public and removes the copy of one that has since
+ * been narrowed to a single class.
  *
- * Idempotent, and safe to run whenever the two look out of step.
- *
- *   node scripts/resync-public-schedule.js --key ./serviceAccount.json
+ *   node scripts/resync-public-schedule.js          # say what would change
+ *   node scripts/resync-public-schedule.js --write  # actually change it
  */
-
+const fs = require('fs');
 const path = require('path');
 
-function parseArgs(argv) {
-  const args = {};
-  for (let i = 2; i < argv.length; i += 1) {
-    const token = argv[i];
-    if (!token.startsWith('--')) continue;
-    const next = argv[i + 1];
-    args[token.slice(2)] = next && !next.startsWith('--') ? next : true;
-  }
-  return args;
-}
+const ROOT = path.resolve(__dirname, '..');
+const WRITE = process.argv.includes('--write');
 
-/** Same shape `calendarService.syncPublicSchedule` writes. */
+/** Same shape the app writes — see calendarService.syncPublicSchedule. */
 function publicCopy(event) {
-  const [y, m, d] = String(event.date || '').split('-').map(Number);
-  const [hh, mm] = String(event.startTime || '').split(':').map(Number);
-  const startsAt = new Date(y || 1970, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
-
+  const date = event.date || '';
+  const startTime = event.startTime || '';
   return {
-    title: event.title ?? '',
+    title: event.title || '',
     description: event.description ?? null,
-    date: event.date ?? '',
-    startTime: event.startTime ?? '',
-    endTime: event.endTime ?? '',
+    date,
+    startTime,
+    endTime: event.endTime || '',
     venue: event.venue ?? null,
     location: event.location ?? null,
     topic: event.topic ?? null,
     speaker: event.speaker ?? null,
     bannerUrl: event.bannerUrl ?? null,
     takesBookings: Boolean(event.registration),
-    startsAt,
+    registrationStatus: event.registration?.status ?? null,
+    startsAt: startsAt(date, startTime),
     deleted: false,
   };
 }
 
+/**
+ * The instant an event begins, from the two strings people actually type.
+ *
+ * Kept deliberately dumb and local: the app's own combineDateTime is a TypeScript
+ * module this plain script cannot import, and the only thing that matters is
+ * that both produce the same instant for the same two strings.
+ */
+function startsAt(date, time) {
+  if (!date) return null;
+  const [year, month, day] = String(date).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const [hour, minute] = String(time || '00:00').split(':').map(Number);
+  return new Date(year, month - 1, day, hour || 0, minute || 0, 0, 0);
+}
+
 async function main() {
-  const args = parseArgs(process.argv);
-  const keyPath = args.key || process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (!keyPath) {
-    console.error('\n  ✗ Pass --key <serviceAccount.json>\n');
+  const keyPath = path.join(ROOT, 'serviceAccount.json');
+  if (!fs.existsSync(keyPath)) {
+    console.error('\n  ✗ serviceAccount.json not found next to package.json\n');
     process.exit(1);
   }
 
   const { initializeApp, cert } = require('firebase-admin/app');
   const { getFirestore } = require('firebase-admin/firestore');
-  // eslint-disable-next-line import/no-dynamic-require, global-require
-  initializeApp({ credential: cert(require(path.resolve(process.cwd(), keyPath))) });
+  initializeApp({ credential: cert(require(keyPath)) });
   const db = getFirestore();
 
-  const events = await db.collection('calendarEvents').get();
+  const events = await db.collection('calendarEvents').where('deleted', '==', false).get();
+  console.log(`\n  ${events.size} event(s) to consider${WRITE ? '' : '  (dry run)'}\n`);
+
   let written = 0;
-  let withdrawn = 0;
+  let removed = 0;
 
-  for (const snap of events.docs) {
-    const event = snap.data();
-    const ref = db.collection('publicSchedule').doc(snap.id);
+  for (const doc of events.docs) {
+    const event = doc.data();
+    const ref = db.collection('publicSchedule').doc(doc.id);
 
-    // A deleted or class-scoped event has no public copy. Deleting is
-    // unconditional rather than checked first: removing something that is not
-    // there is not an error, and one round trip beats two.
-    if (event.deleted === true || event.classId) {
-      await ref.delete();
-      withdrawn += 1;
+    // Scoped to one class is not public, and never was. If a copy exists from
+    // before it was narrowed, this is where it goes.
+    if (event.classId) {
+      const existing = await ref.get();
+      if (existing.exists) {
+        console.log(`  - ${event.title}: class-scoped, withdrawing public copy`);
+        if (WRITE) await ref.delete();
+        removed += 1;
+      }
       continue;
     }
 
-    await ref.set(publicCopy(event));
+    const copy = publicCopy(event);
+    console.log(
+      `  ✓ ${event.title}: bookings=${copy.takesBookings} status=${copy.registrationStatus ?? '—'}`
+    );
+    if (WRITE) await ref.set(copy);
     written += 1;
   }
 
-  console.log('');
-  console.log(`  calendar events read : ${events.size}`);
-  console.log(`  public copies written: ${written}`);
-  console.log(`  public copies removed: ${withdrawn}`);
-  console.log('');
+  console.log(
+    WRITE
+      ? `\n  Done — ${written} published, ${removed} withdrawn.\n`
+      : `\n  Would publish ${written} and withdraw ${removed}. Re-run with --write.\n`
+  );
 }
 
 main().catch((error) => {
-  console.error('\n  ✗', error?.message ?? error, '\n');
+  console.error('\n  ✗', error && error.message ? error.message : error, '\n');
   process.exit(1);
 });

@@ -451,6 +451,14 @@ export interface EventRegistration extends BaseDoc {
   amount: number;
   /** Whatever `referenceLabel` asked for, if anything. */
   reference?: string | null;
+  /**
+   * When the confirmation email went out, or null while one is owed.
+   *
+   * This IS the queue the local mail service works from — null means unsent, a
+   * timestamp means done. Written null by the app rather than left absent,
+   * because Firestore cannot query for a field that is not there.
+   */
+  confirmationEmailedAt?: FireDate;
   currency: string;
   /**
    * A booking is requested, not granted.

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { PublicPage } from '@/components/public/PublicPage';
 import {
+  bookingLabelKey,
   Fact,
   ListState,
   PublicCard,
@@ -76,12 +77,13 @@ export default function PublicEvents() {
 function EventCard({ event }: { event: PublicClass }) {
   const { t } = useTranslation();
   const where = [event.venue, event.location].filter(Boolean).join(', ');
+  const booking = bookingLabelKey(event);
 
   return (
     <PublicCard>
       <View style={styles.head}>
         <Tag label={formatShortDate(event.date)} tone="muted" />
-        {event.takesBookings ? <Tag label={t('public.events.registrationOpen')} /> : null}
+        {booking ? <Tag label={t(booking)} /> : null}
       </View>
 
       <Text style={styles.title}>{event.title}</Text>

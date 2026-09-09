@@ -23,6 +23,7 @@ import { useCalendarSystem } from '@/hooks/useCalendarSystem';
 import { LoadingState } from '@/components/ui';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+import { useDocumentBranding } from '@/hooks/useDocumentBranding';
 
 /**
  * Routes each signed-in user into the section their role owns, and everyone
@@ -30,6 +31,8 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
  * boundary is Firestore Security Rules.
  */
 function RoleGate({ children }: { children: React.ReactNode }) {
+  // The tab's title and icon follow the organisation's own settings, live.
+  useDocumentBranding();
   const { user, initialising, signingOut } = useAuth();
   const { ready: languageReady } = useLanguage();
   const segments = useSegments();

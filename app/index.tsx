@@ -8,7 +8,7 @@ import { formatShortDate } from '@/utils/date';
 import * as calendarService from '@/services/calendarService';
 import { InstallPrompt } from '@/components/shared/InstallPrompt';
 import { PublicPage } from '@/components/public/PublicPage';
-import { PublicCard, Tag } from '@/components/public/PublicControls';
+import { bookingLabelKey, PublicCard, Tag } from '@/components/public/PublicControls';
 import { PUBLIC_NAV } from '@/constants/publicNav';
 import { APP_NAME } from '@/constants/app';
 import { useAsync } from '@/hooks/useAsync';
@@ -245,7 +245,9 @@ export default function SplashScreen() {
                     </Text>
                   ) : null}
 
-                  {item.takesBookings ? <Tag label={t('public.events.registrationOpen')} /> : null}
+                  {bookingLabelKey(item) ? (
+                    <Tag label={t(bookingLabelKey(item) as string)} />
+                  ) : null}
 
                   {/* No booking from here, deliberately. This page exists to
                       tell a visitor what is coming up, and every card carrying

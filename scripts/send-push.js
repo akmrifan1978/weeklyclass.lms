@@ -310,6 +310,249 @@ async function applyPasswordChanges(auth, db) {
   return applied;
 }
 
+/**
+ * The booking confirmation email.
+ *
+ * WHY IT LIVES HERE. The app is a browser page: it has no way to send mail, and
+ * the only mail Firebase itself sends is the password reset, whose template
+ * belongs to Google and cannot carry an event's details. This service already
+ * runs on a machine the centre controls and already watches Firestore for work
+ * to do, so the mail goes out from here alongside the push notifications.
+ *
+ * WHAT IT COSTS. Nothing. It speaks plain SMTP, so it works with any free
+ * mailbox — a Gmail account with an app password sends 500 a day, Brevo's free
+ * tier 300, and neither needs a domain of your own. Nothing here is tied to a
+ * provider; set the five variables and it uses whatever you pointed it at.
+ *
+ * WITHOUT CONFIGURATION IT DOES NOTHING, and says so once. A centre that has
+ * not set up mail still gets every push notification, and the ticket in the app
+ * is unaffected — the email is an extra route to the same information, not the
+ * only one.
+ */
+function mailer() {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return null;
+
+  let nodemailer;
+  try {
+    nodemailer = require('nodemailer');
+  } catch {
+    console.warn('  ! email is configured but nodemailer is missing — run: npm install');
+    return null;
+  }
+
+  const port = Number(process.env.SMTP_PORT || 465);
+  return nodemailer.createTransport({
+    host,
+    port,
+    // 465 is implicit TLS; 587 upgrades with STARTTLS. Deriving it from the
+    // port rather than asking for a sixth setting nobody would get right.
+    secure: port === 465,
+    auth: { user, pass },
+  });
+}
+
+/**
+ * The SAME ticket code the app prints on the ticket.
+ *
+ * Deliberately a copy of eventRegistrationService.ticketCode rather than
+ * something simpler: the code in the email is the code somebody reads out at
+ * the door, and a second scheme here would hand every attendee a code the
+ * organiser's screen does not recognise. If that function ever changes, this
+ * one has to change with it.
+ */
+const CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+function ticketCode(registrationId) {
+  // FNV-1a. Not for security — only to spread ids that share a long prefix,
+  // which every booking for the same event does.
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < registrationId.length; i += 1) {
+    hash ^= registrationId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+
+  let code = '';
+  for (let i = 0; i < 6; i += 1) {
+    code += CODE_ALPHABET[hash % CODE_ALPHABET.length];
+    hash = Math.floor(hash / CODE_ALPHABET.length) + Math.imul(hash, 31);
+    hash >>>= 0;
+  }
+  return code;
+}
+
+/** Escapes text going into the HTML body. An event title is somebody's typing. */
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Builds the message.
+ *
+ * Table-based and inline-styled, which is not how anybody writes a web page and
+ * is how mail clients still expect HTML: Outlook ignores most of a stylesheet
+ * and several clients strip <style> entirely. A plain-text alternative goes
+ * alongside, both because some people read mail that way and because a message
+ * with no text part is treated as more likely to be spam.
+ */
+function confirmationEmail(registration, event, appName) {
+  const ticket = ticketCode(String(registration.id || ''));
+  const title = registration.eventTitle || event?.title || '';
+  const when = [event?.date, event?.startTime].filter(Boolean).join(' at ');
+  const where = [event?.venue, event?.location].filter(Boolean).join(', ');
+  const whatsapp = event?.registration?.whatsappLink || null;
+  const seats = registration.seats || 1;
+
+  const row = (label, value) =>
+    !value
+      ? ''
+      : `<tr>
+           <td style="padding:6px 0;color:#6A7C9E;font-size:13px;width:110px;">${escapeHtml(label)}</td>
+           <td style="padding:6px 0;color:#111A2E;font-size:14px;font-weight:600;">${escapeHtml(value)}</td>
+         </tr>`;
+
+  // Absent entirely when the organiser set no link — no empty heading, no
+  // button that goes nowhere.
+  //
+  // Outside the details table on purpose. Inside it the button inherits that
+  // table's narrow value column and wraps its own label onto three lines.
+  const joinBlock = whatsapp
+    ? `<div style="padding-top:22px;">
+         <a href="${escapeHtml(whatsapp)}"
+            style="display:block;background:#25D366;color:#ffffff;text-decoration:none;
+                   font-size:15px;font-weight:700;padding:14px 20px;border-radius:8px;
+                   text-align:center;white-space:nowrap;">
+           Join WhatsApp Group
+         </a>
+         <div style="color:#6A7C9E;font-size:12px;padding-top:8px;">
+           Join the group for updates about this event.
+         </div>
+       </div>`
+    : '';
+
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- Without this a phone lays the message out at desktop width and then
+       shrinks the whole thing, which is how a perfectly good email arrives
+       looking like a scanned document. -->
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="margin:0;padding:24px;background:#F5F7FA;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;">
+    <tr><td style="background:#041E4A;padding:20px 24px;color:#ffffff;font-size:16px;font-weight:700;">
+      ${escapeHtml(appName)}
+    </td></tr>
+    <tr><td style="padding:24px;">
+      <div style="color:#1B8A5A;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">
+        Booking confirmed
+      </div>
+      <div style="color:#041E4A;font-size:20px;font-weight:700;padding-top:6px;">
+        ${escapeHtml(title)}
+      </div>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="padding-top:14px;">
+        ${row('When', when)}
+        ${row('Where', where)}
+        ${row('Places', String(seats))}
+        ${row('Ticket', ticket)}
+      </table>
+      ${joinBlock}
+      <div style="color:#6A7C9E;font-size:12px;padding-top:24px;line-height:18px;">
+        Show this ticket code at the door. You can also open it any time in the app.
+      </div>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  const text = [
+    `Booking confirmed - ${title}`,
+    when && `When: ${when}`,
+    where && `Where: ${where}`,
+    `Places: ${seats}`,
+    `Ticket: ${ticket}`,
+    whatsapp && `Join the WhatsApp group: ${whatsapp}`,
+    '',
+    'Show this ticket code at the door. You can also open it any time in the app.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  return { subject: `Booking confirmed - ${title}`, html, text };
+}
+
+/**
+ * Sends one email per confirmed booking that has not had one.
+ *
+ * The queue is the `confirmationEmailedAt` field: null means owed, a timestamp
+ * means sent. Written by the app when a booking is confirmed and stamped here
+ * once the mail is away, so a service that dies mid-pass resends at worst and
+ * loses nothing at best.
+ *
+ * A booking whose owner has no email address is stamped as done rather than
+ * retried for ever — plenty of accounts here sign in by mobile number alone,
+ * and there is no address to write to.
+ */
+async function sendConfirmationEmails(db) {
+  const transport = mailer();
+  if (!transport) return 0;
+
+  const snap = await db
+    .collection('eventRegistrations')
+    .where('deleted', '==', false)
+    .where('status', '==', 'confirmed')
+    .where('confirmationEmailedAt', '==', null)
+    .limit(25)
+    .get();
+
+  if (snap.empty) return 0;
+
+  const settings = await db.collection('settings').doc('app').get();
+  const appName = (settings.exists && settings.data().appName) || 'WeeklyClass LMS';
+  const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+
+  console.log(`\n  ${snap.size} confirmation email(s) to send`);
+  let sent = 0;
+
+  for (const doc of snap.docs) {
+    const registration = { id: doc.id, ...doc.data() };
+    const to = (registration.userEmail || '').trim();
+
+    if (!to) {
+      await doc.ref.update({ confirmationEmailedAt: new Date() });
+      console.log(`    - ${registration.userName || doc.id}: no email address, skipped`);
+      continue;
+    }
+
+    try {
+      const eventSnap = await db
+        .collection('calendarEvents')
+        .doc(registration.eventId)
+        .get();
+      const event = eventSnap.exists ? eventSnap.data() : null;
+
+      const message = confirmationEmail(registration, event, appName);
+      await transport.sendMail({ from, to, ...message });
+
+      // Stamped only after the send returned. A crash before this resends the
+      // same mail, which is a far better failure than silently sending none.
+      await doc.ref.update({ confirmationEmailedAt: new Date() });
+      sent += 1;
+      console.log(`    ✓ ${to}`);
+    } catch (error) {
+      console.warn(`    ! ${to}: ${error && error.message ? error.message : error}`);
+    }
+  }
+
+  return sent;
+}
+
 async function run() {
   const args = parseArgs(process.argv);
   loadEnv();
@@ -418,6 +661,9 @@ async function run() {
     await applyPasswordChanges(getAuth(), db).catch((error) =>
       console.warn('  ! password pass failed:', error.message)
     );
+    await sendConfirmationEmails(db).catch((error) =>
+      console.warn('  ! email pass failed:', error.message)
+    );
     return pushed;
   };
 
@@ -435,7 +681,14 @@ async function run() {
   console.log(sent === 0 ? '\n  Nothing waiting.\n' : `\n  Done — ${sent} delivery(s).\n`);
 }
 
-run().catch((error) => {
-  console.error('\n  ✗', error && error.message ? error.message : error, '\n');
-  process.exit(1);
-});
+// Only when this file is the thing being run. Requiring it — which is how the
+// email template is checked without sending anything — should not start a
+// service that polls Firestore.
+if (require.main === module) {
+  run().catch((error) => {
+    console.error('\n  ✗', error && error.message ? error.message : error, '\n');
+    process.exit(1);
+  });
+}
+
+module.exports = { confirmationEmail, escapeHtml, ticketCode };
