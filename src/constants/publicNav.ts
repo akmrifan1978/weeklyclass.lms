@@ -19,16 +19,30 @@ export interface PublicNavItem {
   icon: keyof typeof Ionicons.glyphMap;
 }
 
+/**
+ * Why the paths are spelt out rather than short.
+ *
+ * A route group is invisible in the URL, so `(public)/classes` and
+ * `(admin)/classes` both want to be `/classes` — and a cold load of that
+ * address has no way to tell which was meant. The router picked the admin one,
+ * the role gate saw a signed-out visitor inside a staff group, and bounced them
+ * back to the front page.
+ *
+ * In the app that never showed, because every tap names the group it is going
+ * to. It showed the moment somebody opened a link, which is the one thing a
+ * public website exists to support. So these carry names no signed-in screen
+ * uses, and they read better in a shared link for it.
+ */
 export const PUBLIC_NAV: readonly PublicNavItem[] = [
   { key: 'nav.home', route: '/', icon: 'home-outline' },
-  { key: 'nav.teachers', route: '/(public)/teachers', icon: 'people-outline' },
-  { key: 'nav.videos', route: '/(public)/videos', icon: 'videocam-outline' },
-  { key: 'nav.events', route: '/(public)/events', icon: 'calendar-outline' },
+  { key: 'nav.teachers', route: '/(public)/our-teachers', icon: 'people-outline' },
+  { key: 'nav.videos', route: '/(public)/video-lectures', icon: 'videocam-outline' },
+  { key: 'nav.events', route: '/(public)/upcoming-events', icon: 'calendar-outline' },
   { key: 'about.title', route: '/(auth)/about', icon: 'information-circle-outline' },
 
-  { key: 'nav.classes', route: '/(public)/classes', icon: 'school-outline' },
-  { key: 'nav.lessons', route: '/(public)/lessons', icon: 'book-outline' },
-  { key: 'nav.quran', route: '/(public)/quran', icon: 'bookmarks-outline' },
+  { key: 'nav.classes', route: '/(public)/our-classes', icon: 'school-outline' },
+  { key: 'nav.lessons', route: '/(public)/weekly-lessons', icon: 'book-outline' },
+  { key: 'nav.quran', route: '/(public)/read-quran', icon: 'bookmarks-outline' },
   { key: 'nav.contact', route: '/(public)/contact', icon: 'mail-outline' },
 ] as const;
 

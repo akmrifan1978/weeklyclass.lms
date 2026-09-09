@@ -23,6 +23,7 @@ import {
   spacing,
   TOUCH_TARGET,
 } from '@/constants/theme';
+import { tone } from '@/components/public/tone';
 import type { UserRole } from '@/types';
 
 /**
@@ -152,7 +153,7 @@ export default function SplashScreen() {
             accessibilityLabel={t(item.labelKey)}
             style={({ pressed }) => [styles.staffButton, { opacity: pressed ? 0.7 : 1 }]}
           >
-            <Ionicons name={item.icon} size={15} color={colors.textSecondary} />
+            <Ionicons name={item.icon} size={15} color={tone.body} />
             <Text style={styles.staffLabel} numberOfLines={1}>
               {t(item.labelKey)}
             </Text>
@@ -284,7 +285,7 @@ function LinkButton({
       accessibilityLabel={label}
       style={({ pressed }) => [styles.link, { opacity: pressed ? 0.65 : 1 }]}
     >
-      <Ionicons name={icon} size={15} color={colors.textSecondary} />
+      <Ionicons name={icon} size={15} color={tone.body} />
       <Text style={styles.linkText}>{label}</Text>
     </Pressable>
   );
@@ -340,14 +341,14 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
+    borderColor: tone.controlLineStrong,
+    backgroundColor: tone.control,
     paddingHorizontal: spacing.lg,
     // Short of the 44pt guideline on purpose is NOT what this is: the row is
     // padded to a comfortable tap target while reading as secondary.
     paddingVertical: 9,
   },
-  staffLabel: { fontSize: fontSize.xs, color: colors.text, fontWeight: fontWeight.semibold },
+  staffLabel: { fontSize: fontSize.xs, color: tone.body, fontWeight: fontWeight.semibold },
 
   linkRow: {
     flexDirection: 'row',
@@ -367,7 +368,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: fontSize.md,
-    color: colors.textSecondary,
+    color: tone.body,
     fontWeight: fontWeight.semibold,
   },
 
@@ -379,9 +380,9 @@ const styles = StyleSheet.create({
     flexBasis: 96,
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: tone.panel,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tone.panelLine,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.sm,
@@ -390,14 +391,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radius.md,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: tone.accentPanel,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tileLabel: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
-    color: brand.navyDeep,
+    color: tone.body,
     textAlign: 'center',
   },
 
@@ -413,9 +414,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: tone.pressed,
   },
   eventPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
-  eventTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: brand.navyDeep },
-  eventFact: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  eventTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: tone.title },
+  eventFact: { fontSize: fontSize.xs, color: tone.muted, marginTop: 2 },
 });

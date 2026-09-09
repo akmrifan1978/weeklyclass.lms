@@ -18,6 +18,7 @@ import { autoThumbnail, listPublicVideos } from '@/services/videoService';
 import { formatShortDate } from '@/utils/date';
 import type { VideoItem } from '@/types';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import { tone } from '@/components/public/tone';
 
 /**
  * The recordings anybody may watch.
@@ -172,8 +173,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
-    color: brand.navyDeep,
+    color: tone.title,
     lineHeight: 21,
   },
-  blurb: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  blurb: { fontSize: fontSize.sm, color: tone.body, lineHeight: 19 },
 });

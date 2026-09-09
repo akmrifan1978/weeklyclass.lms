@@ -14,6 +14,7 @@ import {
   spacing,
   TOUCH_TARGET,
 } from '@/constants/theme';
+import { tone } from './tone';
 
 /**
  * The handful of pieces the public pages are assembled from.
@@ -35,12 +36,12 @@ export function SearchBar({
 }) {
   return (
     <View style={styles.search}>
-      <Ionicons name="search" size={16} color={colors.textMuted} />
+      <Ionicons name="search" size={16} color={tone.muted} />
       <TextInput
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={tone.muted}
         style={styles.searchInput}
         accessibilityLabel={placeholder}
         autoCorrect={false}
@@ -53,7 +54,7 @@ export function SearchBar({
           accessibilityRole="button"
           accessibilityLabel="Clear"
         >
-          <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+          <Ionicons name="close-circle" size={16} color={tone.muted} />
         </Pressable>
       ) : null}
     </View>
@@ -152,7 +153,7 @@ export function Fact({
 }) {
   return (
     <View style={styles.fact}>
-      <Ionicons name={icon} size={13} color={tint ?? colors.textMuted} />
+      <Ionicons name={icon} size={13} color={tint ?? tone.muted} />
       <Text style={styles.factText} numberOfLines={1}>
         {text}
       </Text>
@@ -198,7 +199,7 @@ export function ListState({
   if (!empty) return null;
   return (
     <View style={styles.state}>
-      <Ionicons name={icon} size={28} color={colors.textMuted} />
+      <Ionicons name={icon} size={28} color={tone.muted} />
       <Text style={styles.stateTitle}>{title}</Text>
       {message ? <Text style={styles.stateText}>{message}</Text> : null}
     </View>
@@ -247,9 +248,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: tone.control,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tone.controlLine,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     minHeight: TOUCH_TARGET,
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: fontSize.sm,
-    color: colors.text,
+    color: tone.title,
     paddingVertical: spacing.sm,
     // Web draws its own focus ring on top of the border, which reads as a
     // second outline around the field.
@@ -270,20 +271,20 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: tone.controlLine,
+    backgroundColor: tone.control,
     minHeight: 32,
     justifyContent: 'center',
   },
-  chipActive: { backgroundColor: brand.navyDeep, borderColor: brand.navyDeep },
-  chipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  chipActive: { backgroundColor: brand.orange, borderColor: brand.orange },
+  chipText: { fontSize: fontSize.xs, color: tone.body, fontWeight: fontWeight.medium },
   chipTextActive: { color: colors.textInverse, fontWeight: fontWeight.bold },
 
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: tone.panel,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tone.panelLine,
     padding: spacing.lg,
     gap: spacing.sm,
     ...shadow.sm,
@@ -295,19 +296,19 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: radius.sm,
   },
-  tagAccent: { backgroundColor: colors.accentSoft },
-  tagMuted: { backgroundColor: colors.surfaceMuted },
+  tagAccent: { backgroundColor: tone.accentPanel },
+  tagMuted: { backgroundColor: tone.pressed },
   tagText: { fontSize: 10, fontWeight: fontWeight.bold, letterSpacing: 0.6 },
-  tagTextAccent: { color: brand.orangeDark },
-  tagTextMuted: { color: colors.textSecondary },
+  tagTextAccent: { color: brand.orangeLight },
+  tagTextMuted: { color: tone.body },
 
   fact: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  factText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary },
+  factText: { flex: 1, fontSize: fontSize.xs, color: tone.body },
 
   cardAction: {
     marginTop: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: tone.controlLineStrong,
     borderRadius: radius.md,
     minHeight: TOUCH_TARGET,
     alignItems: 'center',
@@ -316,14 +317,14 @@ const styles = StyleSheet.create({
   cardActionText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    color: brand.navyDeep,
+    color: tone.body,
   },
 
   state: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxxl },
-  stateTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
+  stateTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: tone.title },
   stateText: {
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    color: tone.body,
     textAlign: 'center',
     maxWidth: 320,
     lineHeight: 19,
@@ -332,15 +333,15 @@ const styles = StyleSheet.create({
   prompt: {
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: tone.accentPanel,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(237,91,3,0.22)',
+    borderColor: tone.accentLine,
     padding: spacing.lg,
   },
   promptText: {
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    color: tone.body,
     textAlign: 'center',
     lineHeight: 19,
   },
@@ -361,11 +362,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
+    borderColor: tone.controlLineStrong,
+    backgroundColor: tone.control,
   },
   promptSecondaryText: {
-    color: brand.navyDeep,
+    color: tone.body,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
   },

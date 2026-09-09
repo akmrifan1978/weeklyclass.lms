@@ -8,6 +8,7 @@ import { ListState, PublicCard, SignInPrompt } from '@/components/public/PublicC
 import { useAsync } from '@/hooks/useAsync';
 import { getSettings } from '@/services/settingsService';
 import { brand, colors, fontSize, fontWeight, radius, spacing, TOUCH_TARGET } from '@/constants/theme';
+import { tone } from '@/components/public/tone';
 
 /**
  * How to reach the centre.
@@ -81,6 +82,22 @@ export default function PublicContact() {
     ].filter((channel) => Boolean(channel.value?.trim()));
   }, [settings, t]);
 
+  /**
+   * "Jeddah Dawah Center", not "Venue: Jeddah Dawah Center", under a heading
+   * that already says VENUE.
+   *
+   * Whoever filled the setting in reasonably typed the label into the field as
+   * well, which is fine on the front page where nothing else names it and reads
+   * as a stutter here. Rather than editing what they wrote, the label is
+   * stripped back off when this page has already printed it. Matched against
+   * whatever the label currently is, so it keeps working in every language.
+   */
+  const label = t('settings.venueLabel').trim().replace(/:$/, '');
+  const raw = settings?.venue?.trim() ?? '';
+  const venue = raw.toLowerCase().startsWith(`${label.toLowerCase()}:`)
+    ? raw.slice(label.length + 1).trim()
+    : raw;
+
   return (
     <PublicPage
       badge={t('public.contact.badge')}
@@ -89,7 +106,7 @@ export default function PublicContact() {
       onRefresh={refresh}
       refreshing={refreshing}
     >
-      {settings?.venue?.trim() ? (
+      {venue ? (
         <PublicCard>
           <View style={styles.venueRow}>
             <View style={styles.venueMark}>
@@ -97,7 +114,7 @@ export default function PublicContact() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.venueLabel}>{t('settings.venueLabel')}</Text>
-              <Text style={styles.venue}>{settings.venue}</Text>
+              <Text style={styles.venue}>{venue}</Text>
             </View>
           </View>
         </PublicCard>
@@ -128,14 +145,14 @@ export default function PublicContact() {
                 { opacity: pressed ? 0.65 : 1 },
               ]}
             >
-              <Ionicons name={channel.icon} size={17} color={brand.navy} />
+              <Ionicons name={channel.icon} size={17} color={brand.sandLight} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.channelLabel}>{channel.label}</Text>
                 <Text style={styles.channelValue} numberOfLines={1}>
                   {channel.value}
                 </Text>
               </View>
-              <Ionicons name="open-outline" size={15} color={colors.textMuted} />
+              <Ionicons name="open-outline" size={15} color={tone.muted} />
             </Pressable>
           ))}
         </PublicCard>
@@ -154,21 +171,21 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radius.md,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: tone.accentPanel,
     alignItems: 'center',
     justifyContent: 'center',
   },
   venueLabel: {
     fontSize: 10,
     fontWeight: fontWeight.bold,
-    color: colors.textMuted,
+    color: tone.muted,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   venue: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
-    color: brand.navyDeep,
+    color: tone.title,
     marginTop: 2,
     lineHeight: 21,
   },
@@ -180,11 +197,11 @@ const styles = StyleSheet.create({
     minHeight: TOUCH_TARGET,
     paddingVertical: spacing.sm,
   },
-  channelDivided: { borderTopWidth: 1, borderTopColor: colors.divider },
-  channelLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  channelDivided: { borderTopWidth: 1, borderTopColor: tone.panelLine },
+  channelLabel: { fontSize: fontSize.xs, color: tone.muted },
   channelValue: {
     fontSize: fontSize.sm,
-    color: brand.navyDeep,
+    color: tone.title,
     fontWeight: fontWeight.semibold,
     marginTop: 1,
   },

@@ -17,6 +17,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { listPublicClassRooms } from '@/services/publicSiteService';
 import type { AgeBand, ClassRoom } from '@/types';
 import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme';
+import { tone } from '@/components/public/tone';
 
 /**
  * The class groups on offer.
@@ -123,8 +124,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
-    color: brand.navyDeep,
+    color: tone.title,
     lineHeight: 23,
   },
-  blurb: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  blurb: { fontSize: fontSize.sm, color: tone.body, lineHeight: 19 },
 });

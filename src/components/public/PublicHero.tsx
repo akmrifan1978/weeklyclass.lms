@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Defs, Path, Pattern, Rect } from 'react-native-svg';
 
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import { tone } from './tone';
 
 /**
  * The navy band at the top of every public page.
@@ -108,7 +109,7 @@ export function PublicHero({
 
 const styles = StyleSheet.create({
   hero: {
-    backgroundColor: brand.navyDeep,
+    backgroundColor: tone.band,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xxxl,
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: spacing.md,
     fontSize: fontSize.sm,
-    color: 'rgba(229,197,160,0.85)',
+    color: tone.faint,
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 420,

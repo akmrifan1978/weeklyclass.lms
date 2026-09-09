@@ -13,6 +13,7 @@ import {
 import { useAsync } from '@/hooks/useAsync';
 import { listSurahs, type SurahSummary } from '@/services/quranService';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import { tone } from '@/components/public/tone';
 
 /**
  * The index of the Qur'an, open to anybody.
@@ -112,21 +113,21 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: radius.sm,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: tone.accentPanel,
     alignItems: 'center',
     justifyContent: 'center',
   },
   numberText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
-    color: brand.orangeDark,
+    color: brand.orangeLight,
   },
   details: { flex: 1 },
-  english: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: brand.navyDeep },
-  meaning: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 1 },
+  english: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: tone.title },
+  meaning: { fontSize: fontSize.xs, color: tone.muted, marginTop: 1 },
   arabic: {
     fontSize: fontSize.lg,
-    color: brand.navy,
+    color: brand.sandLight,
     fontWeight: fontWeight.semibold,
     // Arabic sits low in its line box at this size; a little extra height stops
     // the descenders being clipped by the row above.

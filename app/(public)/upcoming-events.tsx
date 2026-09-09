@@ -15,6 +15,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { listPublicClasses, type PublicClass } from '@/services/calendarService';
 import { formatShortDate } from '@/utils/date';
 import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme';
+import { tone } from '@/components/public/tone';
 
 /**
  * What is coming up, for anybody at all.
@@ -109,12 +110,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
-    color: brand.navyDeep,
+    color: tone.title,
     lineHeight: 23,
   },
   blurb: {
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    color: tone.body,
     lineHeight: 19,
     marginTop: 2,
   },

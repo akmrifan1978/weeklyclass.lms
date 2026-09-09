@@ -8,6 +8,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { listPublicTeachers } from '@/services/publicSiteService';
 import type { PublicTeacher } from '@/types';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import { tone } from '@/components/public/tone';
 
 /**
  * Who teaches here.
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: radius.md,
-    backgroundColor: brand.navyDeep,
+    backgroundColor: tone.pressed,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.heavy,
   },
   details: { flex: 1, gap: 3 },
-  name: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: brand.navyDeep },
-  subjects: { fontSize: fontSize.sm, color: brand.orangeDark, fontWeight: fontWeight.semibold },
-  qualification: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
+  name: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: tone.title },
+  subjects: { fontSize: fontSize.sm, color: brand.orangeLight, fontWeight: fontWeight.semibold },
+  qualification: { fontSize: fontSize.xs, color: tone.body, lineHeight: 17 },
 });

@@ -53,6 +53,7 @@ import {
   Spacer,
   StatusBadge,
   TextField,
+  ToggleRow,
   type Option,
 } from '@/components/ui';
 import type { Cursor } from '@/services/firestore';
@@ -632,6 +633,8 @@ function UserForm({
     dateOfBirth: '',
     gender: '' as 'male' | 'female' | '',
     qualification: '',
+    publicProfile: false,
+    publicSubjects: '',
     branchId: '',
     classId: '',
     language: 'en' as LanguageCode,
@@ -676,6 +679,8 @@ function UserForm({
         dateOfBirth: existing.dateOfBirth ?? '',
         gender: existing.gender ?? '',
         qualification: existing.qualification ?? '',
+        publicProfile: existing.publicProfile ?? false,
+        publicSubjects: existing.publicSubjects ?? '',
         branchId: existing.branchId ?? '',
         classId: existing.classId ?? '',
         language: existing.language,
@@ -693,6 +698,10 @@ function UserForm({
         dateOfBirth: '',
         gender: '',
         qualification: '',
+        // Off for somebody who does not exist yet. Publishing a person is a
+        // decision somebody makes about them, never a default they inherit.
+        publicProfile: false,
+        publicSubjects: '',
         branchId: '',
         classId: '',
         language: 'en',
@@ -773,7 +782,11 @@ function UserForm({
             status: form.status,
             ...(effectiveRole === 'student'
               ? { dateOfBirth: form.dateOfBirth || null, gender: form.gender || null }
-              : { qualification: form.qualification.trim() }),
+              : {
+                qualification: form.qualification.trim(),
+                publicProfile: form.publicProfile,
+                publicSubjects: form.publicSubjects.trim(),
+              }),
           },
           actor
         );
@@ -949,13 +962,40 @@ function UserForm({
           />
         </>
       ) : (
-        <TextField
-          label={t('auth.qualification')}
-          value={form.qualification}
-          onChangeText={(v) => set('qualification', v)}
-          error={errors.qualification}
-          icon="ribbon-outline"
-        />
+        <>
+          <TextField
+            label={t('auth.qualification')}
+            value={form.qualification}
+            onChangeText={(v) => set('qualification', v)}
+            error={errors.qualification}
+            icon="ribbon-outline"
+          />
+
+          {/*
+            The public profile, and the one field it publishes that is not
+            already on this form.
+
+            Off unless somebody turns it on, per teacher. The public Teachers
+            page reads a separate document that only exists while this is on —
+            see publicSiteService — so switching it off takes the profile down
+            rather than merely hiding it behind a flag.
+          */}
+          <ToggleRow
+            label={t('admin.publicProfile')}
+            description={t('admin.publicProfileHint')}
+            value={form.publicProfile}
+            onValueChange={(v) => set('publicProfile', v)}
+          />
+
+          {form.publicProfile ? (
+            <TextField
+              label={t('admin.publicSubjects')}
+              value={form.publicSubjects}
+              onChangeText={(v) => set('publicSubjects', v)}
+              icon="book-outline"
+            />
+          ) : null}
+        </>
       )}
 
       <Select<UserStatus>

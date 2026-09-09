@@ -19,6 +19,7 @@ import {
   spacing,
   TOUCH_TARGET,
 } from '@/constants/theme';
+import { tone } from './tone';
 import type { AppSettings, LanguageCode } from '@/types';
 
 /**
@@ -81,7 +82,7 @@ export function PublicHeader({ settings }: { settings?: AppSettings | null }) {
           accessibilityLabel={t('common.menu')}
           style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.6 }]}
         >
-          <Ionicons name="menu" size={22} color={brand.navyDeep} />
+          <Ionicons name="menu" size={22} color={tone.body} />
         </Pressable>
       </View>
 
@@ -98,7 +99,7 @@ export function PublicHeader({ settings }: { settings?: AppSettings | null }) {
               accessibilityLabel={t('common.close')}
               style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.6 }]}
             >
-              <Ionicons name="close" size={20} color={brand.navyDeep} />
+              <Ionicons name="close" size={20} color={tone.body} />
             </Pressable>
           </View>
 
@@ -189,17 +190,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: tone.bar,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: tone.barLine,
   },
   iconButton: {
     width: 38,
     height: 38,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: tone.controlLine,
+    backgroundColor: tone.control,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -210,9 +211,11 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.surface,
+    backgroundColor: tone.band,
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: tone.panelLine,
     paddingBottom: spacing.lg,
     ...shadow.lg,
   },
@@ -232,10 +235,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
   },
-  itemCurrent: { backgroundColor: colors.surfaceMuted },
-  itemPressed: { backgroundColor: colors.divider },
-  itemText: { fontSize: fontSize.sm, color: colors.textSecondary },
-  itemTextCurrent: { color: brand.navyDeep, fontWeight: fontWeight.semibold },
+  itemCurrent: { backgroundColor: tone.pressed },
+  itemPressed: { backgroundColor: tone.control },
+  itemText: { fontSize: fontSize.sm, color: tone.body },
+  itemTextCurrent: { color: tone.title, fontWeight: fontWeight.semibold },
 
   footer: {
     flexDirection: 'row',
@@ -245,7 +248,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     marginTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: tone.panelLine,
   },
   pills: { gap: spacing.xs, alignItems: 'center', paddingRight: spacing.sm },
   pill: {
@@ -253,24 +256,26 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: tone.controlLine,
     minHeight: 34,
     justifyContent: 'center',
   },
-  pillActive: { backgroundColor: brand.navyDeep, borderColor: brand.navyDeep },
-  pillText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  // Orange, the colour an active language pill has always been here. A navy
+  // fill would be the reference's answer and is invisible on a navy sheet.
+  pillActive: { backgroundColor: brand.orange, borderColor: brand.orange },
+  pillText: { color: tone.body, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   pillTextActive: { color: colors.textInverse, fontWeight: fontWeight.bold },
 
   loginButton: {
     paddingHorizontal: spacing.lg,
     paddingVertical: 9,
     borderRadius: radius.pill,
-    backgroundColor: brand.orange,
+    backgroundColor: colors.surface,
     minHeight: 34,
     justifyContent: 'center',
   },
   loginText: {
-    color: colors.textOnAccent,
+    color: brand.navyDeep,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
   },

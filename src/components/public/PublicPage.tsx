@@ -7,7 +7,8 @@ import { PublicHero } from './PublicHero';
 import { FooterTicker } from '@/components/shared/FooterTicker';
 import { useAsync } from '@/hooks/useAsync';
 import { getSettings } from '@/services/settingsService';
-import { colors, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
+import { tone } from './tone';
 
 /**
  * Every public page, laid out the same way.
@@ -74,7 +75,7 @@ export function PublicPage({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: tone.ground },
   scroll: { padding: spacing.lg, paddingBottom: spacing.huge },
   column: { width: '100%', maxWidth: 720, alignSelf: 'center' },
   body: { marginTop: spacing.lg, gap: spacing.md },

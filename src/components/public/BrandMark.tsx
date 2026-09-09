@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { APP_NAME } from '@/constants/app';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import { tone } from './tone';
 import type { AppSettings } from '@/types';
 
 /**
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radius.md,
-    backgroundColor: brand.navyDeep,
+    backgroundColor: tone.pressed,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.lg,
-    backgroundColor: brand.navyDeep,
+    backgroundColor: tone.pressed,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
   wordmark: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.heavy,
-    color: brand.navyDeep,
+    color: tone.title,
     letterSpacing: -0.2,
   },
   wordmarkHero: { fontSize: fontSize.xl },
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
   brandLine: {
     fontSize: 8,
     fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
+    color: tone.faint,
     letterSpacing: 1.6,
     textTransform: 'uppercase',
     marginTop: 1,

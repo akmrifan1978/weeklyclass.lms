@@ -16,6 +16,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { listPublicLessons } from '@/services/publicSiteService';
 import type { PublicLesson } from '@/types';
 import { brand, fontSize, fontWeight, spacing } from '@/constants/theme';
+import { tone } from '@/components/public/tone';
 
 /**
  * The syllabus, as far as a visitor may read it.
@@ -119,11 +120,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  week: { fontSize: fontSize.xs, color: brand.slate, fontWeight: fontWeight.semibold },
+  week: { fontSize: fontSize.xs, color: tone.muted, fontWeight: fontWeight.semibold },
   title: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
-    color: brand.navyDeep,
+    color: tone.title,
     lineHeight: 23,
   },
 });
