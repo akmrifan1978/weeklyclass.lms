@@ -189,7 +189,7 @@ export default function SplashScreen() {
           accessibilityLabel={t('common.menu')}
           style={({ pressed }) => [styles.menuButton, pressed && { opacity: 0.6 }]}
         >
-          <Ionicons name="menu" size={22} color={colors.text} />
+          <Ionicons name="menu" size={22} color={brand.sandLight} />
         </Pressable>
       </View>
 
@@ -280,7 +280,7 @@ export default function SplashScreen() {
                   accessibilityLabel={t(item.labelKey)}
                   style={({ pressed }) => [styles.staffButton, { opacity: pressed ? 0.7 : 1 }]}
                 >
-                  <Ionicons name={item.icon} size={15} color={colors.textSecondary} />
+                  <Ionicons name={item.icon} size={15} color={brand.sandLight} />
                   <Text style={styles.staffLabel} numberOfLines={1}>
                     {t(item.labelKey)}
                   </Text>
@@ -305,21 +305,11 @@ export default function SplashScreen() {
               icon="key-outline"
               onPress={() => router.push('/(auth)/forgot-password')}
             />
-            {/* Readable before signing in, on purpose: somebody deciding whether
-                to register is exactly the person who needs to know what the
-                programme is. */}
-            <LinkButton
-              label={t('about.title')}
-              icon="information-circle-outline"
-              onPress={() => router.push('/(auth)/about')}
-            />
-            {/* A way in that asks for nothing. Somebody weighing this up can
-                watch what has been released before handing over a number. */}
-            <LinkButton
-              label={t('guest.enter')}
-              icon="eye-outline"
-              onPress={() => router.push('/(auth)/guest')}
-            />
+            {/* "About the Program" and "Look around first" used to sit here
+                too. They are in the menu now - still one tap away, and still
+                reachable before signing in, which was the point of putting
+                them on this screen. Three links under the buttons is a row;
+                five was a paragraph. */}
           </View>
 
           {/* After the programme description, deliberately: somebody has just
@@ -435,7 +425,7 @@ export default function SplashScreen() {
               accessibilityLabel={t('common.close')}
               style={({ pressed }) => [styles.menuButton, pressed && { opacity: 0.6 }]}
             >
-              <Ionicons name="close" size={20} color={colors.text} />
+              <Ionicons name="close" size={20} color={brand.sandLight} />
             </Pressable>
           </View>
 
@@ -504,7 +494,7 @@ function LinkButton({
       accessibilityLabel={label}
       style={({ pressed }) => [styles.link, { opacity: pressed ? 0.65 : 1 }]}
     >
-      <Ionicons name={icon} size={15} color={colors.textSecondary} />
+      <Ionicons name={icon} size={15} color={brand.sandLight} />
       <Text style={styles.linkText}>{label}</Text>
     </Pressable>
   );
@@ -522,9 +512,7 @@ const styles = StyleSheet.create({
     // sat exactly at the edge and looked clipped rather than scrollable. At
     // 196 the next one peeks in, which is what tells somebody to swipe.
     width: 196,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.07)',
     borderRadius: radius.lg,
     padding: spacing.sm,
     gap: 3,
@@ -532,27 +520,24 @@ const styles = StyleSheet.create({
   classCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   classPhoto: { width: 38, height: 38, borderRadius: radius.sm, backgroundColor: colors.surface },
   classPhotoEmpty: { alignItems: 'center', justifyContent: 'center' },
-  classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.text },
+  classTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textInverse },
   classBlurb: {
     fontSize: fontSize.xs,
-    color: colors.textMuted,
+    color: 'rgba(255,255,255,0.62)',
     lineHeight: 15,
     marginTop: 2,
   },
-  classFact: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  classFact: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.72)', marginTop: 2 },
   /*
-   * Light, from the reference.
+   * Navy, as it was.
    *
-   * The page was navy end to end, which suits a sign-in screen and does not
-   * suit a landing page: on navy every panel has to be a translucent white
-   * rectangle, and a stack of those reads as one heavy block rather than as
-   * separate things. On a light ground the panels can be white and the
-   * separation comes from the ground itself.
-   *
-   * The brand does not change. Navy and orange are still the marks; they are
-   * now on the type and the buttons rather than under everything.
+   * The reference behind the last change is a light design, and matching its
+   * colours as well as its shape was a step too far: the palette is the
+   * centre's own and was not the part being borrowed. What the reference is
+   * good for is the STRUCTURE - a bar with the mark in it, and everything
+   * else behind one menu button - and that is what has been kept.
    */
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: brand.navyDeep },
 
   topBar: {
     flexDirection: 'row',
@@ -560,16 +545,20 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
+    // Lifted a little off the page rather than given a colour of its own, so
+    // the bar reads as the top of this surface and not as a separate strip.
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: 'rgba(255,255,255,0.10)',
   },
   wordmarkRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   markBox: {
     width: 36,
     height: 36,
     borderRadius: radius.md,
-    backgroundColor: brand.navyDeep,
+    // Translucent, not navy: a navy tile on a navy bar is an invisible tile,
+    // and the mark inside it is drawn white.
+    backgroundColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -578,13 +567,13 @@ const styles = StyleSheet.create({
   wordmark: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.heavy,
-    color: colors.text,
+    color: colors.textInverse,
     letterSpacing: -0.2,
   },
   wordmarkSub: {
     fontSize: 9,
     fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
+    color: 'rgba(229,197,160,0.72)',
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     marginTop: 1,
@@ -594,8 +583,8 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -606,9 +595,11 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.surface,
+    backgroundColor: brand.navy,
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.14)',
     paddingBottom: spacing.lg,
     ...shadow.lg,
   },
@@ -631,14 +622,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
   },
-  menuItemPressed: { backgroundColor: colors.surfaceMuted },
-  menuItemText: { fontSize: fontSize.sm, color: colors.text },
+  menuItemPressed: { backgroundColor: 'rgba(255,255,255,0.10)' },
+  menuItemText: { fontSize: fontSize.sm, color: brand.sandLight },
   menuFooter: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     marginTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: 'rgba(255,255,255,0.14)',
   },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
   inner: { width: '100%', maxWidth: 460, alignSelf: 'center' },
@@ -659,7 +650,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: fontSize.display,
     fontWeight: fontWeight.heavy,
-    color: brand.navyDeep,
+    color: colors.textInverse,
     // Display sizes want tightening, not spacing out. The positive tracking
     // here was inherited from body-text defaults and made the title look
     // stretched at the one size where letterforms already have room.
@@ -683,14 +674,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radius.pill,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: 'rgba(255,255,255,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(237,91,3,0.22)',
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   venue: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
-    color: brand.orangeDark,
+    color: brand.sandLight,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
@@ -698,7 +689,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     // A step back from the badge and the title, so the three read in order
     // rather than competing.
-    color: colors.textSecondary,
+    color: 'rgba(229,197,160,0.78)',
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: spacing.lg,
@@ -729,14 +720,14 @@ const styles = StyleSheet.create({
     // A shade stronger, and on a ground of its own: at 0.22 on navy the
     // outline was almost not there, and the two secondary buttons read as
     // floating text rather than as things to press.
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
+    borderColor: 'rgba(255,255,255,0.30)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     paddingHorizontal: spacing.lg,
     // Short of the 44pt guideline on purpose is NOT what this is: the row is
     // padded to a comfortable tap target while reading as secondary.
     paddingVertical: 9,
   },
-  staffLabel: { fontSize: fontSize.xs, color: colors.text, fontWeight: fontWeight.semibold },
+  staffLabel: { fontSize: fontSize.xs, color: brand.sandLight, fontWeight: fontWeight.semibold },
   roleButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -782,7 +773,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: fontSize.md,
-    color: colors.textSecondary,
+    color: brand.sandLight,
     fontWeight: fontWeight.semibold,
   },
   languageBar: {
@@ -804,11 +795,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: 'rgba(255,255,255,0.22)',
     minHeight: 38,
     justifyContent: 'center',
   },
   languageChipActive: { backgroundColor: brand.orange, borderColor: brand.orange },
-  languageText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  languageText: { color: brand.sandLight, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   languageTextActive: { color: colors.textInverse, fontWeight: fontWeight.bold },
 });
