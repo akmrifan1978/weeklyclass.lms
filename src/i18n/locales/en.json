@@ -1371,7 +1371,7 @@
     "audio_noArabicVoice": "No Arabic voice is installed on this device, so the names are not read aloud — a wrong pronunciation would be worse than none. Adding an Arabic language pack in your system settings enables it."
   },
   "khutbah": {
-    "title": "Khutbah & Bayan",
+    "title": "Special Bayan & Khutbah",
     "lead": "Friday sermons and special talks, translated",
     "search": "Search",
     "kindLabel": "Type",

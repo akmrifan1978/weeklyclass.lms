@@ -321,9 +321,41 @@ async function resolveSignInEmail(identifier: string): Promise<string | null> {
  * All three are resolved to the account's sign-in address through the public
  * indexes before authenticating — see identityService for why that is safe.
  */
+/**
+ * Where a sign-in spent its time.
+ *
+ * Slow logins have been reported repeatedly and the path has been shortened
+ * twice, but nobody has ever been able to say WHICH part was slow — the report
+ * arrives as "it hangs" and the developer cannot reproduce it on a fast
+ * connection in a different country. This prints a breakdown on every sign-in,
+ * so the next report can carry numbers instead of an impression.
+ *
+ * Cheap enough to leave on: four calls to Date.now and one console line, on an
+ * action that happens once a session.
+ */
+function phaseTimer() {
+  const start = Date.now();
+  let last = start;
+  const marks: string[] = [];
+  return {
+    mark(name: string) {
+      const now = Date.now();
+      marks.push(`${name} ${now - last}ms`);
+      last = now;
+    },
+    done() {
+      console.info(
+        `[WeeklyClass] sign-in took ${Date.now() - start}ms — ${marks.join(', ')}`
+      );
+    },
+  };
+}
+
 export async function login(identifier: string, password: string): Promise<LoginResult> {
+  const timing = phaseTimer();
   const trimmed = identifier.trim();
   let email = await resolveSignInEmail(trimmed);
+  timing.mark('resolve address');
 
   if (!email) {
     // Same message as a wrong password: do not reveal which accounts exist.
@@ -357,8 +389,11 @@ export async function login(identifier: string, password: string): Promise<Login
     credential = await signInWithEmailAndPassword(auth, email, password);
   }
 
+  timing.mark('password check');
+
   // Every Firestore call below depends on request.auth being populated.
   await waitForAuthToken(credential.user);
+  timing.mark('token ready');
 
   // Both reads at once. They do not depend on each other, and run in
   // sequence they put two full round-trips between the password being accepted
@@ -367,6 +402,7 @@ export async function login(identifier: string, password: string): Promise<Login
     fetchProfile(credential.user.uid),
     bootstrapIsClosed(),
   ]);
+  timing.mark('profile');
   let profile = fetched;
 
   // On an unconfigured platform the first successful sign-in becomes the
@@ -473,6 +509,7 @@ export async function login(identifier: string, password: string): Promise<Login
     summary: `${profile.fullName} signed in`,
   });
 
+  timing.done();
   return { user: profile, firebaseUser: credential.user };
 }
 

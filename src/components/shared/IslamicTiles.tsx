@@ -39,7 +39,7 @@ const TILES: Tile[] = [
   },
   {
     feature: 'khutbah',
-    icon: 'mic',
+    icon: 'megaphone',
     labelKey: 'khutbah.title',
     path: '/khutbah',
     tint: brand.slate,
