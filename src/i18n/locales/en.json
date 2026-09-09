@@ -680,7 +680,13 @@
     "approveUserConfirm": "Approve {{name}} and activate their account?",
     "publicProfile": "Show on the public website",
     "publicProfileHint": "Publishes this teacher’s name, qualification and subjects on the public Teachers page. Their email address and mobile number are never published.",
-    "publicSubjects": "Subjects taught (shown publicly)"
+    "publicSubjects": "Subjects taught (shown publicly)",
+    "publicProfileOn": "Shown on the website",
+    "publicProfileOff": "Not shown",
+    "publicProfileShow": "Show on the public website",
+    "publicProfileHide": "Remove from the public website",
+    "publicProfileShown": "This teacher now appears on the public website.",
+    "publicProfileHidden": "This teacher no longer appears on the public website."
   },
   "settings": {
     "title": "Settings",

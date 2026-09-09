@@ -345,6 +345,21 @@ export function UserManager({
                     value={selected.qualification}
                     icon="ribbon-outline"
                   />
+                  <Divider />
+                  {/* Whether this person is on the public website, said plainly
+                      on the sheet rather than only inside the edit form — where
+                      it sits below a dozen fields and is easy to miss. */}
+                  <DetailRow
+                    label={t('admin.publicProfile')}
+                    value={
+                      selected.publicProfile
+                        ? [t('admin.publicProfileOn'), selected.publicSubjects]
+                            .filter(Boolean)
+                            .join(' — ')
+                        : t('admin.publicProfileOff')
+                    }
+                    icon={selected.publicProfile ? 'globe-outline' : 'eye-off-outline'}
+                  />
                 </>
               ) : null}
             </Card>
@@ -412,6 +427,41 @@ export function UserManager({
                   onPress={() => {
                     setEditing(selected);
                     setSelected(null);
+                  }}
+                />
+              ) : null}
+
+              {/* Publishing in one tap, for the common case: a name and a
+                  qualification are already on the account, so turning the
+                  profile on needs no typing. The subjects line and the switch
+                  itself also live in the edit form, and both routes go through
+                  updateUser — which is what withdraws the public copy when this
+                  is turned back off. */}
+              {selected.role === 'teacher' && canEdit ? (
+                <Button
+                  label={
+                    selected.publicProfile
+                      ? t('admin.publicProfileHide')
+                      : t('admin.publicProfileShow')
+                  }
+                  icon={selected.publicProfile ? 'eye-off-outline' : 'globe-outline'}
+                  variant="outline"
+                  fullWidth
+                  onPress={() => {
+                    const target = selected;
+                    const next = !target.publicProfile;
+                    setSelected(null);
+                    void (async () => {
+                      try {
+                        await updateUser(target.uid, { publicProfile: next }, actor!);
+                        toast.success(
+                          next ? t('admin.publicProfileShown') : t('admin.publicProfileHidden')
+                        );
+                        list.refresh();
+                      } catch (error) {
+                        toast.error(friendlyMessage(error, t));
+                      }
+                    })();
                   }}
                 />
               ) : null}

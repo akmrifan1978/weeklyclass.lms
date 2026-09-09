@@ -680,7 +680,13 @@
     "approveUserConfirm": "الموافقة على {{name}} وتفعيل حسابه؟",
     "publicProfile": "إظهار في الموقع العام",
     "publicProfileHint": "يَنشر اسم المعلم ومؤهله وموادّه في صفحة المعلمين العامة. لا يُنشر بريده الإلكتروني ولا رقم هاتفه أبدًا.",
-    "publicSubjects": "المواد التي يدرّسها (تظهر للعموم)"
+    "publicSubjects": "المواد التي يدرّسها (تظهر للعموم)",
+    "publicProfileOn": "يظهر في الموقع",
+    "publicProfileOff": "لا يظهر",
+    "publicProfileShow": "إظهار في الموقع العام",
+    "publicProfileHide": "إزالة من الموقع العام",
+    "publicProfileShown": "أصبح هذا المعلم يظهر الآن في الموقع العام.",
+    "publicProfileHidden": "لم يعد هذا المعلم يظهر في الموقع العام."
   },
   "settings": {
     "title": "الإعدادات",
