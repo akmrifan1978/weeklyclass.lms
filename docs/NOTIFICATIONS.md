@@ -280,3 +280,74 @@ as done rather than retried for ever.
 The stamp is written *after* the send returns, so a service killed mid-pass
 resends at worst. A duplicate confirmation is a far better failure than a
 silent absence.
+
+## Running it without a laptop
+
+The service polls Firestore and sends what it finds. Nothing about it needs to
+be on any particular machine, and a laptop that is closed most of the time is
+the wrong machine: notifications and confirmation emails sit in the queue until
+it wakes up.
+
+`.github/workflows/notifications.yml` runs the same script on GitHub's machines
+every half hour. It is free, needs no card, and needs no server.
+
+### What still works when nothing is running at all
+
+The website and the installed app, sign-in, registration, browsing, booking, the
+in-app notification list and its unread badge, and Firebase's own password reset
+email. All of those are Firebase Hosting and Firestore, which are always up.
+
+What waits for the service is only outbound delivery: device push, booking
+confirmation emails, admin-minted reset links and admin-set passwords.
+
+### Setting it up
+
+1. Create a **private** repository on GitHub and push this project to it. The
+   credentials are already excluded — `.env` and `*serviceAccount*.json` are in
+   `.gitignore` and have never been committed. Check `git status` shows neither
+   before you push.
+2. In the repository, open **Settings → Secrets and variables → Actions** and
+   add:
+
+   | Secret | Value |
+   | --- | --- |
+   | `FIREBASE_SERVICE_ACCOUNT` | the whole contents of `serviceAccount.json` |
+   | `VAPID_PRIVATE_KEY` | from `.env` |
+   | `VAPID_PUBLIC_KEY` | the `EXPO_PUBLIC_VAPID_PUBLIC_KEY` from `.env` |
+   | `VAPID_SUBJECT` | from `.env` |
+   | `PASSWORD_PRIVATE_KEY` | from `.env`, if admin-set passwords are in use |
+   | `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `MAIL_FROM` | only if confirmation email is wanted |
+
+3. Open the **Actions** tab, choose **Notifications**, and press **Run
+   workflow**. It should finish in well under a minute and print either
+   "Nothing waiting" or a list of what it delivered.
+
+Anything left out simply switches that part off. No `SMTP_*` means no email and
+everything else still runs; no `PASSWORD_PRIVATE_KEY` means admin-set passwords
+are not applied.
+
+### Why every half hour and not every five minutes
+
+A private repository gets 2,000 free Actions minutes a month, and **every run is
+billed as a whole minute** however briefly it actually runs. Half-hourly is
+1,440 a month and fits. Quarter-hourly is 2,880 and does not.
+
+GitHub's scheduler is also best effort — a run can arrive several minutes late,
+particularly on the hour, and no setting makes it punctual.
+
+So the honest expectation is: a push arrives within about half an hour, usually
+sooner. If that is too slow, the options are a public repository (unlimited
+minutes, but the code becomes readable by anyone) or a paid always-on host.
+
+### Running both at once is safe
+
+The laptop service can stay installed. When it is awake it polls every thirty
+seconds and will almost always get there first; when it is closed the scheduled
+job covers.
+
+Neither can send the same thing twice. Both **claim** a notification in a
+Firestore transaction before sending it — whoever writes `pushedAt` first owns
+it and the other skips. Booking confirmation emails claim
+`confirmationEmailedAt` the same way. The trade is deliberate: a crash between
+claiming and sending loses that one push rather than duplicating it, and the
+message is in the app's notification list either way.

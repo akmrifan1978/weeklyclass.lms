@@ -27,7 +27,16 @@ const fs = require('fs');
 const path = require('path');
 
 /** Older than this and it is history, not news. */
-const MAX_AGE_HOURS = 24;
+/**
+ * How stale a notification may be and still be pushed.
+ *
+ * Two days rather than one. A push is an interruption and an interruption about
+ * last March is noise — but the service that sends these can now be a scheduled
+ * job rather than a machine somebody is sitting at, and a single failed weekend
+ * should not silently swallow every alert in it. Anything older stays in the
+ * app's notification list, which keeps the full history regardless.
+ */
+const MAX_AGE_HOURS = 48;
 
 function parseArgs(argv) {
   const args = {};
@@ -113,6 +122,30 @@ async function recipientsFor(db, notification) {
 
 async function sendOne(webpush, db, doc) {
   const notification = doc.data();
+
+  /**
+   * Claimed before it is sent, not after.
+   *
+   * There can now be two of these services running — one on a laptop, one on a
+   * schedule in the cloud — and both poll the same queue. Marking a
+   * notification only after the push went out leaves a window where both read
+   * it as unsent, and the phone buzzes twice for one message.
+   *
+   * The transaction is the claim: whoever writes `pushedAt` first owns it and
+   * the other backs off. A crash between claiming and sending therefore loses
+   * that ONE push rather than duplicating it — which is the right way round,
+   * because the message is in the app's notification list either way, and a
+   * duplicate alert is the failure people actually complain about.
+   */
+  const claimed = await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(doc.ref);
+    if (!fresh.exists || fresh.data().pushedAt) return false;
+    tx.update(doc.ref, { pushedAt: new Date() });
+    return true;
+  });
+
+  if (!claimed) return 0;
+
   const subscriptions = await recipientsFor(db, notification);
 
   const payload = JSON.stringify({
@@ -175,7 +208,6 @@ async function sendOne(webpush, db, doc) {
   }
 
   await doc.ref.update({
-    pushedAt: new Date(),
     pushReport: {
       devices: subscriptions.length,
       sent,
@@ -491,9 +523,9 @@ function confirmationEmail(registration, event, appName) {
  * Sends one email per confirmed booking that has not had one.
  *
  * The queue is the `confirmationEmailedAt` field: null means owed, a timestamp
- * means sent. Written by the app when a booking is confirmed and stamped here
- * once the mail is away, so a service that dies mid-pass resends at worst and
- * loses nothing at best.
+ * means claimed. Written by the app when a booking is confirmed and stamped
+ * here BEFORE the send, so that two of these services running at once cannot
+ * both post the same confirmation.
  *
  * A booking whose owner has no email address is stamped as done rather than
  * retried for ever — plenty of accounts here sign in by mobile number alone,
@@ -530,6 +562,17 @@ async function sendConfirmationEmails(db) {
       continue;
     }
 
+    // Claimed before it is sent, for the same reason the push queue is: two
+    // services now poll this one, and a booking confirmation arriving twice is
+    // worse than one arriving never — the ticket is in the app either way.
+    const claimed = await db.runTransaction(async (tx) => {
+      const fresh = await tx.get(doc.ref);
+      if (!fresh.exists || fresh.data().confirmationEmailedAt) return false;
+      tx.update(doc.ref, { confirmationEmailedAt: new Date() });
+      return true;
+    });
+    if (!claimed) continue;
+
     try {
       const eventSnap = await db
         .collection('calendarEvents')
@@ -539,10 +582,6 @@ async function sendConfirmationEmails(db) {
 
       const message = confirmationEmail(registration, event, appName);
       await transport.sendMail({ from, to, ...message });
-
-      // Stamped only after the send returned. A crash before this resends the
-      // same mail, which is a far better failure than silently sending none.
-      await doc.ref.update({ confirmationEmailedAt: new Date() });
       sent += 1;
       console.log(`    ✓ ${to}`);
     } catch (error) {
