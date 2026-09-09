@@ -85,6 +85,24 @@ function idFor(endpoint: string): string {
 }
 
 /**
+ * Whether a subscription was made with the key we are about to sign with.
+ *
+ * `options.applicationServerKey` is the raw key the browser recorded at
+ * subscribe time. It is absent on some older engines, and there the honest
+ * answer is "cannot tell" — treated as a match rather than forcing a needless
+ * resubscribe on browsers that were never the problem.
+ */
+function sameKey(recorded: ArrayBuffer | null, current: Uint8Array): boolean {
+  if (!recorded) return true;
+  const seen = new Uint8Array(recorded);
+  if (seen.length !== current.length) return false;
+  for (let i = 0; i < seen.length; i += 1) {
+    if (seen[i] !== current[i]) return false;
+  }
+  return true;
+}
+
+/**
  * Asks permission, subscribes this browser, and records it.
  *
  * Must be called from something the person did — browsers refuse a permission
@@ -101,15 +119,39 @@ export async function enablePush(user: AppUser): Promise<PushState> {
 
   const registration = await navigator.serviceWorker.ready;
 
-  // An existing subscription is reused. Subscribing twice with the same key
-  // returns the same endpoint anyway, but asking first avoids the round trip.
+  const serverKey = decodeKey(APPLICATION_SERVER_KEY);
+
+  /**
+   * An existing subscription is reused ONLY if it was made with the key we are
+   * still signing with.
+   *
+   * A subscription is bound to the application server key that created it. If
+   * that key is ever replaced — and it has to be replaceable, because a leaked
+   * one is only fixed by replacing it — the push service starts rejecting every
+   * message with a 403 while the browser goes on reporting a perfectly healthy
+   * subscription. Nothing surfaces. Notifications simply stop, for everybody,
+   * for good, because this function kept handing back the stale subscription
+   * and never asked for a new one.
+   *
+   * So the recorded key is compared against the current one, and a mismatch is
+   * unsubscribed before resubscribing. The person sees nothing; the next push
+   * arrives as usual.
+   */
+  const existing = await registration.pushManager.getSubscription();
+  const stale =
+    existing !== null && !sameKey(existing.options?.applicationServerKey ?? null, serverKey);
+
+  if (existing && stale) {
+    await existing.unsubscribe().catch(() => undefined);
+  }
+
   const subscription =
-    (await registration.pushManager.getSubscription()) ??
+    (!stale && existing) ||
     (await registration.pushManager.subscribe({
       // Without this the push service will accept a message from anybody, and
       // Chrome refuses the subscription outright.
       userVisibleOnly: true,
-      applicationServerKey: decodeKey(APPLICATION_SERVER_KEY) as BufferSource,
+      applicationServerKey: serverKey as BufferSource,
     }));
 
   await setDocById(

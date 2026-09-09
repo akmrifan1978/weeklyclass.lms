@@ -23,6 +23,9 @@ expo-env.d.ts
 .env
 .env.local
 .env.*.local
+# Anything else beginning .env — backups made when a key is rotated hold the
+# OLD private keys, and those are exactly as dangerous as the current ones.
+.env.*
 !.env.example
 
 # Firebase service accounts / admin credentials
