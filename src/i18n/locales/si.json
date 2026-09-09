@@ -71,7 +71,8 @@
     "copy": "පිටපත් කරන්න",
     "done": "නිමයි",
     "showLess": "අඩුවෙන් පෙන්වන්න",
-    "showAllCount": "තවත් {{count}} ක් පෙන්වන්න"
+    "showAllCount": "තවත් {{count}} ක් පෙන්වන්න",
+    "menu": "මෙනුව"
   },
   "auth": {
     "studentLogin": "සිසු පිවිසුම",
@@ -269,7 +270,10 @@
     "myProgress": "මගේ ප්‍රගතිය",
     "duas": "දුආ",
     "events": "සිදුවීම්",
-    "notes": "සටහන්"
+    "notes": "සටහන්",
+    "myClass": "මගේ පන්තිය",
+    "myWork": "මගේ වැඩ",
+    "more": "තවත්"
   },
   "dashboard": {
     "quickAccess": "ඉක්මන් ප්‍රවේශය",

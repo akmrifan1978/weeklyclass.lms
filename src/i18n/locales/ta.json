@@ -71,7 +71,8 @@
     "copy": "நகலெடு",
     "done": "முடிந்தது",
     "showLess": "குறைவாகக் காட்டு",
-    "showAllCount": "மேலும் {{count}} காட்டு"
+    "showAllCount": "மேலும் {{count}} காட்டு",
+    "menu": "பட்டி"
   },
   "auth": {
     "studentLogin": "மாணவர் உள்நுழைவு",
@@ -269,7 +270,10 @@
     "myProgress": "எனது முன்னேற்றம்",
     "duas": "துஆக்கள்",
     "events": "நிகழ்வுகள்",
-    "notes": "குறிப்புகள்"
+    "notes": "குறிப்புகள்",
+    "myClass": "என் வகுப்பு",
+    "myWork": "என் பணிகள்",
+    "more": "மேலும்"
   },
   "dashboard": {
     "quickAccess": "விரைவு அணுகல்",

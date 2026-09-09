@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -32,12 +32,12 @@ import {
   ArticleCard,
   FeaturedVideoCard,
   LessonRow,
-  QuickAccessTile,
   UpcomingEventCard,
   VideoRow,
 } from '@/components/shared/ContentCards';
-import { IslamicTiles } from '@/components/shared/IslamicTiles';
-import { CollapsibleGrid } from '@/components/shared/CollapsibleGrid';
+import { NavDrawer } from '@/components/shared/NavDrawer';
+import { useVisibleIslamicTiles } from '@/components/shared/IslamicTiles';
+import { studentNavSections } from '@/constants/studentNav';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
 import { UpcomingClasses } from '@/components/shared/UpcomingClasses';
@@ -45,7 +45,6 @@ import {
   Avatar,
   Card,
   EmptyState,
-  Grid,
   Screen,
   SectionHeader,
   SkeletonList,
@@ -126,6 +125,11 @@ export default function StudentHome() {
 
   const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, user?.classId]);
 
+  // Built from the same list the Islamic grid used, filtered the same way,
+  // so switching a section off in settings removes it from both at once.
+  const islamicTiles = useVisibleIslamicTiles();
+  const navSections = useMemo(() => studentNavSections(islamicTiles), [islamicTiles]);
+
   // Schedules on-device reminders for the next few classes.
   useEffect(() => {
     if (!user) return;
@@ -151,6 +155,12 @@ export default function StudentHome() {
           greeting becomes a place — and the id and the class, which a student
           is asked for constantly, are on it rather than buried. */}
       <View style={styles.hero}>
+        {/* Everywhere else this student can go. It used to be twenty-three
+            tiles further down the page; a drawer is one button. */}
+        <View style={styles.heroTop}>
+          <NavDrawer sections={navSections} />
+        </View>
+
         <View style={styles.greetingRow}>
         <View style={styles.greetingText}>
           <Text style={styles.salaam}>{t('app.greeting')}</Text>
@@ -329,90 +339,11 @@ export default function StudentHome() {
           ) : null}
 
           <Spacer size={spacing.xxl} />
-          <CollapsibleGrid title={t('dashboard.quickAccess')} icon="grid-outline">
-            {/* First, because this is the one somebody reaches for
-                mid-lesson, when the thought is about to be lost. */}
-            <QuickAccessTile
-              icon="create-outline"
-              label={t('nav.notes')}
-              tint={brand.slate}
-              onPress={() => router.push('/(student)/notes')}
-            />
-            <QuickAccessTile
-              icon="book-outline"
-              label={t('nav.lessons')}
-              tint={brand.orange}
-              onPress={() => router.push('/(student)/(tabs)/lessons')}
-            />
-            <QuickAccessTile
-              icon="videocam-outline"
-              label={t('nav.recordings')}
-              tint={brand.navy}
-              onPress={() => router.push('/(student)/recordings')}
-            />
-            <QuickAccessTile
-              icon="folder-open-outline"
-              label={t('nav.materials')}
-              tint={brand.sand}
-              onPress={() => router.push('/(student)/materials')}
-            />
-            <QuickAccessTile
-              icon="help-circle-outline"
-              label={t('nav.quizzes')}
-              tint={brand.orangeLight}
-              onPress={() => router.push('/(student)/quizzes')}
-            />
-            <QuickAccessTile
-              icon="checkbox-outline"
-              label={t('nav.attendance')}
-              tint={brand.slate}
-              onPress={() => router.push('/(student)/attendance')}
-            />
-            <QuickAccessTile
-              icon="trophy-outline"
-              label={t('nav.results')}
-              tint={brand.orange}
-              onPress={() => router.push('/(student)/results')}
-            />
-            <QuickAccessTile
-              icon="ticket"
-              label={t('nav.events')}
-              tint={brand.orangeLight}
-              onPress={() => router.push('/(student)/events')}
-            />
-            <QuickAccessTile
-              icon="videocam"
-              label={t('nav.onlineClasses')}
-              tint={brand.red}
-              onPress={() => router.push('/(student)/online-classes')}
-            />
-            <QuickAccessTile
-              icon="sparkles"
-              label={t('video.newReleases')}
-              tint={brand.orangeLight}
-              onPress={() => router.push('/(student)/new-releases')}
-            />
-            <QuickAccessTile
-              icon="chatbubbles"
-              label={t('nav.qa')}
-              tint={brand.navy}
-              onPress={() => router.push('/(student)/qa')}
-            />
-            <QuickAccessTile
-              icon="stats-chart"
-              label={t('nav.myProgress')}
-              tint={brand.slate}
-              onPress={() => router.push('/(student)/progress')}
-            />
-            <QuickAccessTile
-              icon="help-buoy"
-              label={t('nav.support')}
-              tint={brand.sand}
-              onPress={() => router.push('/(student)/support')}
-            />
-          </CollapsibleGrid>
-
-          <IslamicTiles basePath="/(student)" />
+          {/* The shortcuts and the Islamic sections used to be two grids
+              here, twenty-three tiles between them, and they are why this
+              screen ran off the bottom of a phone. They live in the drawer
+              now — reachable from every screen rather than only this one,
+              which is a better home than the one they had. */}
 
           {data?.lessons.length ? (
             <>
@@ -489,6 +420,7 @@ export default function StudentHome() {
 }
 
 const styles = StyleSheet.create({
+  heroTop: { flexDirection: 'row', marginBottom: spacing.md },
   hero: {
     backgroundColor: brand.navyDeep,
     borderRadius: radius.xl,

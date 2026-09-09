@@ -71,7 +71,8 @@
     "copy": "نسخ",
     "done": "تم",
     "showLess": "عرض أقل",
-    "showAllCount": "عرض {{count}} أخرى"
+    "showAllCount": "عرض {{count}} أخرى",
+    "menu": "القائمة"
   },
   "auth": {
     "studentLogin": "دخول الطالب",
@@ -269,7 +270,10 @@
     "myProgress": "تقدّمي",
     "duas": "الأدعية",
     "events": "الفعاليات",
-    "notes": "الملاحظات"
+    "notes": "الملاحظات",
+    "myClass": "صفي",
+    "myWork": "أعمالي",
+    "more": "المزيد"
   },
   "dashboard": {
     "quickAccess": "وصول سريع",

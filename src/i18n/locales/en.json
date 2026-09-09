@@ -71,7 +71,8 @@
     "copy": "Copy",
     "done": "Done",
     "showLess": "Show less",
-    "showAllCount": "Show {{count}} more"
+    "showAllCount": "Show {{count}} more",
+    "menu": "Menu"
   },
   "auth": {
     "studentLogin": "Student Login",
@@ -269,7 +270,10 @@
     "myProgress": "My progress",
     "duas": "Duas",
     "events": "Events",
-    "notes": "Notes"
+    "notes": "Notes",
+    "myClass": "My class",
+    "myWork": "My work",
+    "more": "More"
   },
   "dashboard": {
     "quickAccess": "Quick access",

@@ -30,7 +30,11 @@ interface Tile {
   tint: string;
 }
 
-const TILES: Tile[] = [
+/**
+ * Exported so the navigation drawer can list the same sections the dashboard
+ * does, filtered the same way, rather than keeping a second copy that drifts.
+ */
+export const TILES: Tile[] = [
   {
     feature: 'names',
     icon: 'sparkles',
@@ -95,6 +99,14 @@ const TILES: Tile[] = [
     tint: brand.slate,
   },
 ];
+
+/** The Islamic sections an admin has left switched on. */
+export function useVisibleIslamicTiles(): Tile[] {
+  const { enabled } = useIslamicFeatures();
+  return TILES.filter((tile) => enabled(tile.feature));
+}
+
+export type { Tile as IslamicTile };
 
 export function IslamicTiles({
   basePath,
