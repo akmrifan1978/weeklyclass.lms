@@ -1113,7 +1113,11 @@
     "lessonsAvailable": "Lessons available",
     "pagesOf": "{{read}} of {{total}} pages read",
     "noPlan": "No reading plan yet",
-    "noPlanHelp": "Start a daily Qur'an reading plan and your progress will show here."
+    "noPlanHelp": "Start a daily Qur'an reading plan and your progress will show here.",
+    "attendance": "Attendance",
+    "assignments": "Assignments",
+    "lessons": "Lessons",
+    "attendedOf": "{{present}} of {{total}} attended"
   },
   "offline": {
     "banner": "You are offline — showing saved content",

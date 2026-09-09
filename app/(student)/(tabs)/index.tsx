@@ -5,9 +5,18 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { NotificationBell } from '@/components/shared/NotificationBell';
+import { StatTile } from '@/components/shared/StatTile';
+import * as progressService from '@/services/progressService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { brand, colors, fontSize, fontWeight, spacing } from '@/constants/theme';
+import {
+  brand,
+  colors,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+} from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
 import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { toDate } from '@/utils/date';
@@ -62,6 +71,7 @@ export default function StudentHome() {
     if (!user) return null;
     const [
       event,
+      progress,
       upcoming,
       liveVideo,
       featuredVideo,
@@ -73,6 +83,11 @@ export default function StudentHome() {
     ] =
       await Promise.all([
       nextEventFor(user).catch(() => null),
+      // The student's own figures. Added to the existing parallel batch
+      // rather than fetched after it, so it costs no extra waiting — and
+      // they were being computed for the progress screen already while the
+      // dashboard, the screen they actually land on, showed them nothing.
+      progressService.loadUserProgress(user).catch(() => null),
       // Already fetched for the reminder scheduler and then discarded. Kept
       // now, because the same list is what the photographs are drawn from.
       listUpcoming({ classId: user.classId ?? undefined, pageSize: 6 })
@@ -96,6 +111,7 @@ export default function StudentHome() {
     ]);
     return {
       event,
+      progress,
       upcoming,
       liveVideo,
       featuredVideo,
@@ -128,13 +144,33 @@ export default function StudentHome() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['top', 'bottom']}>
-      <View style={styles.greetingRow}>
+      {/* A panel rather than loose text.
+          The same words sat directly on the page background, which made the
+          screen open on nothing in particular. Given a ground of its own, the
+          greeting becomes a place — and the id and the class, which a student
+          is asked for constantly, are on it rather than buried. */}
+      <View style={styles.hero}>
+        <View style={styles.greetingRow}>
         <View style={styles.greetingText}>
           <Text style={styles.salaam}>{t('app.greeting')}</Text>
           <Text style={styles.name} numberOfLines={1} accessibilityRole="header">
             {user?.fullName ?? ''}
           </Text>
-          {user?.studentId ? <Text style={styles.studentId}>{user.studentId}</Text> : null}
+
+          <View style={styles.chipRow}>
+            {user?.studentId ? (
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>{user.studentId}</Text>
+              </View>
+            ) : null}
+            {data?.classGroup ? (
+              <View style={styles.chip}>
+                <Text style={styles.chipText} numberOfLines={1}>
+                  {data.classGroup.name}
+                </Text>
+              </View>
+            ) : null}
+          </View>
 
           {/* Who teaches this student, on the screen they land on.
               The group is the assignment — a student never picks a teacher —
@@ -170,6 +206,7 @@ export default function StudentHome() {
         {/* Beside the avatar, on the screen everybody lands on. A shared
             phone needs a way out that is not behind two taps. */}
         <LogoutButton tint={brand.red} />
+        </View>
       </View>
 
       {!user?.classId ? (
@@ -179,6 +216,45 @@ export default function StudentHome() {
             <Text style={styles.noticeText}>{t('empty.notAssignedClass')}</Text>
           </View>
         </Card>
+      ) : null}
+
+      {/* Their own figures, on the screen they land on. These were computed
+          for the progress screen already and never shown here, which is where
+          somebody actually wonders how they are doing. */}
+      {data?.progress ? (
+        <View style={styles.statRow}>
+          <StatTile
+            icon="calendar-outline"
+            value={`${data.progress.attendance.percent}%`}
+            label={t("progress.attendance")}
+            hint={t("progress.attendedOf", {
+              present: data.progress.attendance.present,
+              total: data.progress.attendance.total,
+            })}
+            tint={colors.success}
+          />
+          <StatTile
+            icon="document-text-outline"
+            value={`${data.progress.assignments.submitted}/${data.progress.assignments.available}`}
+            label={t("progress.assignments")}
+            tint={colors.primary}
+          />
+          <StatTile
+            icon="book-outline"
+            value={String(data.progress.lessons.available)}
+            label={t("progress.lessons")}
+            tint={brand.orange}
+          />
+          {data.progress.quran ? (
+            <StatTile
+              icon="bookmark-outline"
+              value={`${data.progress.quran.percent}%`}
+              label={t("quran.readingPlan")}
+              hint={t("quran.streak", { count: data.progress.quran.streak })}
+              tint={brand.slate}
+            />
+          ) : null}
+        </View>
       ) : null}
 
       {loading ? (
@@ -413,6 +489,28 @@ export default function StudentHome() {
 }
 
 const styles = StyleSheet.create({
+  hero: {
+    backgroundColor: brand.navyDeep,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  chip: {
+    // A translucent white rather than a named colour: it has to sit on the
+    // navy here and would need a second definition anywhere else.
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+  },
+  chipText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: brand.sandLight },
+  statRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -420,11 +518,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   greetingText: { flex: 1 },
-  salaam: { fontSize: fontSize.sm, color: colors.textSecondary },
-  name: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text, marginTop: 2 },
+  salaam: { fontSize: fontSize.sm, color: brand.sandLight },
+  name: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.textInverse, marginTop: 2 },
   studentId: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   teacherRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
-  teacherText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
+  teacherText: { flex: 1, fontSize: fontSize.xs, color: brand.sandLight, lineHeight: 16 },
   noticeCard: { marginTop: spacing.lg, borderColor: colors.warning, borderWidth: 1 },
   noticeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   noticeText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },

@@ -1113,7 +1113,11 @@
     "lessonsAvailable": "الدروس المتاحة",
     "pagesOf": "قرأت {{read}} من {{total}} صفحة",
     "noPlan": "لا خطة قراءة بعد",
-    "noPlanHelp": "ابدأ خطة قراءة يومية للقرآن وسيظهر تقدّمك هنا."
+    "noPlanHelp": "ابدأ خطة قراءة يومية للقرآن وسيظهر تقدّمك هنا.",
+    "attendance": "الحضور",
+    "assignments": "الواجبات",
+    "lessons": "الدروس",
+    "attendedOf": "حضرت {{present}} من {{total}}"
   },
   "offline": {
     "banner": "أنت غير متصل — يُعرض المحتوى المحفوظ",
