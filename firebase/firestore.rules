@@ -97,10 +97,24 @@ service cloud.firestore {
     function isStudent() { return role() == 'student'; }
     function isStaff()   { return isAdmin() || isTeacher(); }
 
-    // Admins implicitly hold everything; teachers hold only granted flags.
+    // Admins implicitly hold everything. Everybody else holds only what an
+    // admin has granted them.
+    //
+    // NOT limited to teachers any more. A centre may want a senior student
+    // marking attendance or tidying a lesson list, and refusing that outright
+    // meant the permissions screen could offer a grant the database would then
+    // ignore — a control that appears to work and does nothing.
+    //
+    // Safe to widen because a permission cannot be self-granted: the users
+    // update rule lists every field somebody may change on their own account
+    // and `permissions` is not among them. Only an admin writes it. So this
+    // makes an admin's decision take effect; it creates no way to take one.
+    //
+    // `isActive()` rather than merely signed in, so a suspended account keeps
+    // nothing it was given.
     function can(permission) {
       return isAdmin()
-        || (isTeacher() && userDoc().get('permissions', {}).get(permission, false) == true);
+        || (isActive() && userDoc().get('permissions', {}).get(permission, false) == true);
     }
 
     function isSelf(uid) {

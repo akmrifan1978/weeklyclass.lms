@@ -707,7 +707,8 @@
     "publicProfileShown": "This teacher now appears on the public website.",
     "publicProfileHidden": "This teacher no longer appears on the public website.",
     "usernameNotYours": "Only a super admin can change another administrator’s username.",
-    "isoCode": "ISO code"
+    "isoCode": "ISO code",
+    "studentPermissionsNote": "Attendance, announcements, the calendar and uploading videos all work for a student. Lessons, quizzes and the materials list need a teacher account as well, so granting those here will have no effect."
   },
   "settings": {
     "title": "Settings",

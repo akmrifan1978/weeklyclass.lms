@@ -490,7 +490,13 @@ export function UserManager({
                 />
               ) : null}
 
-              {selected.role === 'teacher' && can('MANAGE_USERS') ? (
+              {/* Students too, not only teachers.
+                  A centre may want a senior student marking attendance, and
+                  the rules now honour a granted permission whoever holds it —
+                  see `can()` in firestore.rules. Admins are excluded because
+                  they already hold everything; a screen offering to grant them
+                  something would be a screen that does nothing. */}
+              {selected.role !== 'admin' && can('MANAGE_USERS') ? (
                 <Button
                   label={t('admin.managePermissions')}
                   icon="key-outline"
