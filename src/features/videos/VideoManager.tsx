@@ -302,13 +302,15 @@ export function VideoManager({
             hint={t('video.venueHint')}
             icon="location-outline"
           />
-          <TextField
+          {/* Was a link box sitting between two proper image fields, which
+              made it the one picture on this form nobody could upload. */}
+          <ImageField
             label={t('video.thumbnail')}
             value={form.thumbnail}
-            onChangeText={(v) => set('thumbnail', v)}
+            onChange={(url) => set('thumbnail', url)}
             hint={t('video.thumbnailAuto')}
-            icon="image-outline"
-            autoCapitalize="none"
+            kind="thumbnail"
+            aspectRatio={16 / 9}
           />
 
           <ImageField

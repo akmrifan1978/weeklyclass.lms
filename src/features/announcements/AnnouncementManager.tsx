@@ -16,6 +16,7 @@ import type { Announcement, ContentStatus, NotificationTarget, Priority } from '
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
 import { AdminRow } from '@/features/AdminRow';
+import { ImageField } from '@/components/shared/ImageField';
 import { DateField, Select, TextField, ToggleRow, type Option } from '@/components/ui';
 
 interface AnnouncementForm {
@@ -180,12 +181,19 @@ export function AnnouncementManager() {
             multiline
             required
           />
-          <TextField
+          {/* The full field, not a bare link box.
+              This asked for a URL and offered no way to produce one, so
+              anybody holding an actual picture — which is everybody — had
+              nowhere to put it. ImageField gives an upload button, a preview
+              and the paste-a-link box, and it was already used everywhere
+              else images are set. */}
+          <ImageField
             label={t('article.coverImage')}
             value={form.image}
-            onChangeText={(v) => set('image', v)}
-            icon="image-outline"
-            autoCapitalize="none"
+            onChange={(url) => set('image', url)}
+            kind="article"
+            // Wide, because a cover is shown as a banner rather than a square.
+            aspectRatio={16 / 9}
           />
           <Select<NotificationTarget>
             label={t('notification.sendTo')}
