@@ -798,7 +798,8 @@
     "calendarNote": "Applies everywhere dates are shown — lessons, events, tickets and recordings. Hijri dates follow the Umm al-Qura calendar and are a calculation, not a moon sighting.",
     "calendarApproximate": "On this device the Hijri date is worked out arithmetically and may be a day or two out.",
     "greeting": "Greeting",
-    "greetingHint": "Leave empty to use \"Assalamu Alaikum\" in each person’s own language. Typing one here uses that wording for everybody."
+    "greetingHint": "Leave empty to use \"Assalamu Alaikum\" in each person’s own language. Typing one here uses that wording for everybody.",
+    "logoHint": "Changes everywhere in the app and on the browser tab straight away. The icon on a phone home screen is copied when the app is installed, so it changes at the next release — and on iPhone only if the app is removed and added again."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
