@@ -1,22 +1,21 @@
 # Runs the notification service on GitHub's machines instead of a laptop.
 name: Notifications
 
-# Every half hour, and on demand from the Actions tab.
+# Every five minutes, and on demand from the Actions tab.
 #
-# WHY HALF AN HOUR. A private repository gets 2,000 free Actions minutes a
-# month and every run is billed as at least one whole minute, however briefly it
-# actually runs. Half-hourly is 1,440 a month, which fits with room to spare;
-# quarter-hourly is 2,880, which does not. Nothing here has ever cost anything
-# and this keeps it that way.
+# WHY FIVE AND NOT THIRTY. This repository is public, and public repositories
+# get unlimited Actions minutes. The half-hourly schedule was chosen to fit the
+# 2,000 free minutes a PRIVATE repository gets, which does not apply here.
 #
-# GitHub's scheduler is best effort. A run can arrive several minutes late,
-# especially on the hour when everybody else's jobs are queued, and the delay is
-# not something a workflow can shorten. If the laptop service is also running it
-# takes over the moment it is awake — see the claim in sendOne for why the two
-# never send the same thing twice.
+# If this repository is ever made private, change the cron back to '*/30 * * * *'
+# or it will run past the free allowance: at five-minute intervals every run is
+# billed as a whole minute, which is 8,640 minutes a month against 2,000 free.
+#
+# GitHub's scheduler is best effort. A run can arrive a few minutes late,
+# especially on the hour when everybody else's jobs are queued.
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 # One at a time. Two overlapping runs would each claim work the other was
@@ -28,8 +27,8 @@ concurrency:
 jobs:
   deliver:
     runs-on: ubuntu-latest
-    # Generous compared with the few seconds this takes, and small enough that a
-    # hung network call cannot quietly eat the monthly budget.
+    # Generous next to the few seconds this takes, and short enough that a hung
+    # network call cannot sit there for an hour.
     timeout-minutes: 5
 
     steps:
@@ -45,10 +44,16 @@ jobs:
       - name: Install what the service needs
         run: npm install --no-save --no-audit --no-fund firebase-admin web-push nodemailer
 
-      # Named, not guessed. Without this the script exits on the first thing it
-      # cannot find and the log says "VAPID_PRIVATE_KEY is not set", which is
-      # true and unhelpful when the real answer is that three of five secrets
-      # were never added. This checks all of them and lists what is missing.
+      # Named, not guessed. Without this the script stops at the first thing it
+      # cannot find and reports only that, which is unhelpful when the real
+      # answer is that three of five secrets were never added.
+      #
+      # Every string here is written with printf and no embedded line breaks.
+      # An earlier version built a list by appending "\n" inside a shell
+      # variable; the continuation line began at column 0, which ENDS a YAML
+      # block scalar. The whole workflow became invalid and GitHub refused
+      # every run for a day — reporting it by file path rather than by name,
+      # which is the tell.
       - name: Check the secrets are present
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -56,87 +61,47 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
           PASSWORD_PRIVATE_KEY: ${{ secrets.PASSWORD_PRIVATE_KEY }}
-          # The same names read from the OTHER tab of that settings page.
-          #
-          # "Secrets and variables" is one page with two tabs, and a value typed
-          # into Variables is invisible to `secrets.*` — the job then behaves
-          # exactly as though nothing was ever added. Only whether each name is
-          # PRESENT is read here; the values are never printed, and a private
-          # key does not belong in Variables in any case, because that tab shows
-          # its contents in plain text to anyone who can open the page.
           VAR_FIREBASE_SERVICE_ACCOUNT: ${{ vars.FIREBASE_SERVICE_ACCOUNT }}
           VAR_VAPID_PRIVATE_KEY: ${{ vars.VAPID_PRIVATE_KEY }}
           VAR_VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
           VAR_VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
         run: |
-          missing=""
-          for name in FIREBASE_SERVICE_ACCOUNT VAPID_PRIVATE_KEY VAPID_PUBLIC_KEY VAPID_SUBJECT; do
-            eval "value=\${$name}"
-            if [ -z "$value" ]; then missing="$missing  - $name
-"; fi
-          done
-
-          # Optional. Absent, admin-set passwords are simply not applied.
-          if [ -z "$PASSWORD_PRIVATE_KEY" ]; then
-            echo "note: PASSWORD_PRIVATE_KEY is not set - admin-set passwords will be skipped"
-          fi
-
-          # Found in the wrong tab, which looks identical to not being added.
-          wrong=""
+          missing=0
+          wrong=0
           for name in FIREBASE_SERVICE_ACCOUNT VAPID_PRIVATE_KEY VAPID_PUBLIC_KEY VAPID_SUBJECT; do
             eval "here=\${$name}"
             eval "there=\${VAR_$name}"
-            if [ -z "$here" ] && [ -n "$there" ]; then wrong="$wrong  - $name
-"; fi
+            if [ -z "$here" ]; then
+              missing=$((missing + 1))
+              printf '  MISSING: %s\n' "$name"
+              printf '  MISSING: `%s`\n' "$name" >> "$GITHUB_STEP_SUMMARY"
+              if [ -n "$there" ]; then
+                wrong=$((wrong + 1))
+                printf '    ^ this one is in the Variables tab. It must be in Secrets.\n'
+                printf '    (found under **Variables** - it must be under **Secrets**)\n' >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
           done
 
-          if [ -n "$wrong" ]; then
-            {
-              echo "## These are in the wrong tab"
-              echo ""
-              printf "$wrong"
-              echo ""
-              echo "They were added under **Variables**. They must be under **Secrets**."
-              echo "Delete them from the Variables tab and add them again as"
-              echo "*New repository secret* on the Secrets tab."
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "Added under Variables instead of Secrets:"
-            printf "$wrong"
+          if [ -z "$PASSWORD_PRIVATE_KEY" ]; then
+            printf 'note: PASSWORD_PRIVATE_KEY is not set - admin-set passwords will be skipped\n'
           fi
 
-          if [ -n "$missing" ]; then
-            # Written to the run's summary as well as the log. The log needs
-            # three clicks to reach and the summary is the first thing on the
-            # page, which matters when the reader is not a developer.
-            {
-              echo "## Secrets missing"
-              echo ""
-              printf "$missing"
-              echo ""
-              echo "Add them under **Settings > Secrets and variables > Actions**."
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "These repository secrets are missing:"
-            printf "$missing"
-            echo ""
-            echo "Add them under Settings > Secrets and variables > Actions."
+          if [ "$missing" -gt 0 ]; then
+            printf 'Add them under Settings > Secrets and variables > Actions.\n'
             exit 1
           fi
 
           # A service account key is JSON. Catching a truncated or half-pasted
           # one here beats a stack trace from inside firebase-admin.
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > /tmp/key-check.json
-          if ! node -e "const k=require('/tmp/key-check.json'); if(!k.private_key||!k.client_email) throw new Error('missing private_key or client_email')"; then
-            {
-              echo "## FIREBASE_SERVICE_ACCOUNT is not a complete key"
-              echo ""
-              echo "Paste the WHOLE of serviceAccount.json, from the opening { to the closing }."
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "FIREBASE_SERVICE_ACCOUNT is not a complete service account key."
-            echo "Paste the WHOLE of serviceAccount.json, from the opening { to the closing }."
+          if ! node -e "const k=require('/tmp/key-check.json'); if(!k.private_key||!k.client_email) throw new Error('incomplete')"; then
+            printf 'FIREBASE_SERVICE_ACCOUNT is not a complete service account key.\n'
+            printf 'Paste the WHOLE of serviceAccount.json, from the opening brace to the closing one.\n'
             exit 1
           fi
           rm -f /tmp/key-check.json
-          echo "All required secrets are present."
+          printf 'All required secrets are present.\n'
 
       # Written to the workspace and never committed: the file is in
       # .gitignore, and the workspace is destroyed when the job ends.
@@ -147,11 +112,9 @@ jobs:
 
       - name: Deliver
         env:
-          # Push
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           EXPO_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
-          # Admin-set passwords
           PASSWORD_PRIVATE_KEY: ${{ secrets.PASSWORD_PRIVATE_KEY }}
           # Booking confirmation email. Absent, the service skips email and
           # everything else still runs.
@@ -167,13 +130,10 @@ jobs:
           set -o pipefail
           status=0
           node scripts/send-push.js 2>&1 | tee /tmp/deliver.log || status=$?
-          {
-            echo "## Delivery run"
-            echo ""
-            echo '```'
-            tail -25 /tmp/deliver.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          printf '## Delivery run\n\n' >> "$GITHUB_STEP_SUMMARY"
+          printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+          tail -25 /tmp/deliver.log >> "$GITHUB_STEP_SUMMARY"
+          printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
           exit $status
 
       # Whatever happened, the key does not outlive the job. Belt and braces:
