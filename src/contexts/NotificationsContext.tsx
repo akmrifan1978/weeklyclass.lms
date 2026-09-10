@@ -9,6 +9,7 @@ import React, {
 
 import { useAuth } from '@/contexts/AuthContext';
 import { watchInbox, unreadCount } from '@/services/notificationService';
+import { clearBadge, setBadge } from '@/services/badgeService';
 import { createDeviceNotifier } from '@/services/deviceNotify';
 import type { AppNotification } from '@/types';
 
@@ -103,15 +104,37 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, attempt]);
 
+  const unread = uid ? unreadCount(items, uid) : 0;
+
+  /*
+   * The count on the app icon, kept in step with the count in the app.
+   *
+   * This listener is the authority on how many are unread, so the badge is set
+   * from here rather than anywhere else. Opening a notification marks it read,
+   * the listener delivers that change, and the badge drops by itself — which
+   * is exactly the behaviour asked for and needs no separate bookkeeping.
+   *
+   * Signed out, the badge is removed rather than left at whatever the last
+   * person's count was. A number on a shared family tablet that belongs to
+   * somebody who has gone is worse than no number.
+   */
+  useEffect(() => {
+    if (!uid) {
+      void clearBadge();
+      return;
+    }
+    void setBadge(unread);
+  }, [uid, unread]);
+
   const value = useMemo<NotificationsValue>(
     () => ({
       items,
-      unread: uid ? unreadCount(items, uid) : 0,
+      unread,
       loading,
       error,
       reload: () => setAttempt((n) => n + 1),
     }),
-    [items, uid, loading, error]
+    [items, unread, loading, error]
   );
 
   return (
