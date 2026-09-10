@@ -26,7 +26,7 @@ import { getLatestArticle, lessonsForStudent } from '@/services/contentService';
 import { getClass } from '@/services/orgService';
 import { announcementsFor } from '@/services/notificationService';
 import { scheduleEventReminders } from '@/services/pushService';
-import { listUpcoming } from '@/services/calendarService';
+import { listUpcomingForUser } from '@/services/calendarService';
 import {
   AnnouncementCard,
   ArticleCard,
@@ -91,12 +91,12 @@ export default function StudentHome() {
       progressService.loadUserProgress(user).catch(() => null),
       // Already fetched for the reminder scheduler and then discarded. Kept
       // now, because the same list is what the photographs are drawn from.
-      listUpcoming({ classId: user.classId ?? undefined, pageSize: 6 })
+      listUpcomingForUser({ classId: user.classId ?? null, role: user.role, pageSize: 6 })
         // Classes only. An entry carrying `registration` is a ticketed
         // event and lives on the events screen, with its seat count and
         // its booking button; showing it here as a class is what made
         // the two look like one thing.
-        .then((page) => page.items.filter((event) => !event.registration))
+        .then((events) => events.filter((event) => !event.registration))
         .catch(() => []),
       getLiveVideo().catch(() => null),
       getFeaturedVideo().catch(() => null),
@@ -134,9 +134,9 @@ export default function StudentHome() {
   // Schedules on-device reminders for the next few classes.
   useEffect(() => {
     if (!user) return;
-    listUpcoming({ classId: user.classId ?? undefined, pageSize: 5 })
-      .then((page) => {
-        const events = page.items.flatMap((event) => {
+    listUpcomingForUser({ classId: user.classId ?? null, role: user.role, pageSize: 5 })
+      .then((upcoming) => {
+        const events = upcoming.flatMap((event) => {
           const startsAt = toDate(event.startsAt);
           // Events without a resolvable instant cannot be scheduled against.
           return startsAt
