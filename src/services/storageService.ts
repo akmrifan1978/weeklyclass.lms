@@ -459,6 +459,21 @@ async function shrinkIfImage(
 function optimisedUrl(url: string, kind: UploadKind): string {
   const marker = '/image/upload/';
   if (!url.includes('res.cloudinary.com') || !url.includes(marker)) return url;
+
+  /*
+   * A PDF is left exactly as it was uploaded.
+   *
+   * Cloudinary stores a PDF under its IMAGE path, which is why it reaches this
+   * function at all — and the transformation below would then rasterise it:
+   * `f_auto` picks a web image format and `w_1200` sizes it, so what comes back
+   * is a flattened picture of page one. The file stops being a document. Every
+   * page after the first is simply gone, and the text is no longer selectable
+   * or searchable.
+   *
+   * Nothing about that is visible at upload time. It looks like a successful
+   * upload and the thumbnail even looks right.
+   */
+  if (/\.pdf($|\?)/i.test(url)) return url;
   // Already carrying a transformation — leave it be rather than stack a second.
   if (/\/image\/upload\/[a-z]{1,3}_/.test(url)) return url;
 
