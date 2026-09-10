@@ -18,6 +18,7 @@ import {
   Badge,
   Button,
   DateField,
+  TimeField,
   Select,
   StatusBadge,
   TextField,
@@ -33,7 +34,9 @@ interface FlyerForm {
   link: string;
   position: FlyerPosition;
   startDate: string;
+  startTime: string;
   endDate: string;
+  endTime: string;
   active: boolean;
   priority: string;
 }
@@ -47,7 +50,9 @@ const EMPTY: FlyerForm = {
   link: '',
   position: 'dashboard',
   startDate: '',
+  startTime: '',
   endDate: '',
+  endTime: '',
   active: true,
   priority: '0',
 };
@@ -133,7 +138,9 @@ export function FlyerManager() {
         link: flyer.link ?? '',
         position: flyer.position,
         startDate: flyer.startDate ?? '',
+        startTime: flyer.startTime ?? '',
         endDate: flyer.endDate ?? '',
+        endTime: flyer.endTime ?? '',
         active: flyer.active,
         priority: String(flyer.priority ?? 0),
       })}
@@ -144,8 +151,12 @@ export function FlyerManager() {
         // Caught here rather than left to look like a scheduling quirk: a
         // flyer that ends before it starts never shows, and nothing else in
         // the app would ever tell the admin why.
-        if (form.startDate && form.endDate && form.endDate < form.startDate) {
-          errors.endDate = t('flyer.endBeforeStart');
+        if (form.startDate && form.endDate) {
+          const from = `${form.startDate}T${form.startTime || '00:00'}`;
+          const to = `${form.endDate}T${form.endTime || '23:59'}`;
+          // Compared as whole instants, or a flyer running 18:00 to 09:00 on
+          // the same day would pass a date-only check and never appear.
+          if (to < from) errors.endDate = t('flyer.endBeforeStart');
         }
         return errors;
       }}
@@ -161,7 +172,9 @@ export function FlyerManager() {
             link: form.link.trim() || null,
             position: form.position,
             startDate: form.startDate || null,
+            startTime: form.startTime || null,
             endDate: form.endDate || null,
+            endTime: form.endTime || null,
             active: form.active,
             priority: Number(form.priority) || 0,
           },
@@ -284,6 +297,16 @@ export function FlyerManager() {
             onChange={(v) => set('startDate', v)}
             hint={t('flyer.startHint')}
           />
+          {/* Only once there is a date to attach it to. A time on its own
+              means nothing and would only invite somebody to set one. */}
+          {form.startDate ? (
+            <TimeField
+              label={t('flyer.startTime')}
+              value={form.startTime}
+              onChange={(v) => set('startTime', v)}
+            />
+          ) : null}
+
           <DateField
             label={t('flyer.endDate')}
             value={form.endDate}
@@ -291,6 +314,13 @@ export function FlyerManager() {
             error={errors.endDate}
             hint={t('flyer.endHint')}
           />
+          {form.endDate ? (
+            <TimeField
+              label={t('flyer.endTime')}
+              value={form.endTime}
+              onChange={(v) => set('endTime', v)}
+            />
+          ) : null}
 
           <TextField
             label={t('flyer.priority')}

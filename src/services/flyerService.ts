@@ -1,6 +1,7 @@
 import type { Unsubscribe } from 'firebase/firestore';
 
 import { COLLECTIONS } from '@/constants/app';
+import { combineDateTime } from '@/utils/date';
 import {
   createDoc,
   getById,
@@ -36,21 +37,30 @@ export function listFlyers(cursor: Cursor = null, search = ''): Promise<Page<Fly
 }
 
 /**
- * Whether a flyer should be on screen today.
+ * Whether a flyer should be on screen right now.
  *
  * Decided here rather than in the query for two reasons. Firestore cannot apply
- * range filters to two different fields in one query, and `startDate <= today
- * AND endDate >= today` is exactly that. And the dates are optional: a flyer
- * with no end is meant to run until somebody stops it, which no range filter
+ * range filters to two different fields in one query, and "starts before now
+ * AND ends after now" is exactly that. And both ends are optional: a flyer with
+ * no end is meant to run until somebody stops it, which no range filter
  * expresses.
  *
- * Compared as plain `YYYY-MM-DD` strings, which sort correctly as text and
- * raise no question about whose midnight is meant.
+ * `now` is a parameter so a caller can re-ask as the clock moves. The strip
+ * does exactly that — see the ticker in FlyerStrip — because a listener
+ * delivers changes to DATA and the end of a flyer's run is not one: nothing in
+ * Firestore changes at the moment it expires.
  */
-export function isShowing(flyer: Flyer, today = new Date().toISOString().slice(0, 10)): boolean {
+export function isShowing(flyer: Flyer, now: Date = new Date()): boolean {
   if (!flyer.active) return false;
-  if (flyer.startDate && flyer.startDate > today) return false;
-  if (flyer.endDate && flyer.endDate < today) return false;
+
+  // A missing time means the edge of the day, so a flyer scheduled by date
+  // alone behaves exactly as it did before times existed.
+  if (flyer.startDate && now < combineDateTime(flyer.startDate, flyer.startTime || '00:00')) {
+    return false;
+  }
+  if (flyer.endDate && now > combineDateTime(flyer.endDate, flyer.endTime || '23:59')) {
+    return false;
+  }
   return true;
 }
 

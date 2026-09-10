@@ -1554,7 +1554,8 @@
     "description": "Description",
     "endBeforeStart": "The end date is before the start date, so this would never show.",
     "endDate": "Ends",
-    "endHint": "Leave empty to run until you switch it off.",
+    "endHint": "Leave empty to run until you switch it off. It stops by itself at the end time.",
+    "endTime": "End time",
     "fileHint": "JPG, PNG or PDF. A PDF is offered as a document to open rather than shown in place.",
     "fileRequired": "Choose an image or a PDF first.",
     "flyerTitle": "Title",
@@ -1575,7 +1576,8 @@
     "show": "Show",
     "showing": "Showing",
     "startDate": "Starts",
-    "startHint": "Leave empty to start straight away.",
+    "startHint": "Leave empty to start straight away. Add a time to start partway through the day.",
+    "startTime": "Start time",
     "title": "Flyers & advertising",
     "wrongType": "Only JPG, PNG and PDF files can be used."
   }

@@ -127,6 +127,11 @@ export default function SplashScreen() {
       title={settings?.appName?.trim() || APP_NAME}
       subtitle={settings?.tagline?.trim() || t('app.tagline')}
     >
+      {/* At the top, above the sign-in choice. Somebody can close it, which
+          is what makes putting an advertisement in front of the way in
+          defensible rather than merely effective. */}
+      <FlyerStrip position="home" />
+
       <Text style={styles.sectionLabel}>{t('auth.chooseRole')}</Text>
 
       {ROLES.map((item) => (
@@ -179,10 +184,6 @@ export default function SplashScreen() {
           onPress={() => router.push('/(auth)/forgot-password')}
         />
       </View>
-
-      {/* Below the way in, never above it. Somebody arriving to sign in
-          should reach the button before they reach an advertisement. */}
-      <FlyerStrip position="home" />
 
       {/* The rest of the website, on the page rather than only behind the menu.
           A hamburger is where somebody looks for a destination they already

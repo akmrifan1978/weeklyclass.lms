@@ -101,7 +101,9 @@ export default function TeacherHome() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['top', 'bottom']}>
-        <FlyerStrip position="dashboard" />
+      {/* At the top, as asked. It draws nothing when no flyer is
+          running, so it costs no space on the ordinary day. */}
+      <FlyerStrip position="dashboard" />
 
       <View style={styles.greetingRow}>
         <View style={{ flex: 1 }}>

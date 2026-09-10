@@ -891,6 +891,17 @@ export interface Flyer extends BaseDoc {
   position: FlyerPosition;
   startDate?: string | null;
   endDate?: string | null;
+  /**
+   * Times of day, paired with the dates above. `HH:mm`, both optional.
+   *
+   * A flyer for an evening event should come down when the evening ends, not
+   * at the stroke of the following midnight, which is what date-only
+   * scheduling meant. No start time means the start of that day; no end time
+   * means the end of it, so a flyer scheduled by date alone behaves exactly as
+   * it did before.
+   */
+  startTime?: string | null;
+  endTime?: string | null;
   /** Off means it is not shown, whatever its dates say. */
   active: boolean;
   /** Higher shows first. Equal priorities fall back to newest. */

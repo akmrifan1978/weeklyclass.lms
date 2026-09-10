@@ -153,6 +153,10 @@ export default function StudentHome() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['top', 'bottom']}>
+      {/* At the top, as asked. It draws nothing when no flyer is
+          running, so it costs no space on the ordinary day. */}
+      <FlyerStrip position="dashboard" />
+
       {/* A panel rather than loose text.
           The same words sat directly on the page background, which made the
           screen open on nothing in particular. Given a ground of its own, the
@@ -232,11 +236,6 @@ export default function StudentHome() {
           </View>
         </Card>
       ) : null}
-
-      {/* Under the greeting, above the day's work. Advertising that pushes
-          what somebody came for below the fold is advertising nobody
-          thanks you for. Draws nothing at all when no flyer is running. */}
-      <FlyerStrip position="dashboard" />
 
       {/* Their own figures, on the screen they land on. These were computed
           for the progress screen already and never shown here, which is where
