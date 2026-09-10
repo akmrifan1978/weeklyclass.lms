@@ -11,6 +11,7 @@ import { getLesson, listMaterials } from '@/services/contentService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import { MaterialRow } from '@/components/shared/ContentCards';
 import { VideoPlayer } from '@/components/shared/VideoPlayer';
+import { RatingPrompt } from '@/components/shared/RatingPrompt';
 import { AyahAudio } from '@/features/islamic/AyahAudio';
 import {
   AppHeader,
@@ -148,6 +149,12 @@ export default function LessonDetail() {
 
               <Spacer size={spacing.xxxl} />
             </>
+          ) : null}
+
+          {/* After the lesson, not before it. A rating asked above the
+              material is a rating of a page nobody has read yet. */}
+          {lesson ? (
+            <RatingPrompt target="lesson" targetId={lesson.id} targetTitle={lesson.title} />
           ) : null}
         </AsyncBoundary>
       </Screen>

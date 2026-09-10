@@ -48,6 +48,7 @@ export const ADMIN_NAV: NavItem[] = [
   { labelKey: 'nav.classes', route: '/(admin)/classes', icon: 'library-outline', permission: 'VIEW_CLASSES', group: 'main' },
 
   { labelKey: 'nav.lessons', route: '/(admin)/lessons', icon: 'book-outline', permission: 'VIEW_LESSONS', group: 'content' },
+  { labelKey: 'nav.ratings', route: '/(admin)/ratings', icon: 'star-outline', permission: 'VIEW_RESULTS', group: 'content' },
   { labelKey: 'nav.videos', route: '/(admin)/videos', icon: 'videocam-outline', permission: 'UPLOAD_VIDEO', group: 'content' },
   // Making a recording and managing the ones already made are different jobs on
   // different days, so they are different entries rather than one screen with a

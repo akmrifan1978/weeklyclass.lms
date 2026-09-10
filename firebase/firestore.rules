@@ -955,6 +955,44 @@ service cloud.firestore {
     // client), but nobody — admins included — can edit or remove an entry.
     // Rewriting history from a client is simply not expressible here.
 
+    // Ratings, out of five, for the app and for the things in it.
+    //
+    // A person may write their OWN rating and read it back, and nothing else.
+    // Everybody else's opinion is not theirs to browse: a class that can read
+    // the ratings can work out who gave the teacher a one, and that is exactly
+    // the thing that stops people answering honestly.
+    //
+    // The id is `${target}_${targetId}_${uid}`, so the uid check below is what
+    // makes one person unable to write a rating in somebody else's name — and
+    // the whole reason the id has the uid in it at all.
+    match /ratings/{ratingId} {
+      // `resource == null` first, for the same reason as eventRegistrations:
+      // the app reads this exact path to ask "have I rated this already?", and
+      // evaluating resource.data on a missing document throws, which is a
+      // denial. Learning that nothing is there reveals nothing.
+      allow get: if isSignedIn()
+                 && (resource == null
+                     || resource.data.userId == request.auth.uid
+                     || isStaff());
+
+      // Only staff may list. Reading the results is the point of collecting
+      // them, but it is a staff activity.
+      allow list: if isStaff();
+
+      allow create, update: if isSignedIn()
+                            && request.resource.data.userId == request.auth.uid
+                            && request.resource.data.stars is int
+                            && request.resource.data.stars >= 1
+                            && request.resource.data.stars <= 5
+                            && request.resource.data.target in ['app', 'lesson', 'event']
+                            && request.resource.data.get('comment', '') is string
+                            && request.resource.data.get('comment', '').size() <= 2000;
+
+      // Kept, not deleted, so an average cannot be quietly improved by removing
+      // the answers somebody did not like.
+      allow delete: if isAdmin();
+    }
+
     match /auditLogs/{logId} {
       allow read: if isAdmin();
       allow create: if isSignedIn()

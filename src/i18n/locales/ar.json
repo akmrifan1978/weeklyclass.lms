@@ -274,7 +274,8 @@
     "myClass": "صفي",
     "myWork": "أعمالي",
     "more": "المزيد",
-    "contact": "اتصل بنا"
+    "contact": "اتصل بنا",
+    "ratings": "التقييمات"
   },
   "dashboard": {
     "quickAccess": "وصول سريع",
@@ -1076,7 +1077,24 @@
     "level_2": "سيئ",
     "level_3": "مقبول",
     "level_4": "جيد",
-    "level_5": "جيد جدًا"
+    "level_5": "جيد جدًا",
+    "ask_app": "كيف تجد التطبيق؟",
+    "ask_lesson": "كيف كان هذا الدرس؟",
+    "ask_event": "كيف كانت هذه الفعالية؟",
+    "thanks": "شكرًا لك — تم حفظ تقييمك.",
+    "yourRating": "لقد قيّمت هذا بـ {{stars}} من 5.",
+    "commentLabel": "هل تود إضافة شيء؟",
+    "commentHint": "اختياري",
+    "adminTitle": "التقييمات",
+    "overall": "التطبيق بوجه عام",
+    "byLesson": "الدروس",
+    "byEvent": "الفعاليات",
+    "responses_one": "تقييم واحد",
+    "responses_other": "{{count}} تقييمات",
+    "noneYet": "لم يقيّمه أحد بعد.",
+    "noRatings": "لا توجد تقييمات",
+    "noRatingsBody": "تظهر التقييمات هنا فور أن يقدّم أحدهم واحدًا.",
+    "averageOf": "من 5"
   },
   "qa": {
     "askTitle": "اطرح سؤالًا",

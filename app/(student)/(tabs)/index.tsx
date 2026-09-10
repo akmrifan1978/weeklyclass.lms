@@ -37,6 +37,7 @@ import {
 } from '@/components/shared/ContentCards';
 import { NavDrawer } from '@/components/shared/NavDrawer';
 import { useVisibleIslamicTiles } from '@/components/shared/IslamicTiles';
+import { RatingPrompt } from '@/components/shared/RatingPrompt';
 import { studentNavSections } from '@/constants/studentNav';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
@@ -415,6 +416,10 @@ export default function StudentHome() {
       )}
 
       <Spacer size={spacing.xxl} />
+      {/* Asked once, at the foot of the screen somebody opens every day.
+          Never at the top: a person arriving to check their homework is not
+          there to review the software. */}
+      <RatingPrompt target="app" />
     </Screen>
   );
 }

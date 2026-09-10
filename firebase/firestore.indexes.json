@@ -1554,6 +1554,21 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "//": "ratings - the admin list, newest first",
+      "collectionGroup": "ratings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

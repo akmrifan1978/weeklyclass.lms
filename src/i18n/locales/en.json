@@ -274,7 +274,8 @@
     "myClass": "My class",
     "myWork": "My work",
     "more": "More",
-    "contact": "Contact"
+    "contact": "Contact",
+    "ratings": "Ratings"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -1076,7 +1077,24 @@
     "level_2": "Bad",
     "level_3": "Okay",
     "level_4": "Good",
-    "level_5": "Very good"
+    "level_5": "Very good",
+    "ask_app": "How are you finding the app?",
+    "ask_lesson": "How was this lesson?",
+    "ask_event": "How was this event?",
+    "thanks": "Thank you — your rating has been saved.",
+    "yourRating": "You rated this {{stars}} out of 5.",
+    "commentLabel": "Anything you would like to add?",
+    "commentHint": "Optional",
+    "adminTitle": "Ratings",
+    "overall": "The app overall",
+    "byLesson": "Lessons",
+    "byEvent": "Events",
+    "responses_one": "{{count}} rating",
+    "responses_other": "{{count}} ratings",
+    "noneYet": "Nobody has rated this yet.",
+    "noRatings": "No ratings yet",
+    "noRatingsBody": "Ratings appear here as soon as somebody gives one.",
+    "averageOf": "out of 5"
   },
   "qa": {
     "askTitle": "Ask a question",

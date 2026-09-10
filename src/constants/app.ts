@@ -38,6 +38,7 @@ export const COLLECTIONS = {
   auditLogs: 'auditLogs',
   counters: 'counters',
   notes: 'notes',
+  ratings: 'ratings',
   publicSchedule: 'publicSchedule',
   /**
    * Thin public mirrors, written by an admin and readable by anybody.

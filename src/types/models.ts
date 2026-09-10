@@ -853,6 +853,40 @@ export type AuditAction =
   | 'DEACTIVATE'
   | 'PERMISSION_CHANGED';
 
+/** What a rating is about. */
+export type RatingTarget = 'app' | 'lesson' | 'event';
+
+/**
+ * One person's opinion of one thing, out of five.
+ *
+ * ONE COLLECTION for the app, for lessons and for events, rather than three.
+ * They are the same question asked about different objects, and keeping them
+ * together means an admin reads every rating on one screen and the averaging
+ * is written once. `target` says which kind, `targetId` which one.
+ *
+ * The document id is `${target}_${targetId}_${uid}`, so a person has exactly
+ * one rating per thing and changing their mind overwrites it rather than
+ * stacking a second opinion on top of the first. Same trick the bookings use.
+ *
+ * `targetTitle` is copied in rather than looked up. A lesson can be renamed or
+ * deleted, and a rating whose subject can no longer be named is a number
+ * nobody can act on.
+ */
+export interface Rating extends BaseDoc {
+  target: RatingTarget;
+  /** Null for the app itself, which is the only thing there is one of. */
+  targetId?: string | null;
+  targetTitle?: string | null;
+  /** 1-5. Nothing else is accepted, in the rules as well as here. */
+  stars: number;
+  comment?: string | null;
+  userId: string;
+  userName: string;
+  role: UserRole;
+  /** So a teacher can see how their own class answered. */
+  classId?: string | null;
+}
+
 export interface AuditLog extends BaseDoc {
   actorId: string;
   actorName: string;
