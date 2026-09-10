@@ -227,15 +227,30 @@ export async function claimIdentity(params: {
   // it — a lookup table for a thing nobody can look up.
   if (!email) return;
 
-  try {
-    await setDoc(doc(db, EMAIL_LOOKUP, await hashEmail(email)), {
-      username,
-      uid: params.uid,
-      createdAt: serverTimestamp(),
-    });
-  } catch {
-    // Already claimed by whoever registered with this address first.
-  }
+  /*
+   * Sent, not waited for.
+   *
+   * This row only helps "forgot username" find somebody by email, and the
+   * comment above already calls it best effort — several accounts may share an
+   * address and only the first can own the row, so a failure here is the
+   * ORDINARY case rather than an exceptional one. Awaiting it added a network
+   * round-trip to the end of registration purely to learn something the code
+   * then deliberately ignores.
+   *
+   * Recovery is unaffected either way: the mobile number is the identifier
+   * that is actually unique, and it is what "forgot username" falls back to.
+   */
+  void (async () => {
+    try {
+      await setDoc(doc(db, EMAIL_LOOKUP, await hashEmail(email)), {
+        username,
+        uid: params.uid,
+        createdAt: serverTimestamp(),
+      });
+    } catch {
+      // Already claimed by whoever registered with this address first.
+    }
+  })();
 }
 
 /** Moves a username claim when an admin renames a user. */

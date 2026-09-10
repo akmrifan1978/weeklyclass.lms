@@ -651,13 +651,29 @@ export async function register(
   role: Extract<UserRole, 'student' | 'teacher'>,
   input: RegistrationInput
 ): Promise<RegistrationResult> {
-  // One more round-trip before anything happens. getSettings already falls back
-  // to safe defaults, so cap the wait rather than let a slow network stall the
-  // form before it has even started.
-  const settings = await Promise.race([
+  /*
+   * Both reads at once, because neither needs the other.
+   *
+   * They were sequential, which on a database in another country is a second
+   * of waiting for no reason — the settings say whether registration is open,
+   * the mobile check says whether this number is free, and neither answer
+   * changes the other's question. Started together, the pair costs one
+   * round-trip instead of two.
+   *
+   * The settings wait is still capped: getSettings falls back to safe defaults,
+   * so a slow network should not stall a form before it has started.
+   */
+  const settingsPromise = Promise.race([
     getSettings(),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000)),
   ]);
+  // The mobile number is the unique identity. The transaction in claimIdentity
+  // is still the real guard against a race; this exists to fail early with a
+  // message that says what is wrong, rather than after an auth account has
+  // already been made.
+  const mobileFreePromise = isMobileAvailable(input.mobile).catch(() => true);
+
+  const settings = await settingsPromise;
 
   if (settings && !settings.registrationEnabled) {
     throw new AppError('auth.registrationClosed', 'failed-precondition');
@@ -684,7 +700,7 @@ export async function register(
   // race; this exists to fail early with a message that says what is wrong,
   // rather than after an auth account has already been made.
   step('2/6 checking mobile number', input.mobile);
-  if (!(await isMobileAvailable(input.mobile).catch(() => true))) {
+  if (!(await mobileFreePromise)) {
     throw new AppError('validation.mobileTaken', 'already-exists');
   }
 
@@ -762,17 +778,22 @@ export async function register(
       declarationAcceptedAt: new Date(),
     };
 
-    step('4/6 writing profile document', `users/${uid}`);
-    // A profile may already exist if this uid was set up by hand in the Firebase
-    // console. The security rules treat an overwrite as an UPDATE, and the
-    // update rule forbids touching `role`, so the write would fail with a bare
-    // "insufficient permissions". Say what actually happened instead.
-    const existingProfile = await getDoc(doc(db, COLLECTIONS.users, uid));
-    if (existingProfile.exists()) {
-      throw new AppError('auth.profileAlreadyExists', 'already-exists');
-    }
+    step('4/6 writing profile and claiming username');
 
-    await withTokenRetry('profile write', credential.user, () =>
+    /*
+     * The profile write and the username claim run TOGETHER.
+     *
+     * They were one after the other, and neither needs the other's result: the
+     * claim writes `usernames/{username}`, the profile writes `users/{uid}`.
+     * Sequential, that is two crossings of the network for work that could
+     * have gone at once.
+     *
+     * The failure behaviour is unchanged. Sequentially, a failed claim already
+     * left the profile written, because the profile went first — so running
+     * them side by side ends in exactly the same state, reached sooner. Either
+     * rejection still lands in the catch below, which keeps the auth account.
+     */
+    const writeProfile = withTokenRetry('profile write', credential.user, () =>
       denialContext('create', `${COLLECTIONS.users}/${uid}`, () =>
         setDoc(doc(db, COLLECTIONS.users, uid), {
           ...profile,
@@ -782,13 +803,31 @@ export async function register(
           createdBy: uid,
         })
       )
-    );
+    ).catch(async (error) => {
+      /*
+       * A profile may already exist if this uid was set up by hand in the
+       * Firebase console. The rules treat an overwrite as an UPDATE, and the
+       * update rule forbids touching `role`, so the write fails with a bare
+       * "insufficient permissions".
+       *
+       * That check used to run BEFORE every write — one guaranteed round-trip
+       * on every registration to explain a case that almost never happens. It
+       * now runs only when the write has actually failed, where the cost is
+       * paid by the rare failure rather than by everybody.
+       */
+      const existing = await getDoc(doc(db, COLLECTIONS.users, uid)).catch(() => null);
+      if (existing?.exists()) {
+        throw new AppError('auth.profileAlreadyExists', 'already-exists');
+      }
+      throw error;
+    });
 
-    step('5/6 claiming username index', username);
-    await withTokenRetry('identity claim', credential.user, () =>
+    const claim = withTokenRetry('identity claim', credential.user, () =>
       claimIdentity({ username, email, authEmail, uid, role, mobile: input.mobile })
     );
-    step('5/6 username index claimed');
+
+    await Promise.all([writeProfile, claim]);
+    step('5/6 profile written and username claimed');
 
     // Everything above is essential and is awaited. These two are not: the
     // account already exists and is usable. Awaiting them added two more
