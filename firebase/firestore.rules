@@ -369,6 +369,18 @@ service cloud.firestore {
       allow write: if can('EDIT_LESSONS') || can('CREATE_LESSONS');
     }
 
+    // Advertising flyers, readable by anybody.
+    //
+    // Public on purpose: a flyer is an advertisement, some of them run on the
+    // front page, and a poster nobody outside can see is not doing its job.
+    // Whether one is CURRENTLY shown — its dates, its active flag — is decided
+    // by the app, not here: a rule cannot compare against today's date, and an
+    // expired advertisement is not a secret.
+    match /flyers/{flyerId} {
+      allow read: if true;
+      allow write: if can('MANAGE_ANNOUNCEMENTS');
+    }
+
     match /languages/{code} {
       allow read: if true;
       allow write: if can('MANAGE_LANGUAGES');

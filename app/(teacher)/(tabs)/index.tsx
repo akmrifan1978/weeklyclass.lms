@@ -24,6 +24,7 @@ import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
 import { UpcomingClasses } from '@/components/shared/UpcomingClasses';
+import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import {
   Avatar,
   Card,
@@ -98,6 +99,8 @@ export default function TeacherHome() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['top', 'bottom']}>
+        <FlyerStrip position="dashboard" />
+
       <View style={styles.greetingRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.salaam}>{t('app.greeting')}</Text>

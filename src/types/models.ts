@@ -862,6 +862,41 @@ export type AuditAction =
   | 'DEACTIVATE'
   | 'PERMISSION_CHANGED';
 
+/** Where a flyer is shown. */
+export type FlyerPosition = 'home' | 'dashboard' | 'both';
+
+/**
+ * A promotional flyer or poster an admin puts in front of people.
+ *
+ * The file may be an image or a PDF. An image is shown; a PDF cannot be, so it
+ * is offered as something to open — a flyer nobody can see is not a flyer, and
+ * silently rendering a broken image is worse than an honest "open this".
+ *
+ * Scheduling is by plain `YYYY-MM-DD` strings rather than instants. A poster
+ * runs "from the first to the fifteenth" in the centre's own reckoning, and
+ * turning that into a timestamp only raises the question of whose midnight.
+ * Either end may be empty: no start means "already running", no end means
+ * "until it is switched off".
+ */
+export interface Flyer extends BaseDoc {
+  title: string;
+  description?: string | null;
+  /** The uploaded image or PDF. */
+  fileUrl: string;
+  fileType: 'image' | 'pdf';
+  /** Where the file lives, so replacing one can clean up after itself. */
+  storagePath?: string | null;
+  /** Opened when somebody taps the flyer. Falls back to the file itself. */
+  link?: string | null;
+  position: FlyerPosition;
+  startDate?: string | null;
+  endDate?: string | null;
+  /** Off means it is not shown, whatever its dates say. */
+  active: boolean;
+  /** Higher shows first. Equal priorities fall back to newest. */
+  priority: number;
+}
+
 /** What a rating is about. */
 export type RatingTarget = 'app' | 'lesson' | 'event';
 

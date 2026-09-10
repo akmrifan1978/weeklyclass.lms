@@ -39,6 +39,7 @@ export const COLLECTIONS = {
   counters: 'counters',
   notes: 'notes',
   ratings: 'ratings',
+  flyers: 'flyers',
   publicSchedule: 'publicSchedule',
   /**
    * Thin public mirrors, written by an admin and readable by anybody.

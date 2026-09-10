@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { formatShortDate } from '@/utils/date';
 import * as calendarService from '@/services/calendarService';
 import { InstallPrompt } from '@/components/shared/InstallPrompt';
+import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import { PublicPage } from '@/components/public/PublicPage';
 import { bookingLabelKey, PublicCard, Tag } from '@/components/public/PublicControls';
 import { PUBLIC_NAV } from '@/constants/publicNav';
@@ -178,6 +179,10 @@ export default function SplashScreen() {
           onPress={() => router.push('/(auth)/forgot-password')}
         />
       </View>
+
+      {/* Below the way in, never above it. Somebody arriving to sign in
+          should reach the button before they reach an advertisement. */}
+      <FlyerStrip position="home" />
 
       {/* The rest of the website, on the page rather than only behind the menu.
           A hamburger is where somebody looks for a destination they already

@@ -38,6 +38,7 @@ import {
 import { NavDrawer } from '@/components/shared/NavDrawer';
 import { useVisibleIslamicTiles } from '@/components/shared/IslamicTiles';
 import { RatingPrompt } from '@/components/shared/RatingPrompt';
+import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import { studentNavSections } from '@/constants/studentNav';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
@@ -229,6 +230,11 @@ export default function StudentHome() {
           </View>
         </Card>
       ) : null}
+
+      {/* Under the greeting, above the day's work. Advertising that pushes
+          what somebody came for below the fold is advertising nobody
+          thanks you for. Draws nothing at all when no flyer is running. */}
+      <FlyerStrip position="dashboard" />
 
       {/* Their own figures, on the screen they land on. These were computed
           for the progress screen already and never shown here, which is where

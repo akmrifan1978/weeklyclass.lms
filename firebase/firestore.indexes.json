@@ -1569,6 +1569,25 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "//": "flyers - what is on show, highest priority first",
+      "collectionGroup": "flyers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priority",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

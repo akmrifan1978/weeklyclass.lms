@@ -275,7 +275,8 @@
     "myWork": "My work",
     "more": "More",
     "contact": "Contact",
-    "ratings": "Ratings"
+    "ratings": "Ratings",
+    "flyers": "Flyers"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -1537,5 +1538,38 @@
       "emptyTitle": "Nothing released yet",
       "emptyBody": "Published recordings appear here as soon as they go out."
     }
+  },
+  "flyer": {
+    "active": "Active",
+    "activeHint": "Off hides it everywhere, whatever its dates say.",
+    "add": "Add flyer",
+    "chooseFile": "Choose file",
+    "description": "Description",
+    "endBeforeStart": "The end date is before the start date, so this would never show.",
+    "endDate": "Ends",
+    "endHint": "Leave empty to run until you switch it off.",
+    "fileHint": "JPG, PNG or PDF. A PDF is offered as a document to open rather than shown in place.",
+    "fileRequired": "Choose an image or a PDF first.",
+    "flyerTitle": "Title",
+    "fromNow": "Now",
+    "hide": "Hide",
+    "link": "Link",
+    "linkHint": "Opened when somebody taps the flyer. Leave empty to open the file itself.",
+    "noEnd": "No end",
+    "none": "No flyers yet",
+    "open": "Open",
+    "position": "Where it appears",
+    "position_both": "Both",
+    "position_dashboard": "Dashboard",
+    "position_home": "Front page",
+    "priority": "Priority",
+    "priorityHint": "Higher numbers show first.",
+    "replaceFile": "Replace file",
+    "show": "Show",
+    "showing": "Showing",
+    "startDate": "Starts",
+    "startHint": "Leave empty to start straight away.",
+    "title": "Flyers & advertising",
+    "wrongType": "Only JPG, PNG and PDF files can be used."
   }
 }
