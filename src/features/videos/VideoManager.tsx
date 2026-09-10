@@ -306,7 +306,7 @@ export function VideoManager({
             label={t('video.thumbnail')}
             value={form.thumbnail}
             onChangeText={(v) => set('thumbnail', v)}
-            hint="YouTube thumbnails are detected automatically."
+            hint={t('video.thumbnailAuto')}
             icon="image-outline"
             autoCapitalize="none"
           />

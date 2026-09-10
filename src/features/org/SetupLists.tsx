@@ -226,7 +226,7 @@ export function CountryList({
           required
         />
         <TextField
-          label="ISO code"
+          label={t('admin.isoCode')}
           value={form.code}
           onChangeText={(v) =>
             setForm((p) => ({ ...p, code: v.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) }))

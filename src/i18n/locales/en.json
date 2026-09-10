@@ -357,7 +357,8 @@
     "logo": "Logo",
     "banner": "Banner",
     "brandingHint": "Shown with this class. Published classes keep the logo and banner they were created with.",
-    "startsInThePast": "This starts in the past, so it will be saved under Past rather than Upcoming."
+    "startsInThePast": "This starts in the past, so it will be saved under Past rather than Upcoming.",
+    "meetingLinkHint": "Paste a Zoom or Google Meet link"
   },
   "video": {
     "title": "Videos",
@@ -394,7 +395,9 @@
     "topic": "Topic",
     "topicHint": "Subject of the session, used for grouping and search",
     "location": "Location",
-    "locationHint": "Town or country, e.g. Jeddah, Saudi Arabia"
+    "locationHint": "Town or country, e.g. Jeddah, Saudi Arabia",
+    "thumbnailAuto": "YouTube thumbnails are detected automatically.",
+    "video": "Video"
   },
   "record": {
     "title": "Record a lesson",
@@ -464,7 +467,9 @@
     "coverImage": "Cover image",
     "publishedOn": "Published on",
     "noArticles": "No articles published yet",
-    "setFeatured": "Feature on home screen"
+    "setFeatured": "Feature on home screen",
+    "machineTranslated": "Translated by software, not by a person. It may be wrong.",
+    "paragraphHint": "Separate paragraphs with a blank line."
   },
   "lesson": {
     "title": "Weekly lessons",
@@ -614,7 +619,11 @@
     "priorityHigh": "High",
     "priorityUrgent": "Urgent",
     "expiresAt": "Expires on",
-    "noAnnouncements": "No announcements right now"
+    "noAnnouncements": "No announcements right now",
+    "notice": "Notice",
+    "understood": "I have read this",
+    "showAsPopup": "Show as a notice over the screen",
+    "showAsPopupHint": "Interrupts everyone it is addressed to, once each, until they close it. Use it for something that must be read, not for ordinary news."
   },
   "profile": {
     "title": "Profile",
@@ -697,7 +706,8 @@
     "publicProfileHide": "Remove from the public website",
     "publicProfileShown": "This teacher now appears on the public website.",
     "publicProfileHidden": "This teacher no longer appears on the public website.",
-    "usernameNotYours": "Only a super admin can change another administrator’s username."
+    "usernameNotYours": "Only a super admin can change another administrator’s username.",
+    "isoCode": "ISO code"
   },
   "settings": {
     "title": "Settings",

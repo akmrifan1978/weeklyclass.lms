@@ -302,7 +302,7 @@ export function LessonRow({
             </Text>
           ) : null}
           <View style={styles.chipRow}>
-            {lesson.videoUrl ? <MiniChip icon="videocam-outline" label="Video" /> : null}
+            {lesson.videoUrl ? <MiniChip icon="videocam-outline" label={t('video.video')} /> : null}
             {lesson.audioUrl ? <MiniChip icon="headset-outline" label={t('lesson.audio')} /> : null}
             {lesson.pdfUrl ? <MiniChip icon="document-text-outline" label="PDF" /> : null}
             {lesson.status !== 'published' ? (

@@ -1,11 +1,13 @@
 import React, { useCallback } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
+import { useAutoTranslate } from '@/hooks/useAutoTranslate';
 import { formatDate } from '@/utils/date';
 import { getArticle } from '@/services/contentService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
@@ -32,6 +34,19 @@ export default function ArticleDetail() {
 
   const { data: article, loading, error, reload } = useAsync(load, [id]);
 
+  /*
+   * Read in the reader's own language.
+   *
+   * Title, summary and body are translated separately rather than as one
+   * blob: they are cached separately too, so an article whose body somebody
+   * has already read costs nothing when a second person opens it, and a
+   * failure on the long part still leaves the heading readable.
+   */
+  const title = useAutoTranslate(article?.title, article?.language);
+  const summary = useAutoTranslate(article?.summary, article?.language);
+  const body = useAutoTranslate(article?.content, article?.language);
+  const machine = title.translated || summary.translated || body.translated;
+
   return (
     <View style={{ flex: 1 }}>
       <AppHeader title={t('article.title')} showBack />
@@ -53,15 +68,27 @@ export default function ArticleDetail() {
 
               <Card style={article.image ? styles.cardOverlap : undefined}>
                 <Text style={styles.title} accessibilityRole="header">
-                  {article.title}
+                  {title.text}
                 </Text>
                 <Text style={styles.byline}>
                   {article.author} · {formatDate(article.publishedAt ?? article.createdAt, language)}
                 </Text>
 
-                {article.summary ? (
+                {/* Said plainly, and never presented as an approved
+                    translation. Software did this, not a person, and a reader
+                    quoting it should know that before they do. */}
+                {machine ? (
+                  <View style={styles.machineNote}>
+                    <Ionicons name="language-outline" size={14} color={colors.info} />
+                    <Text style={styles.machineText}>{t('article.machineTranslated')}</Text>
+                  </View>
+                ) : null}
+
+                {body.busy ? <Text style={styles.machineText}>{t('common.loading')}</Text> : null}
+
+                {summary.text ? (
                   <View style={styles.summaryBox}>
-                    <Text style={styles.summary}>{article.summary}</Text>
+                    <Text style={styles.summary}>{summary.text}</Text>
                   </View>
                 ) : null}
 
@@ -86,6 +113,17 @@ export default function ArticleDetail() {
 }
 
 const styles = StyleSheet.create({
+  machineNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.infoSoft,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  machineText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary },
   cover: {
     width: '100%',
     height: 200,

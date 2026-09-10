@@ -151,7 +151,7 @@ export function ArticleManager() {
             value={form.content}
             onChangeText={(v) => set('content', v)}
             error={errors.content}
-            hint="Separate paragraphs with a blank line."
+            hint={t('article.paragraphHint')}
             multiline
             required
           />

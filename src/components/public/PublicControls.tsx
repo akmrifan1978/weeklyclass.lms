@@ -34,6 +34,7 @@ export function SearchBar({
   onChange: (next: string) => void;
   placeholder: string;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.search}>
       <Ionicons name="search" size={16} color={tone.muted} />
@@ -52,7 +53,7 @@ export function SearchBar({
           onPress={() => onChange('')}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Clear"
+          accessibilityLabel={t('common.clear')}
         >
           <Ionicons name="close-circle" size={16} color={tone.muted} />
         </Pressable>

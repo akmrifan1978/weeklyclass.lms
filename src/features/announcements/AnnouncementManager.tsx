@@ -16,7 +16,7 @@ import type { Announcement, ContentStatus, NotificationTarget, Priority } from '
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
 import { AdminRow } from '@/features/AdminRow';
-import { DateField, Select, TextField, type Option } from '@/components/ui';
+import { DateField, Select, TextField, ToggleRow, type Option } from '@/components/ui';
 
 interface AnnouncementForm {
   title: string;
@@ -26,6 +26,7 @@ interface AnnouncementForm {
   targetClassId: string;
   targetBranchId: string;
   priority: Priority;
+  popup: boolean;
   expiresAt: string;
   status: ContentStatus;
 }
@@ -38,6 +39,7 @@ const EMPTY: AnnouncementForm = {
   targetClassId: '',
   targetBranchId: '',
   priority: 'normal',
+  popup: false,
   expiresAt: '',
   status: 'published',
 };
@@ -99,6 +101,7 @@ export function AnnouncementManager() {
         targetClassId: announcement.targetClassId ?? '',
         targetBranchId: announcement.targetBranchId ?? '',
         priority: announcement.priority,
+        popup: announcement.popup === true,
         expiresAt: '',
         status: announcement.status,
       })}
@@ -123,6 +126,7 @@ export function AnnouncementManager() {
             targetClassId: form.targetRole === 'class' ? form.targetClassId : null,
             targetBranchId: form.targetRole === 'branch' ? form.targetBranchId : null,
             priority: form.priority,
+            popup: form.popup,
             status: form.status,
             expiresAt: form.expiresAt ? new Date(form.expiresAt) : null,
           },
@@ -225,6 +229,15 @@ export function AnnouncementManager() {
               { value: 'urgent', label: t('announcement.priorityUrgent') },
             ]}
             onChange={(v) => set('priority', v)}
+          />
+
+          {/* Off unless somebody chooses it. A popup interrupts every student
+              on every device, and it stops working the moment it is routine. */}
+          <ToggleRow
+            label={t('announcement.showAsPopup')}
+            description={t('announcement.showAsPopupHint')}
+            value={form.popup}
+            onValueChange={(v: boolean) => set('popup', v)}
           />
           <DateField
             label={t('announcement.expiresAt')}

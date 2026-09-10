@@ -846,6 +846,20 @@ export interface Announcement extends BaseDoc {
   publishedAt?: FireDate;
   expiresAt?: FireDate;
   status: ContentStatus;
+  /**
+   * Shown as a notice over the screen rather than as a line in a list.
+   *
+   * Off by default and deliberately so. A popup is the loudest thing this app
+   * can do to somebody, and an announcement that interrupts every student on
+   * every device should be a decision an admin makes on purpose — a bank
+   * detail everybody must read, a class cancelled an hour before it starts —
+   * rather than the default shape of an announcement.
+   *
+   * Shown once per person per announcement. Closing it is final: it does not
+   * return tomorrow, and the same text is still in the announcements list for
+   * anybody who wants it again.
+   */
+  popup?: boolean;
 }
 
 // ---------------------------------------------------------------------------
