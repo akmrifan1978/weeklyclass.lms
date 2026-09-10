@@ -25,14 +25,21 @@ import type { AppUser, Flyer, FlyerPosition } from '@/types';
  * and none is scheduled by the platform on the centre's behalf.
  */
 
-/** Every flyer, for the admin screen. Inactive and expired ones included. */
-export function listFlyers(cursor: Cursor = null, search = ''): Promise<Page<Flyer>> {
+/**
+ * Every flyer, for the admin screen. Inactive and expired ones included.
+ *
+ * Ordering by priority while the helper adds `deleted == false` is an equality
+ * plus an order on a different field, which Firestore serves only from a
+ * composite index of its own — see firestore.indexes.json. The display query
+ * has `active` between those two fields, and an index cannot be used with a
+ * middle field skipped, so the two need separate entries.
+ */
+export function listFlyers(cursor: Cursor = null): Promise<Page<Flyer>> {
   return listPage<Flyer>(COLLECTIONS.flyers, {
     orderByField: 'priority',
     direction: 'desc',
     cursor,
     pageSize: 50,
-    ...(search ? { filters: [] } : {}),
   });
 }
 

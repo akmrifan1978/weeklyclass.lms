@@ -1588,6 +1588,21 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "//": "flyers - the ADMIN list: every flyer by priority, active or not. Distinct from the display index because `active` sits between `deleted` and `priority` there, and an index cannot be used with a middle field skipped.",
+      "collectionGroup": "flyers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priority",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
