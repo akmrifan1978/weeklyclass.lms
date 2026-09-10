@@ -119,7 +119,7 @@ export async function saveLesson(
     description: '',
     weekNumber: 1,
     language: 'en' as const,
-    status: 'published' as const,
+    status: 'draft' as const,
     ...data,
   };
 
@@ -248,7 +248,7 @@ export async function saveArticle(
     summary: '',
     author: actor.fullName,
     language: 'en' as const,
-    status: 'published' as const,
+    status: 'draft' as const,
     isFeatured: false,
     publishedAt: new Date(),
     ...data,
@@ -431,7 +431,7 @@ export async function saveMaterial(
   actor: AppUser,
   id?: string
 ): Promise<string> {
-  const payload = { language: 'en' as const, status: 'published' as const, ...data };
+  const payload = { language: 'en' as const, status: 'draft' as const, ...data };
 
   const tell = (isUpdate: boolean) =>
     void announce(

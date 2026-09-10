@@ -32,7 +32,10 @@ export interface CrudScreenProps<T extends BaseDoc, F> {
   title: string;
   /** Loads one page. `search` is already debounced. */
   fetchPage: (cursor: Cursor, search: string) => Promise<Page<T>>;
-  renderItem: (item: T, actions: { edit: () => void; remove: () => void }) => React.ReactNode;
+  renderItem: (
+    item: T,
+    actions: { edit: () => void; remove: () => void; reload: () => void }
+  ) => React.ReactNode;
   /** Blank form state for a new record. */
   emptyForm: F;
   /** Maps an existing record into form state. */
@@ -226,6 +229,12 @@ export function CrudScreen<T extends BaseDoc, F>({
                 edit: () => openEdit(item),
                 remove: () => {
                   if (canDelete && onDelete) setConfirmDelete(item);
+                },
+                // For a row that changes something without opening the sheet —
+                // publishing, say. The sheet reloads on its own when it saves;
+                // an action taken on the row has nothing that would.
+                reload: () => {
+                  void list.reload();
                 },
               })}
             </View>

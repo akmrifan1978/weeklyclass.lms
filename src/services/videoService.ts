@@ -195,7 +195,7 @@ export async function saveVideo(
   const payload = {
     kind: 'video' as VideoKind,
     language: 'en' as const,
-    status: 'published' as const,
+    status: 'draft' as const,
     isFeatured: false,
     ...data,
   };

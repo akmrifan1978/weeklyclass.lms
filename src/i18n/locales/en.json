@@ -72,7 +72,12 @@
     "done": "Done",
     "showLess": "Show less",
     "showAllCount": "Show {{count}} more",
-    "menu": "Menu"
+    "menu": "Menu",
+    "preview": "Preview",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "publishedToast": "Published. Everyone can see it now.",
+    "unpublishedToast": "Moved back to draft. Hidden from everyone."
   },
   "auth": {
     "studentLogin": "Student Login",
@@ -781,7 +786,9 @@
     "calendar_hijri": "Hijri only",
     "calendar_hijriHint": "Ramadan 23, 1447 AH",
     "calendarNote": "Applies everywhere dates are shown — lessons, events, tickets and recordings. Hijri dates follow the Umm al-Qura calendar and are a calculation, not a moon sighting.",
-    "calendarApproximate": "On this device the Hijri date is worked out arithmetically and may be a day or two out."
+    "calendarApproximate": "On this device the Hijri date is worked out arithmetically and may be a day or two out.",
+    "greeting": "Greeting",
+    "greetingHint": "Leave empty to use \"Assalamu Alaikum\" in each person’s own language. Typing one here uses that wording for everybody."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",

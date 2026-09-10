@@ -119,6 +119,13 @@ function SettingsScreen() {
             multiline
           />
           <TextField
+            label={t('settings.greeting')}
+            value={form.greeting ?? ''}
+            onChangeText={(v) => set('greeting', v)}
+            icon="hand-left-outline"
+            hint={t('settings.greetingHint')}
+          />
+          <TextField
             label={t('settings.venueLabel')}
             value={form.venue ?? ''}
             onChangeText={(v) => set('venue', v)}

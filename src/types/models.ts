@@ -976,6 +976,15 @@ export interface AppSettings {
    */
   venue?: string;
   /**
+   * How the app greets people, overriding the built-in translation.
+   *
+   * Optional and usually empty. The app already says "Assalamu Alaikum" in
+   * every language it speaks; this exists for a centre that wants its own
+   * wording, and a centre that does not should not have to type the default
+   * back in to get it.
+   */
+  greeting?: string;
+  /**
    * Set once here and inherited by everything created afterwards — recordings,
    * videos and calendar events all start from these. Each record then keeps its
    * own copy, so changing a default never restyles anything already published.

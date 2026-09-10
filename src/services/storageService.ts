@@ -418,9 +418,24 @@ async function shrinkIfImage(
     context.resize({ width: MAX_EDGE[kind] });
 
     const rendered = await context.renderAsync();
+
+    /*
+     * A PNG stays a PNG.
+     *
+     * Re-encoding one as JPEG fills every transparent pixel with black, which
+     * is exactly how an uploaded logo or a poster with a cut-out background
+     * arrives with a dark box around it. JPEG is the right choice for a
+     * photograph and the wrong one for artwork, and the source format is the
+     * best signal available for telling those apart.
+     *
+     * PNG ignores the compress value — it is lossless — so the saving there
+     * comes from the resize alone. That is the trade: a smaller file that is
+     * still correct, rather than a smaller file that is wrong.
+     */
+    const isPng = contentType === 'image/png';
     const result = await rendered.saveAsync({
       compress: 0.8,
-      format: ImageManipulator.SaveFormat.JPEG,
+      format: isPng ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG,
     });
     return result.uri;
   } catch {

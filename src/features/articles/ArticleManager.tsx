@@ -9,6 +9,7 @@ import { deleteArticle, listArticles, saveArticle } from '@/services/contentServ
 import type { Article, ContentStatus, LanguageCode } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
+import { PublishActions } from '@/features/PublishActions';
 import { AdminRow } from '@/features/AdminRow';
 import { DateField, Select, TextField } from '@/components/ui';
 
@@ -32,7 +33,10 @@ const EMPTY: ArticleForm = {
   image: '',
   publishedAt: '',
   language: 'en',
-  status: 'published',
+  // New work starts as a DRAFT. Something half-written reaching a class
+  // before its author meant it to is not recoverable by editing it
+  // afterwards — they have already read it.
+  status: 'draft',
   isFeatured: false,
 };
 
@@ -110,6 +114,17 @@ export function ArticleManager() {
             { label: t(`common.${article.status}`), tone: article.status },
             ...(article.isFeatured ? [{ label: t('video.featured'), tone: 'active' }] : []),
           ]}
+          extraActions={
+            <PublishActions
+              status={article.status}
+              previewUrl={null}
+              onSetStatus={async (next) => {
+                if (!user) return;
+                await saveArticle({ ...article, status: next }, user, article.id);
+                actions.reload?.();
+              }}
+            />
+          }
           onEdit={can('MANAGE_ARTICLES') ? actions.edit : undefined}
           onDelete={can('MANAGE_ARTICLES') ? actions.remove : undefined}
         />

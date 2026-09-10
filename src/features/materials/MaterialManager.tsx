@@ -15,6 +15,7 @@ import * as storageService from '@/services/storageService';
 import type { ContentStatus, LanguageCode, Material, MaterialType } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
+import { PublishActions } from '@/features/PublishActions';
 import { AdminRow } from '@/features/AdminRow';
 import { Button, Select, TextField, type Option } from '@/components/ui';
 
@@ -39,7 +40,10 @@ const EMPTY: MaterialForm = {
   size: '',
   classId: '',
   language: 'en',
-  status: 'published',
+  // New work starts as a DRAFT. Something half-written reaching a class
+  // before its author meant it to is not recoverable by editing it
+  // afterwards — they have already read it.
+  status: 'draft',
 };
 
 /**
@@ -202,6 +206,17 @@ export function MaterialManager({ classScope }: { classScope?: string[] }) {
             .filter(Boolean)
             .join(' · ')}
           badges={[{ label: t(`common.${material.status}`), tone: material.status }]}
+          extraActions={
+            <PublishActions
+              status={material.status}
+              previewUrl={material.url}
+              onSetStatus={async (next) => {
+                if (!user) return;
+                await saveMaterial({ ...material, status: next }, user, material.id);
+                actions.reload?.();
+              }}
+            />
+          }
           onEdit={can('UPLOAD_MATERIAL') ? actions.edit : undefined}
           onDelete={can('DELETE_MATERIAL') ? actions.remove : undefined}
         />

@@ -59,6 +59,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: APP_NAME,
   tagline: APP_TAGLINE,
   venue: '',
+  greeting: '',
   logoUrl: null,
   faviconUrl: null,
   bannerUrl: null,

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useGreeting } from '@/hooks/useGreeting';
 import { Ionicons } from '@expo/vector-icons';
 
 import { NotificationBell } from '@/components/shared/NotificationBell';
@@ -62,6 +63,7 @@ import {
  */
 export default function StudentHome() {
   const { t } = useTranslation();
+  const greeting = useGreeting();
   const { user } = useAuth();
   const { language } = useLanguage();
   // This dashboard remembers its own language; see useLanguageScope.
@@ -165,7 +167,7 @@ export default function StudentHome() {
 
         <View style={styles.greetingRow}>
         <View style={styles.greetingText}>
-          <Text style={styles.salaam}>{t('app.greeting')}</Text>
+          <Text style={styles.salaam}>{greeting}</Text>
           <Text style={styles.name} numberOfLines={1} accessibilityRole="header">
             {user?.fullName ?? ''}
           </Text>
