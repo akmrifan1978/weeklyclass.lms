@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { spacing } from '@/constants/theme';
-import { usePaginated } from '@/hooks/useAsync';
-import { lessonsForStudent } from '@/services/contentService';
+import { useLive } from '@/hooks/useLive';
+import { watchLessonsForStudent } from '@/services/contentService';
+import type { Lesson } from '@/types';
 import { LessonRow } from '@/components/shared/ContentCards';
 import {
   AppHeader,
@@ -15,19 +16,29 @@ import {
   Screen,
   SkeletonList,
 } from '@/components/ui';
-import type { Cursor } from '@/services/firestore';
 
 export default function StudentLessons() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const router = useRouter();
 
-  const fetchPage = useCallback(
-    (_cursor: Cursor) => lessonsForStudent(user?.classId ?? '', 20),
+  /*
+   * Live, and no longer paged.
+   *
+   * A lesson a teacher publishes now reaches the class without anybody pulling
+   * to refresh, which is what a student would expect of a screen called
+   * Lessons. The "load more" button goes with it: a weekly class produces
+   * fifty-odd lessons a year, so sixty covers more than the whole course and
+   * paging through them was buying nothing.
+   */
+  const subscribe = useCallback(
+    (onNext: (items: Lesson[]) => void, onError: (error: unknown) => void) =>
+      watchLessonsForStudent(user?.classId ?? '', onNext, onError, 60),
     [user?.classId]
   );
 
-  const list = usePaginated(fetchPage, [user?.classId], { enabled: Boolean(user?.classId) });
+  const list = useLive(subscribe, [user?.classId], { enabled: Boolean(user?.classId) });
+  const lessons = list.data ?? [];
 
   return (
     <View style={{ flex: 1 }}>
@@ -36,7 +47,7 @@ export default function StudentLessons() {
         <AsyncBoundary
           loading={list.loading}
           error={list.error}
-          empty={list.items.length === 0}
+          empty={lessons.length === 0}
           onRetry={list.reload}
           skeleton={<SkeletonList count={5} />}
           emptyProps={{
@@ -46,22 +57,13 @@ export default function StudentLessons() {
           }}
         >
           <View style={{ gap: spacing.md }}>
-            {list.items.map((lesson) => (
+            {lessons.map((lesson) => (
               <LessonRow
                 key={lesson.id}
                 lesson={lesson}
                 onPress={() => router.push(`/(student)/lesson/${lesson.id}`)}
               />
             ))}
-            {list.hasMore ? (
-              <Button
-                label={t('common.loadMore')}
-                onPress={list.loadMore}
-                loading={list.loadingMore}
-                variant="outline"
-                style={{ marginTop: spacing.md }}
-              />
-            ) : null}
           </View>
         </AsyncBoundary>
       </Screen>

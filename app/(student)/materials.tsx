@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { spacing } from '@/constants/theme';
-import { useAsync } from '@/hooks/useAsync';
+import { useLive } from '@/hooks/useLive';
 import { matchesSearch } from '@/utils/format';
-import { materialsForStudent } from '@/services/contentService';
+import { watchMaterialsForStudent } from '@/services/contentService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import { MaterialRow } from '@/components/shared/ContentCards';
 import {
@@ -17,7 +17,7 @@ import {
   SearchField,
   SkeletonList,
 } from '@/components/ui';
-import type { MaterialType } from '@/types';
+import type { Material, MaterialType } from '@/types';
 
 type Filter = MaterialType | 'all';
 
@@ -27,12 +27,15 @@ export default function StudentMaterials() {
   const [term, setTerm] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
 
-  const load = useCallback(
-    () => materialsForStudent(user?.classId, 60),
+  // Live, so a file a teacher uploads mid-week appears without the student
+  // pulling to refresh — which is the whole point of putting it there.
+  const subscribe = useCallback(
+    (onNext: (items: Material[]) => void, onError: (error: unknown) => void) =>
+      watchMaterialsForStudent(user?.classId, onNext, onError, 60),
     [user?.classId]
   );
 
-  const { data, loading, error, refreshing, refresh, reload } = useAsync(load, [user?.classId]);
+  const { data, loading, error, refreshing, refresh, reload } = useLive(subscribe, [user?.classId]);
 
   const visible = useMemo(() => {
     const items = data ?? [];

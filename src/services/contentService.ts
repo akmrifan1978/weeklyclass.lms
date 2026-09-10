@@ -7,9 +7,11 @@ import {
   listPage,
   softDelete,
   updateDocById,
+  watchList,
   type Cursor,
   type Page,
 } from './firestore';
+import type { Unsubscribe } from 'firebase/firestore';
 import * as audit from './auditService';
 import { cached } from './offlineCache';
 import { announce } from './announceService';
@@ -69,6 +71,39 @@ function listLessonsFromServer(classId: string, pageSize = 20): Promise<Page<Les
     direction: 'desc',
     pageSize,
   });
+}
+
+/**
+ * The student's lessons, kept up to date.
+ *
+ * The paged version fetches once and needs pulling to refresh, which means a
+ * lesson a teacher publishes during a class is not on the student's phone
+ * until they think to reach for it. This delivers it.
+ *
+ * Firestore serves a listener from its own cache first and corrects it when
+ * the network returns, so this keeps the offline behaviour the cached fetch
+ * had rather than trading it away.
+ */
+export function watchLessonsForStudent(
+  classId: string,
+  onNext: (lessons: Lesson[]) => void,
+  onError?: (error: unknown) => void,
+  pageSize = 60
+): Unsubscribe {
+  return watchList<Lesson>(
+    COLLECTIONS.lessons,
+    {
+      filters: [
+        ['classId', '==', classId],
+        ['status', '==', 'published'],
+      ],
+      orderByField: 'weekNumber',
+      direction: 'desc',
+      pageSize,
+    },
+    onNext,
+    onError
+  );
 }
 
 export function getLesson(id: string): Promise<Lesson | null> {
@@ -311,6 +346,80 @@ export async function materialsForStudent(
   const merged = new Map<string, Material>();
   for (const item of [...a, ...b]) merged.set(item.id, item);
   return Array.from(merged.values()).slice(0, pageSize);
+}
+
+/**
+ * The student's materials, kept up to date.
+ *
+ * Two listeners rather than one, for the same reason the fetched version runs
+ * two queries: a student sees the files shared with everybody AND the files for
+ * their own class, and Firestore cannot express "classId is null OR classId is
+ * mine" in a single query.
+ *
+ * Each side keeps its latest result and the merge is emitted whenever either
+ * changes, so a file added to one does not blank the other.
+ */
+export function watchMaterialsForStudent(
+  classId: string | null | undefined,
+  onNext: (materials: Material[]) => void,
+  onError?: (error: unknown) => void,
+  pageSize = 60
+): Unsubscribe {
+  let shared: Material[] = [];
+  let mine: Material[] = [];
+
+  const emit = () => {
+    const merged = new Map<string, Material>();
+    for (const item of [...shared, ...mine]) merged.set(item.id, item);
+    onNext(
+      Array.from(merged.values())
+        .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
+        .slice(0, pageSize)
+    );
+  };
+
+  const stopShared = watchList<Material>(
+    COLLECTIONS.materials,
+    {
+      filters: [
+        ['classId', '==', null],
+        ['status', '==', 'published'],
+      ],
+      orderByField: 'createdAt',
+      direction: 'desc',
+      pageSize,
+    },
+    (items) => {
+      shared = items;
+      emit();
+    },
+    onError
+  );
+
+  const stopMine = classId
+    ? watchList<Material>(
+        COLLECTIONS.materials,
+        {
+          filters: [
+            ['classId', '==', classId],
+            ['status', '==', 'published'],
+          ],
+          orderByField: 'createdAt',
+          direction: 'desc',
+          pageSize,
+        },
+        (items) => {
+          mine = items;
+          emit();
+        },
+        onError
+      )
+    : () => undefined;
+
+  return () => {
+    stopShared();
+    stopMine();
+  };
 }
 
 export function getMaterial(id: string): Promise<Material | null> {
