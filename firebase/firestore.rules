@@ -63,6 +63,25 @@ service cloud.firestore {
         || userDoc().get('deleted', false) == 'true';
     }
 
+    /**
+     * An admin permitted to rename OTHER admins.
+     *
+     * Deliberately not a permission in the usual list and deliberately not
+     * settable from any screen: it is granted by editing the user document
+     * directly, in the console or with scripts/set-claims.js. A privilege whose
+     * whole job is to constrain what one admin may do to another must not be
+     * something one admin can hand themselves.
+     *
+     * Forgiving about the stored shape for the same reason isDeleted is: this
+     * is a field somebody will set by hand in the console, where a boolean can
+     * easily arrive as the string "true".
+     */
+    function isSuperAdmin() {
+      return isAdmin()
+        && (userDoc().get('superAdmin', false) == true
+            || userDoc().get('superAdmin', false) == 'true');
+    }
+
     function isActive() {
       return userExists()
         && userDoc().get('status', '').lower() == 'active'
@@ -152,7 +171,11 @@ service cloud.firestore {
                     || (isSignedIn()
                         && resource.data.uid == request.auth.uid
                         && request.resource.data.uid == request.auth.uid);
-      allow delete: if isAdmin();
+      // Deleting a row is how a username is RELEASED when it is changed, so
+      // this is the rule that decides who may rename whom. Your own row, or a
+      // super admin's to give.
+      allow delete: if isSuperAdmin()
+                    || (isAdmin() && resource.data.uid == request.auth.uid);
     }
 
     match /emailLookup/{emailHash} {

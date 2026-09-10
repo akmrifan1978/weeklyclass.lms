@@ -5,12 +5,13 @@ import {
   signOut as fbSignOut,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 import { db, firebaseConfig } from '@/firebase/config';
 import { COLLECTIONS, DEFAULT_LANGUAGE, PAGE_SIZE } from '@/constants/app';
 import { searchTokens } from '@/utils/format';
 import { AppError } from '@/utils/errors';
+import { usernameSchema } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS, allPermissions } from '@/types/permissions';
 import type { AppUser, LanguageCode, Permission, PermissionMap, UserRole, UserStatus } from '@/types';
 
@@ -123,6 +124,98 @@ export async function updateUser(
       before as unknown as Record<string, unknown>,
       changes as unknown as Record<string, unknown>
     ),
+  });
+}
+
+/**
+ * Changes an account's username, and nothing else about it.
+ *
+ * WHAT THIS DOES NOT TOUCH, because the whole risk of renaming is that it
+ * quietly breaks something adjacent: the password, the role, the permission
+ * map, the class, and every record the account has ever produced. None of them
+ * are keyed by username. Sign-in is not either — an account authenticates with
+ * `authEmail`, and the username is only the label used to LOOK UP that address
+ * in the `usernames` index. Moving the index row moves the label; the account
+ * underneath is untouched.
+ *
+ * The old row is deleted and the new one written in one transaction, so a
+ * failure cannot leave a person with two usernames or none.
+ *
+ * WHO MAY DO IT is decided by firestore.rules, not here: your own, or anybody's
+ * if you are a super admin. This checks the same thing first so the refusal is
+ * a sentence rather than a permission error, but the rule is what enforces it.
+ */
+export async function changeUsername(
+  uid: string,
+  requested: string,
+  actor: AppUser
+): Promise<void> {
+  const before = await getUser(uid);
+  if (!before) throw new AppError('errors.notFound', 'not-found');
+
+  const isSelf = actor.uid === uid;
+  if (!isSelf && actor.superAdmin !== true) {
+    throw new AppError('admin.usernameNotYours', 'permission-denied');
+  }
+
+  const next = normaliseUsername(requested);
+  const parsed = usernameSchema.safeParse(next);
+  if (!parsed.success) {
+    throw new AppError(parsed.error.issues[0]?.message ?? 'validation.usernameInvalid', 'invalid-argument');
+  }
+
+  const current = normaliseUsername(before.username ?? '');
+  if (next === current) return;
+
+  const nextRef = doc(db, COLLECTIONS.usernames, next);
+  const currentRef = doc(db, COLLECTIONS.usernames, current);
+  const userRef = doc(db, COLLECTIONS.users, uid);
+
+  await runTransaction(db, async (tx) => {
+    // Read before write, as a transaction requires. Somebody else may have
+    // taken the name between the form being filled in and this running.
+    const taken = await tx.get(nextRef);
+    if (taken.exists() && taken.data().uid !== uid) {
+      throw new AppError('validation.usernameTaken', 'already-exists');
+    }
+
+    const old = current ? await tx.get(currentRef) : null;
+
+    tx.set(nextRef, {
+      uid,
+      email: before.email ?? '',
+      // Carried across unchanged. This is the address the account actually
+      // signs in with, and renaming must not disturb it.
+      authEmail: before.authEmail ?? before.email ?? '',
+      role: before.role,
+      createdAt: old?.exists() ? old.data().createdAt : serverTimestamp(),
+    });
+
+    // Only when it was really this account's. Deleting a row pointing at
+    // somebody else would hand them a broken login.
+    if (old?.exists() && old.data().uid === uid) tx.delete(currentRef);
+
+    tx.update(userRef, {
+      username: next,
+      searchTokens: searchTokens(
+        before.fullName,
+        next,
+        before.email,
+        before.studentId ?? before.teacherId
+      ),
+      updatedAt: serverTimestamp(),
+    });
+  });
+
+  await audit.log({
+    actor,
+    action: 'UPDATE',
+    collection: COLLECTIONS.users,
+    documentId: uid,
+    summary: isSelf
+      ? `Changed own username from "${current}" to "${next}"`
+      : `Changed ${before.fullName}'s username from "${current}" to "${next}"`,
+    changes: { username: { from: current, to: next } },
   });
 }
 

@@ -67,6 +67,15 @@ export interface AppUser extends BaseDoc {
    * the Admin SDK can do that — see userService.requirePasswordChange.
    */
   mustChangePassword?: boolean;
+  /**
+   * May rename other administrators.
+   *
+   * Not in the permission map and not settable from any screen — it is granted
+   * by editing the user document directly. A privilege whose entire job is to
+   * limit what one admin may do to another cannot be one an admin can hand
+   * themselves, and the permissions screen is a screen admins can reach.
+   */
+  superAdmin?: boolean;
 
   // Student-specific
   studentId?: string;

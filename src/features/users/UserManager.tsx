@@ -21,6 +21,7 @@ import {
   sendResetEmail,
   setStatus,
   updateUser,
+  changeUsername,
 } from '@/services/userService';
 import { listBranches, listClasses, listCountries } from '@/services/orgService';
 import {
@@ -106,6 +107,9 @@ export function UserManager({
     null
   );
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState<AppUser | null>(null);
+  const [nextUsername, setNextUsername] = useState('');
+  const [renameError, setRenameError] = useState<string | undefined>();
 
   const search = useDebounced(term, 400);
 
@@ -466,6 +470,26 @@ export function UserManager({
                 />
               ) : null}
 
+              {/* Renaming somebody else is super-admin work.
+                  The rule in firestore.rules is what enforces it — this button
+                  only decides whether to offer something that would otherwise
+                  fail with a permission error nobody could interpret. An admin
+                  renames THEMSELVES from Account Settings, which needs no such
+                  privilege. */}
+              {actor?.superAdmin === true && actor.uid !== selected.uid ? (
+                <Button
+                  label={t('profile.changeUsername')}
+                  icon="person-outline"
+                  variant="outline"
+                  fullWidth
+                  onPress={() => {
+                    setRenaming(selected);
+                    setNextUsername(selected.username ?? '');
+                    setSelected(null);
+                  }}
+                />
+              ) : null}
+
               {selected.role === 'teacher' && can('MANAGE_USERS') ? (
                 <Button
                   label={t('admin.managePermissions')}
@@ -535,6 +559,39 @@ export function UserManager({
             </View>
           </>
         ) : null}
+      </FormSheet>
+
+      {/* --- Rename, super admin only --- */}
+      <FormSheet
+        visible={Boolean(renaming)}
+        title={t('profile.changeUsername')}
+        onClose={() => setRenaming(null)}
+        submitting={busy}
+        onSubmit={async () => {
+          if (!renaming || !actor) return;
+          setBusy(true);
+          setRenameError(undefined);
+          try {
+            await changeUsername(renaming.uid, nextUsername, actor);
+            setRenaming(null);
+            toast.success(t('profile.usernameChanged'));
+            list.refresh();
+          } catch (error) {
+            setRenameError(friendlyMessage(error, t));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <TextField
+          label={t('auth.username')}
+          value={nextUsername}
+          onChangeText={setNextUsername}
+          error={renameError}
+          autoCapitalize="none"
+          icon="person-outline"
+          hint={t('profile.changeUsernameHint')}
+        />
       </FormSheet>
 
       {/* --- Create / edit --- */}

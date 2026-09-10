@@ -638,7 +638,10 @@
     "newSignInEmail": "New sign-in email",
     "newSignInEmailHint": "You will sign in with this address from now on.",
     "verifyInbox": "Check that inbox",
-    "verifyInboxHelp": "We have sent a confirmation link to the new address. Nothing changes until you open it. Until then, keep signing in exactly as you do now — and the first time after you open it, sign in with the new email address."
+    "verifyInboxHelp": "We have sent a confirmation link to the new address. Nothing changes until you open it. Until then, keep signing in exactly as you do now — and the first time after you open it, sign in with the new email address.",
+    "changeUsername": "Change username",
+    "changeUsernameHint": "Your password, role, permissions and every record stay exactly as they are. Only the name you sign in with changes.",
+    "usernameChanged": "Username changed."
   },
   "admin": {
     "manageUsers": "Manage users",
@@ -687,7 +690,8 @@
     "publicProfileShow": "Show on the public website",
     "publicProfileHide": "Remove from the public website",
     "publicProfileShown": "This teacher now appears on the public website.",
-    "publicProfileHidden": "This teacher no longer appears on the public website."
+    "publicProfileHidden": "This teacher no longer appears on the public website.",
+    "usernameNotYours": "Only a super admin can change another administrator’s username."
   },
   "settings": {
     "title": "Settings",
