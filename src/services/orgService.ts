@@ -1,6 +1,7 @@
 import { COLLECTIONS } from '@/constants/app';
 import type { AppUser, Branch, ClassRoom, Country, Organization, Subject } from '@/types';
 import {
+  batchWrite,
   createDoc,
   getById,
   listAll,
@@ -280,6 +281,9 @@ export async function saveClass(
   if (id) {
     const before = await getClass(id);
     await updateDocById<ClassRoom>(COLLECTIONS.classes, id, payload);
+    // Students carry a copy of who teaches them; changing that here has to
+    // reach them, or the copy starts lying. See reallocateTeachers below.
+    await reallocateTeachers(id, before, payload as Partial<ClassRoom>);
     await audit.log({
       actor,
       action: 'UPDATE',
@@ -303,6 +307,85 @@ export async function saveClass(
     summary: `Added class ${data.name}`,
   });
   return newId;
+}
+
+/**
+ * Pushes a group's teachers out to the students in it.
+ *
+ * A student's record carries the names of their teachers so that an admin's
+ * roll, or a teacher's own class list, is one query rather than one query plus
+ * a class lookup per row. The price of that is this function: the copy has to
+ * be maintained, and the only moment it can go wrong is here, when an admin
+ * changes who teaches a group.
+ *
+ * Deliberately quiet and deliberately non-fatal. The class change itself has
+ * already been saved and is what matters; if a student's copy cannot be
+ * rewritten — a permission, a dropped connection — the class remains the
+ * source of truth and the next edit will put it right. Failing the admin's
+ * save over a stale display name would be the worse outcome.
+ *
+ * Nothing is written when the teachers have not actually changed, which is
+ * most edits: renaming a group or changing its schedule should not cost sixty
+ * writes.
+ */
+async function reallocateTeachers(
+  classId: string,
+  before: ClassRoom | null,
+  payload: Partial<ClassRoom>
+): Promise<void> {
+  /*
+   * A save that does not mention teachers does not get to clear them.
+   *
+   * Today the class form always sends both fields, so this never fires. It
+   * exists because the failure it prevents is silent and wide: a future
+   * partial update — renaming a group, changing its schedule — would arrive
+   * here with no teacher list, be read as "no teachers", and wipe the
+   * allocation off every student in the group.
+   */
+  if (payload.teacherIds === undefined && payload.teacherNames === undefined) return;
+
+  const nextIds = payload.teacherIds ?? [];
+  const nextNames = payload.teacherNames ?? [];
+  const sameIds = sameList(before?.teacherIds ?? [], nextIds);
+  const sameNames = sameList(before?.teacherNames ?? [], nextNames);
+  if (sameIds && sameNames) return;
+
+  try {
+    const students = await listPage<AppUser>(COLLECTIONS.users, {
+      filters: [
+        ['role', '==', 'student'],
+        ['classId', '==', classId],
+      ],
+      pageSize: 400,
+    });
+    if (!students.items.length) return;
+
+    await batchWrite(
+      students.items.map((student) => ({
+        type: 'update' as const,
+        path: COLLECTIONS.users,
+        id: student.id,
+        data: { assignedTeacherIds: nextIds, assignedTeacherNames: nextNames },
+      }))
+    );
+    console.info(
+      `[WeeklyClass] reallocated ${students.items.length} student(s) in ${classId} to ` +
+        (nextNames.join(', ') || 'no teacher')
+    );
+  } catch (error) {
+    console.warn(
+      `[WeeklyClass] the class was saved, but the students in ${classId} still show their ` +
+        'previous teachers. The class group itself is correct.',
+      error
+    );
+  }
+}
+
+function sameList(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const left = [...a].sort();
+  const right = [...b].sort();
+  return left.every((value, index) => value === right[index]);
 }
 
 export async function deleteClass(id: string, actor: AppUser): Promise<void> {

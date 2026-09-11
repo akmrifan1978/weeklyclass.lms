@@ -28,7 +28,7 @@ import { AppError, denialContext } from '@/utils/errors';
 import { searchTokens } from '@/utils/format';
 import { isEmail } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS } from '@/types/permissions';
-import type { AppUser, LanguageCode, UserRole, UserStatus } from '@/types';
+import type { AppUser, ClassRoom, LanguageCode, UserRole, UserStatus } from '@/types';
 
 import {
   authEmailForMobile,
@@ -679,6 +679,29 @@ export async function register(
   const username = normaliseUsername(input.username);
   const usernameFreePromise = isUsernameAvailable(username).catch(() => true);
 
+  /*
+   * The teachers who come with the chosen group, fetched in the same breath.
+   *
+   * A student does not pick a teacher — the group they join decides who
+   * teaches them — so allocating one by hand afterwards was admin work that
+   * never needed a person. It happens here instead, at the moment the group
+   * is chosen.
+   *
+   * Read from the class rather than taken from the sign-up form. The form
+   * already holds the class document and could hand the names over for free,
+   * but then the allocation on a student's record would be whatever their
+   * device claimed it was, which is not something to take on trust. The read
+   * goes out with the other two checks and has landed long before the profile
+   * is written, so being authoritative here costs no waiting.
+   *
+   * A failure is deliberately swallowed. Not knowing the teachers is a gap an
+   * admin can fill in a moment; refusing the registration over it is not.
+   */
+  const classPromise =
+    role === 'student' && input.classId
+      ? getDoc(doc(db, COLLECTIONS.classes, input.classId)).catch(() => null)
+      : Promise.resolve(null);
+
   const settings = await settingsPromise;
 
   if (settings && !settings.registrationEnabled) {
@@ -822,6 +845,20 @@ export async function register(
       step('3/6 counter refused — issued a non-sequential id', generatedId);
     }
 
+    /*
+     * Resolved, not awaited — the read above finished during the auth account
+     * creation, so this is already sitting there.
+     */
+    const classSnap = await classPromise;
+    const classData = classSnap?.exists() ? (classSnap.data() as Partial<ClassRoom>) : null;
+    const allocatedTeachers = {
+      assignedTeacherIds: classData?.teacherIds ?? [],
+      assignedTeacherNames: classData?.teacherNames ?? [],
+    };
+    if (role === 'student') {
+      step('3/6 teachers allocated from the class group', allocatedTeachers.assignedTeacherNames);
+    }
+
     const profile: Omit<AppUser, 'id'> = {
       uid,
       fullName: input.fullName.trim(),
@@ -847,6 +884,7 @@ export async function register(
             studentId: generatedId,
             dateOfBirth: input.dateOfBirth ?? null,
             gender: input.gender ?? null,
+            ...allocatedTeachers,
           }
         : {
             teacherId: generatedId,

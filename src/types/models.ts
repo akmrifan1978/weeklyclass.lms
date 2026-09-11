@@ -81,6 +81,24 @@ export interface AppUser extends BaseDoc {
   studentId?: string;
   dateOfBirth?: string | null;
   gender?: 'male' | 'female' | null;
+  /**
+   * The teachers who come with this student's class group.
+   *
+   * Nobody chooses these. A student joins a group, and the group decides who
+   * teaches them, so the allocation is copied from the class at registration
+   * and kept in step afterwards — by userService when a student is moved to a
+   * different group, and by orgService when a group's teachers change.
+   *
+   * Copied rather than looked up because the places that need it are lists:
+   * an admin scanning who teaches whom, or a teacher's own roll. Resolving a
+   * class document per row would turn one query into fifty.
+   *
+   * The class remains the source of truth. If these two ever disagree, the
+   * class is right and this is stale — which is why both propagation paths
+   * rewrite it wholesale rather than merging into it.
+   */
+  assignedTeacherIds?: string[];
+  assignedTeacherNames?: string[];
 
   // Teacher-specific
   teacherId?: string;

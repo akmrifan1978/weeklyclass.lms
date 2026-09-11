@@ -13,7 +13,15 @@ import { searchTokens } from '@/utils/format';
 import { AppError } from '@/utils/errors';
 import { usernameSchema } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS, allPermissions } from '@/types/permissions';
-import type { AppUser, LanguageCode, Permission, PermissionMap, UserRole, UserStatus } from '@/types';
+import type {
+  AppUser,
+  ClassRoom,
+  LanguageCode,
+  Permission,
+  PermissionMap,
+  UserRole,
+  UserStatus,
+} from '@/types';
 
 import {
   batchWrite,
@@ -99,6 +107,28 @@ export async function updateUser(
   if (!before) throw new AppError('errors.notFound', 'not-found');
 
   const payload: Partial<AppUser> & { searchTokens?: string[] } = { ...changes };
+
+  /*
+   * Moving a student to a different group moves their teachers with them.
+   *
+   * The allocation is copied onto the student so that lists do not have to
+   * resolve a class per row, and a copy that is not maintained is worse than
+   * no copy at all — it would show an admin the name of somebody who stopped
+   * teaching this student the moment they were moved.
+   *
+   * Only when the class actually changes, and only for students. A teacher's
+   * own record has no allocation to keep.
+   */
+  const targetRole = changes.role ?? before.role;
+  const classChanged = changes.classId !== undefined && changes.classId !== before.classId;
+  if (targetRole === 'student' && classChanged) {
+    const group = changes.classId
+      ? await getById<ClassRoom>(COLLECTIONS.classes, changes.classId).catch(() => null)
+      : null;
+    payload.assignedTeacherIds = group?.teacherIds ?? [];
+    payload.assignedTeacherNames = group?.teacherNames ?? [];
+  }
+
   if (changes.fullName || changes.username || changes.email) {
     payload.searchTokens = searchTokens(
       changes.fullName ?? before.fullName,

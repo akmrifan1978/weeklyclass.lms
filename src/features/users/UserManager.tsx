@@ -341,6 +341,23 @@ export function UserManager({
                 value={selected.studentId ?? selected.teacherId}
                 icon="card-outline"
               />
+              {selected.role === 'student' ? (
+                <>
+                  <Divider />
+                  {/* Who teaches them, allocated by the group they joined
+                      rather than chosen by anybody. Shown here because an
+                      admin asking "who has this student?" should not have to
+                      open the class group to find out. */}
+                  <DetailRow
+                    label={t('admin.allocatedTeachers')}
+                    value={
+                      (selected.assignedTeacherNames ?? []).filter(Boolean).join(', ') ||
+                      t('admin.allocatedTeachersNone')
+                    }
+                    icon="person-circle-outline"
+                  />
+                </>
+              ) : null}
               {selected.role === 'teacher' ? (
                 <>
                   <Divider />
