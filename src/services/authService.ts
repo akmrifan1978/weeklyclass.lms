@@ -785,10 +785,42 @@ export async function register(
   try {
     const status: UserStatus = requireApproval ? 'pending' : 'active';
     step('3/6 allocating sequential id');
-    const generatedId = await withTokenRetry('counter allocation', credential.user, () =>
-      nextSequentialId(role === 'student' ? 'STU' : 'TCH')
-    );
-    step('3/6 id allocated', generatedId);
+
+    /*
+     * A refused counter no longer costs somebody their registration.
+     *
+     * The id is a CONVENIENCE — a human-readable STU-2026-0013 to quote on a
+     * form — and the account works perfectly without a pretty one. Yet this
+     * was the step most likely to fail, and when it failed the whole
+     * registration was abandoned: no profile, no username, and a sign-in left
+     * behind that made every retry fail differently. People were being turned
+     * away at the door over a serial number.
+     *
+     * Every check is still made and the counter is still the preferred source,
+     * with the retry that refreshes the token behind it. Only the CONSEQUENCE
+     * of failing has changed.
+     *
+     * The fallback is derived from the uid, which is itself unique, and it
+     * deliberately does not pretend to be sequential — an admin looking at
+     * STU-2026-H7H5K2 can see at a glance that it was not issued by the
+     * counter, and can renumber it if the order matters to them.
+     */
+    const prefix = role === 'student' ? 'STU' : 'TCH';
+    let generatedId: string;
+    try {
+      generatedId = await withTokenRetry('counter allocation', credential.user, () =>
+        nextSequentialId(prefix)
+      );
+      step('3/6 id allocated', generatedId);
+    } catch (error) {
+      generatedId = `${prefix}-${new Date().getFullYear()}-${uid.slice(0, 6).toUpperCase()}`;
+      console.warn(
+        `[WeeklyClass] the id counter was refused, so ${generatedId} was issued instead. ` +
+          'The account is complete; only the number is out of sequence.',
+        error
+      );
+      step('3/6 counter refused — issued a non-sequential id', generatedId);
+    }
 
     const profile: Omit<AppUser, 'id'> = {
       uid,
