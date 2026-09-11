@@ -37,6 +37,7 @@ import {
   emailForUsername,
   isMobileAvailable,
   isSyntheticAuthEmail,
+  isUsernameAvailable,
   nextSequentialId,
   normaliseUsername,
   usernameForEmail,
@@ -672,6 +673,11 @@ export async function register(
   // message that says what is wrong, rather than after an auth account has
   // already been made.
   const mobileFreePromise = isMobileAvailable(input.mobile).catch(() => true);
+  // And the username, in the same breath. The transaction in claimIdentity is
+  // still what actually enforces it; this only means somebody is told which
+  // field is wrong BEFORE an account is created, rather than after.
+  const username = normaliseUsername(input.username);
+  const usernameFreePromise = isUsernameAvailable(username).catch(() => true);
 
   const settings = await settingsPromise;
 
@@ -682,7 +688,6 @@ export async function register(
 
   step('1/6 settings read ok', { requireApproval });
 
-  const username = normaliseUsername(input.username);
   const email = input.email.trim().toLowerCase();
 
   // No address given at all. Plenty of teachers and older students simply do
@@ -699,9 +704,12 @@ export async function register(
   // created. The transaction in claimIdentity is still the real guard against a
   // race; this exists to fail early with a message that says what is wrong,
   // rather than after an auth account has already been made.
-  step('2/6 checking mobile number', input.mobile);
+  step('2/6 checking mobile number and username', input.mobile);
   if (!(await mobileFreePromise)) {
     throw new AppError('validation.mobileTaken', 'already-exists');
+  }
+  if (!(await usernameFreePromise)) {
+    throw new AppError('validation.usernameTaken', 'already-exists');
   }
 
   // An email address may be shared — a household registering several children
@@ -722,9 +730,48 @@ export async function register(
     credential = await createUserWithEmailAndPassword(auth, signInAddress, input.password);
   } catch (error) {
     if ((error as { code?: string })?.code !== 'auth/email-already-in-use') throw error;
+
+    // A household shares one inbox, so the address may already belong to a
+    // sibling. This account signs in under an address derived from its own
+    // (unique) mobile number instead.
     authEmail = authEmailForMobile(input.mobile);
     step('2/6 address already in use — signing in by mobile instead', authEmail);
-    credential = await createUserWithEmailAndPassword(auth, authEmail, input.password);
+
+    try {
+      credential = await createUserWithEmailAndPassword(auth, authEmail, input.password);
+    } catch (second) {
+      if ((second as { code?: string })?.code !== 'auth/email-already-in-use') throw second;
+
+      /*
+       * BOTH addresses are taken, and the mobile-derived one can only belong to
+       * this very person — it is derived from the number they just gave, and
+       * the number was checked as free a moment ago.
+       *
+       * So this is an account a PREVIOUS attempt created and then failed to
+       * finish: a sign-in exists, no profile was ever written, and the index
+       * row that would have said "this number is taken" was never written
+       * either. Registration used to die here, telling somebody who may have
+       * typed no address at all that "an account already exists with this
+       * email address" — and it died the same way every time they tried again,
+       * which is exactly what was reported.
+       *
+       * The account is ADOPTED instead. Signing in to it gives the same uid,
+       * and the rest of registration then writes the profile and the index
+       * that were missing. The half-made account becomes the finished one.
+       *
+       * The password has to match, which is what keeps this safe: without it
+       * this would be a way to attach yourself to somebody else's sign-in by
+       * claiming their phone number.
+       */
+      step('2/6 an unfinished account exists for this number — signing in to finish it');
+      try {
+        credential = await signInWithEmailAndPassword(auth, authEmail, input.password);
+      } catch {
+        // Wrong password, so we cannot prove it is theirs. Say what is actually
+        // true rather than blaming an email address.
+        throw new AppError('auth.mobileHasUnfinishedAccount', 'already-exists');
+      }
+    }
   }
   const uid = credential.user.uid;
   step('2/6 auth account created', uid);

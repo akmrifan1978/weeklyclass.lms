@@ -504,11 +504,13 @@ export default function RegisterScreen() {
               value={form.email}
               onChangeText={(v) => set('email', v)}
               error={errors.email}
-              // A household shares one inbox, so the same address may appear on
-              // several accounts. The mobile number is what has to be unique.
+              // Required again, and marked as such — an asterisk has to agree
+              // with the validator behind it or the form lies about itself.
               //
-              // No longer required: the asterisk had to go with the rule behind
-              // it, or the form would demand something the validator does not.
+              // A household may still share one inbox: the same address on
+              // several accounts is fine, and the mobile number is what has to
+              // be unique.
+              required
               hint={t('auth.sharedEmailNote')}
             />
 

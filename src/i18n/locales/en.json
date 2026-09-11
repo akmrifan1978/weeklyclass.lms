@@ -174,7 +174,8 @@
     "newPasswordOptional": "New password (optional)",
     "newPasswordOptionalHint": "Leave blank to keep the current password. Setting one replaces it within a minute — and means you know it, so prefer a reset link where you can.",
     "passwordQueued": "Saved. The new password takes effect within a minute.",
-    "setPasswordUnavailable": "This device cannot set a password securely. Use a desktop browser, or create a reset link instead."
+    "setPasswordUnavailable": "This device cannot set a password securely. Use a desktop browser, or create a reset link instead.",
+    "mobileHasUnfinishedAccount": "An unfinished account already exists for this mobile number. Use the same password you chose before, or sign in instead."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
