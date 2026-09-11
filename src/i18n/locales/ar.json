@@ -1593,5 +1593,18 @@
     "startTime": "وقت البدء",
     "title": "الإعلانات والملصقات",
     "wrongType": "يمكن استخدام ملفات JPG وPNG وPDF فقط."
+  },
+  "audience": {
+    "label": "من يمكنه رؤية هذا",
+    "all": "جميع الطلاب",
+    "classes": "الصف / المجموعة",
+    "students": "طلاب محددون",
+    "noClasses": "لا توجد مجموعات صفية بعد.",
+    "noStudents": "لا يوجد طلاب نشطون بعد.",
+    "searchStudents": "ابحث عن طالب بالاسم أو الرقم",
+    "summaryAll": "سيرى هذا كل طالب.",
+    "summaryNobody": "لم يتم اختيار أحد بعد، لذا لن يصل هذا إلى أحد.",
+    "summaryClasses": "يُرسل إلى {{names}}.",
+    "summaryStudents": "يُرسل إلى {{names}}."
   }
 }

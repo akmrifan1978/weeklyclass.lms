@@ -1593,5 +1593,18 @@
     "startTime": "Start time",
     "title": "Flyers & advertising",
     "wrongType": "Only JPG, PNG and PDF files can be used."
+  },
+  "audience": {
+    "label": "Who can see this",
+    "all": "All students",
+    "classes": "Class / group",
+    "students": "Selected students",
+    "noClasses": "No class groups yet.",
+    "noStudents": "No active students yet.",
+    "searchStudents": "Search students by name or ID",
+    "summaryAll": "Every student will see this.",
+    "summaryNobody": "Nobody is selected yet, so this would reach no one.",
+    "summaryClasses": "Goes to {{names}}.",
+    "summaryStudents": "Goes to {{names}}."
   }
 }
