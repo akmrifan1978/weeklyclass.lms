@@ -123,12 +123,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return;
             }
 
-            // An account that EXISTS and has been suspended or deleted is a
-            // different matter, and is still shown the door.
+            /*
+             * An account that EXISTS and has been suspended or deleted is a
+             * different matter, and is still shown the door.
+             *
+             * Unless it is being created right now. A centre that requires
+             * approval writes the new profile as `pending`, which is
+             * indistinguishable here from an account an admin just suspended —
+             * and signing out mid-registration stripped the credentials from
+             * the writes that had not finished yet. The identity claim was
+             * usually the one caught, because it is a transaction and lands
+             * last, and it failed with "you do not have permission to do that".
+             *
+             * So while a registration is in flight the session is left alone.
+             * `user` stays null either way, so nobody reaches the app on a
+             * pending profile; register() signs them out itself once the record
+             * is complete. Only the MOMENT of the sign-out changes.
+             */
             if (profile.status !== 'active' || profile.deleted) {
               setUser(null);
-              stopWatching();
-              void authService.logout(null);
+              if (!authService.isRegistering()) {
+                stopWatching();
+                void authService.logout(null);
+              }
             } else {
               setUser(profile);
               void AsyncStorage.setItem(

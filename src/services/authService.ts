@@ -130,6 +130,38 @@ async function waitForAuthToken(user: FirebaseUser): Promise<void> {
  */
 const RETRY_BACKOFF_MS = [500, 1000, 1500, 3000];
 
+/*
+ * Registration is in progress — hold the door.
+ *
+ * For the few seconds it takes, `users/{uid}` passes through states that look
+ * exactly like a dead account to anything watching it: absent at first, then
+ * present but `pending` when the centre requires approval. The session watcher
+ * in AuthContext reacts to a non-active profile by signing the person out,
+ * which is right for an account an admin has just suspended and catastrophic
+ * for one that is being created — the remaining writes lose their credentials
+ * mid-flight and are refused.
+ *
+ * That is what "Refused: claim usernames/... + mobiles/..." was. The profile
+ * write and the identity claim run together; the profile landed first, the
+ * watcher saw `pending` and signed out, and the claim — a transaction, so
+ * slower — committed with no auth at all. Every retry then refreshed a token
+ * for somebody who was no longer signed in. Being a race, it struck some
+ * registrations and not others, and it left behind an auth account with no
+ * profile and no index rows, which is precisely the wreckage found in this
+ * project.
+ *
+ * A counter rather than a boolean so that two registrations on one device
+ * cannot have the first to finish lift the guard for the second.
+ *
+ * register() signs a pending account out itself when it is done, so nothing is
+ * lost by deferring — only the moment it happens changes.
+ */
+let registrationsInFlight = 0;
+
+export function isRegistering(): boolean {
+  return registrationsInFlight > 0;
+}
+
 async function withTokenRetry<T>(
   label: string,
   user: FirebaseUser,
@@ -649,6 +681,18 @@ function step(name: string, detail?: unknown): void {
 }
 
 export async function register(
+  role: Extract<UserRole, 'student' | 'teacher'>,
+  input: RegistrationInput
+): Promise<RegistrationResult> {
+  registrationsInFlight += 1;
+  try {
+    return await runRegistration(role, input);
+  } finally {
+    registrationsInFlight -= 1;
+  }
+}
+
+async function runRegistration(
   role: Extract<UserRole, 'student' | 'teacher'>,
   input: RegistrationInput
 ): Promise<RegistrationResult> {
