@@ -31,6 +31,7 @@ import { DEFAULT_TEACHER_PERMISSIONS } from '@/types/permissions';
 import type { AppUser, ClassRoom, LanguageCode, UserRole, UserStatus } from '@/types';
 
 import {
+  altAuthEmailForMobile,
   authEmailForMobile,
   claimIdentity,
   emailForMobile,
@@ -817,26 +818,65 @@ async function runRegistration(
        * So this is an account a PREVIOUS attempt created and then failed to
        * finish: a sign-in exists, no profile was ever written, and the index
        * row that would have said "this number is taken" was never written
-       * either. Registration used to die here, telling somebody who may have
-       * typed no address at all that "an account already exists with this
-       * email address" — and it died the same way every time they tried again,
-       * which is exactly what was reported.
+       * either.
        *
-       * The account is ADOPTED instead. Signing in to it gives the same uid,
-       * and the rest of registration then writes the profile and the index
-       * that were missing. The half-made account becomes the finished one.
-       *
-       * The password has to match, which is what keeps this safe: without it
-       * this would be a way to attach yourself to somebody else's sign-in by
-       * claiming their phone number.
+       * There are two ways through, and both are taken in turn.
        */
-      step('2/6 an unfinished account exists for this number — signing in to finish it');
+
+      /*
+       * RESUME, if we can prove the unfinished account is theirs.
+       *
+       * Signing in to it gives back the same uid, and the rest of registration
+       * then writes the profile and the index that were missing. The half-made
+       * account becomes the finished one, and no debris is left behind. This
+       * is the better outcome and is why it is tried first.
+       */
+      step('2/6 an unfinished account exists for this number — trying to resume it');
       try {
         credential = await signInWithEmailAndPassword(auth, authEmail, input.password);
+        step('2/6 resumed the unfinished account');
       } catch {
-        // Wrong password, so we cannot prove it is theirs. Say what is actually
-        // true rather than blaming an email address.
-        throw new AppError('auth.mobileHasUnfinishedAccount', 'already-exists');
+        /*
+         * START AGAIN, when we cannot.
+         *
+         * The password does not match, so this cannot be proven to be the same
+         * person, and adopting the account on a guess would be a way to attach
+         * yourself to somebody else's sign-in by claiming their phone number.
+         *
+         * But refusing outright was worse, and it is what people kept hitting:
+         * "an unfinished account already exists for this mobile number", every
+         * single attempt, with no way past it. The dead account owns nothing —
+         * no profile, no index row, nothing anybody can sign in to or recover —
+         * yet it held the number hostage because it happened to own an address
+         * derived from it.
+         *
+         * So the address is sidestepped rather than fought over. A fresh
+         * account is created under a different synthetic address for the same
+         * number, and registration carries on normally.
+         *
+         * THE NUMBER IS STILL UNIQUE. Uniqueness lives in `mobiles/{key}` and
+         * the transaction that claims it, never in the shape of a sign-in
+         * address — and a COMPLETED account holds that row, so its number was
+         * already reported as taken long before this point. Only an unfinished
+         * one can reach here, and an unfinished one owns nothing to protect.
+         */
+        step('2/6 could not resume it — registering under a new address instead');
+
+        let made = null as typeof credential | null;
+        // Six random characters; a collision would need the same six twice.
+        // Tried a few times regardless, because the cost of being wrong here
+        // is somebody being turned away again.
+        for (let attempt = 0; attempt < 3 && !made; attempt += 1) {
+          const fresh = altAuthEmailForMobile(input.mobile);
+          try {
+            made = await createUserWithEmailAndPassword(auth, fresh, input.password);
+            authEmail = fresh;
+          } catch (third) {
+            if ((third as { code?: string })?.code !== 'auth/email-already-in-use') throw third;
+          }
+        }
+        if (!made) throw new AppError('auth.mobileHasUnfinishedAccount', 'already-exists');
+        credential = made;
       }
     }
   }
