@@ -21,6 +21,7 @@ import {
   sendResetEmail,
   setStatus,
   updateUser,
+  changeUsername,
 } from '@/services/userService';
 import { listBranches, listClasses, listCountries } from '@/services/orgService';
 import {
@@ -106,6 +107,9 @@ export function UserManager({
     null
   );
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState<AppUser | null>(null);
+  const [nextUsername, setNextUsername] = useState('');
+  const [renameError, setRenameError] = useState<string | undefined>();
 
   const search = useDebounced(term, 400);
 
@@ -337,6 +341,23 @@ export function UserManager({
                 value={selected.studentId ?? selected.teacherId}
                 icon="card-outline"
               />
+              {selected.role === 'student' ? (
+                <>
+                  <Divider />
+                  {/* Who teaches them, allocated by the group they joined
+                      rather than chosen by anybody. Shown here because an
+                      admin asking "who has this student?" should not have to
+                      open the class group to find out. */}
+                  <DetailRow
+                    label={t('admin.allocatedTeachers')}
+                    value={
+                      (selected.assignedTeacherNames ?? []).filter(Boolean).join(', ') ||
+                      t('admin.allocatedTeachersNone')
+                    }
+                    icon="person-circle-outline"
+                  />
+                </>
+              ) : null}
               {selected.role === 'teacher' ? (
                 <>
                   <Divider />
@@ -466,7 +487,33 @@ export function UserManager({
                 />
               ) : null}
 
-              {selected.role === 'teacher' && can('MANAGE_USERS') ? (
+              {/* Renaming somebody else is super-admin work.
+                  The rule in firestore.rules is what enforces it — this button
+                  only decides whether to offer something that would otherwise
+                  fail with a permission error nobody could interpret. An admin
+                  renames THEMSELVES from Account Settings, which needs no such
+                  privilege. */}
+              {actor?.superAdmin === true && actor.uid !== selected.uid ? (
+                <Button
+                  label={t('profile.changeUsername')}
+                  icon="person-outline"
+                  variant="outline"
+                  fullWidth
+                  onPress={() => {
+                    setRenaming(selected);
+                    setNextUsername(selected.username ?? '');
+                    setSelected(null);
+                  }}
+                />
+              ) : null}
+
+              {/* Students too, not only teachers.
+                  A centre may want a senior student marking attendance, and
+                  the rules now honour a granted permission whoever holds it —
+                  see `can()` in firestore.rules. Admins are excluded because
+                  they already hold everything; a screen offering to grant them
+                  something would be a screen that does nothing. */}
+              {selected.role !== 'admin' && can('MANAGE_USERS') ? (
                 <Button
                   label={t('admin.managePermissions')}
                   icon="key-outline"
@@ -535,6 +582,39 @@ export function UserManager({
             </View>
           </>
         ) : null}
+      </FormSheet>
+
+      {/* --- Rename, super admin only --- */}
+      <FormSheet
+        visible={Boolean(renaming)}
+        title={t('profile.changeUsername')}
+        onClose={() => setRenaming(null)}
+        submitting={busy}
+        onSubmit={async () => {
+          if (!renaming || !actor) return;
+          setBusy(true);
+          setRenameError(undefined);
+          try {
+            await changeUsername(renaming.uid, nextUsername, actor);
+            setRenaming(null);
+            toast.success(t('profile.usernameChanged'));
+            list.refresh();
+          } catch (error) {
+            setRenameError(friendlyMessage(error, t));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <TextField
+          label={t('auth.username')}
+          value={nextUsername}
+          onChangeText={setNextUsername}
+          error={renameError}
+          autoCapitalize="none"
+          icon="person-outline"
+          hint={t('profile.changeUsernameHint')}
+        />
       </FormSheet>
 
       {/* --- Create / edit --- */}

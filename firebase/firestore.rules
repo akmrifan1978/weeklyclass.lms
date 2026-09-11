@@ -63,6 +63,25 @@ service cloud.firestore {
         || userDoc().get('deleted', false) == 'true';
     }
 
+    /**
+     * An admin permitted to rename OTHER admins.
+     *
+     * Deliberately not a permission in the usual list and deliberately not
+     * settable from any screen: it is granted by editing the user document
+     * directly, in the console or with scripts/set-claims.js. A privilege whose
+     * whole job is to constrain what one admin may do to another must not be
+     * something one admin can hand themselves.
+     *
+     * Forgiving about the stored shape for the same reason isDeleted is: this
+     * is a field somebody will set by hand in the console, where a boolean can
+     * easily arrive as the string "true".
+     */
+    function isSuperAdmin() {
+      return isAdmin()
+        && (userDoc().get('superAdmin', false) == true
+            || userDoc().get('superAdmin', false) == 'true');
+    }
+
     function isActive() {
       return userExists()
         && userDoc().get('status', '').lower() == 'active'
@@ -78,10 +97,24 @@ service cloud.firestore {
     function isStudent() { return role() == 'student'; }
     function isStaff()   { return isAdmin() || isTeacher(); }
 
-    // Admins implicitly hold everything; teachers hold only granted flags.
+    // Admins implicitly hold everything. Everybody else holds only what an
+    // admin has granted them.
+    //
+    // NOT limited to teachers any more. A centre may want a senior student
+    // marking attendance or tidying a lesson list, and refusing that outright
+    // meant the permissions screen could offer a grant the database would then
+    // ignore — a control that appears to work and does nothing.
+    //
+    // Safe to widen because a permission cannot be self-granted: the users
+    // update rule lists every field somebody may change on their own account
+    // and `permissions` is not among them. Only an admin writes it. So this
+    // makes an admin's decision take effect; it creates no way to take one.
+    //
+    // `isActive()` rather than merely signed in, so a suspended account keeps
+    // nothing it was given.
     function can(permission) {
       return isAdmin()
-        || (isTeacher() && userDoc().get('permissions', {}).get(permission, false) == true);
+        || (isActive() && userDoc().get('permissions', {}).get(permission, false) == true);
     }
 
     function isSelf(uid) {
@@ -152,7 +185,11 @@ service cloud.firestore {
                     || (isSignedIn()
                         && resource.data.uid == request.auth.uid
                         && request.resource.data.uid == request.auth.uid);
-      allow delete: if isAdmin();
+      // Deleting a row is how a username is RELEASED when it is changed, so
+      // this is the rule that decides who may rename whom. Your own row, or a
+      // super admin's to give.
+      allow delete: if isSuperAdmin()
+                    || (isAdmin() && resource.data.uid == request.auth.uid);
     }
 
     match /emailLookup/{emailHash} {
@@ -196,7 +233,25 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isSignedIn()
                     && (request.resource.data.uid == request.auth.uid || isAdmin());
-      allow update, delete: if isAdmin();
+
+      // An account may rewrite its OWN row, which `usernames` has always
+      // allowed and this did not.
+      //
+      // The asymmetry broke finishing a half-made registration. A first attempt
+      // that got as far as claiming the number leaves the row in place; the
+      // retry then writes the same row again, which is an UPDATE, and update
+      // was admin-only — so the claim was refused with "Refused: claim
+      // usernames/... + mobiles/...". It also made the repair-on-sign-in path
+      // impossible for a number, though it works for a username.
+      //
+      // Both sides must name the caller, so this cannot take a number from
+      // somebody else: the row has to already be yours before you may touch it.
+      allow update: if isAdmin()
+                    || (isSignedIn()
+                        && resource.data.uid == request.auth.uid
+                        && request.resource.data.uid == request.auth.uid);
+
+      allow delete: if isAdmin();
     }
 
     // Sequential id counters (STU-2026-0001), incremented in a transaction while
@@ -344,6 +399,18 @@ service cloud.firestore {
     match /publicLessons/{lessonId} {
       allow read: if true;
       allow write: if can('EDIT_LESSONS') || can('CREATE_LESSONS');
+    }
+
+    // Advertising flyers, readable by anybody.
+    //
+    // Public on purpose: a flyer is an advertisement, some of them run on the
+    // front page, and a poster nobody outside can see is not doing its job.
+    // Whether one is CURRENTLY shown — its dates, its active flag — is decided
+    // by the app, not here: a rule cannot compare against today's date, and an
+    // expired advertisement is not a secret.
+    match /flyers/{flyerId} {
+      allow read: if true;
+      allow write: if can('MANAGE_ANNOUNCEMENTS');
     }
 
     match /languages/{code} {
@@ -863,6 +930,95 @@ service cloud.firestore {
     // Delete is soft, through an update, so the row survives a mistimed tap.
     // Hard delete is refused outright — a purge belongs to the owner's account
     // being removed, not to a stray call.
+    // =========================================================================
+    // Workbooks — the teaching board, written by staff and handed to students
+    // =========================================================================
+    //
+    // The opposite of a note in every way that matters. A note is private to
+    // whoever wrote it; a workbook exists to be given out, and carries an
+    // audience saying to whom.
+    //
+    // WHO MAY SEE ONE is decided here rather than by a screen choosing what to
+    // draw. `audienceKeys` holds the flattened audience — 'all', 'class:<id>'
+    // or 'user:<uid>' — so the check is a `hasAny` against the at most three
+    // keys that can match this reader, with no extra document reads. See
+    // src/types/audience.ts for why the shape is what it is.
+    function myAudienceKeys() {
+      return isActive()
+        ? ['all', 'user:' + request.auth.uid, 'class:' + string(myClassId())]
+        : ['all'];
+    }
+
+    function workbookIsMine() {
+      return isSignedIn() && resource.data.get('authorId', '') == request.auth.uid;
+    }
+
+    // A published workbook, addressed to this reader. A draft is nobody's but
+    // its author's and an admin's — half a lesson on thirty phones is not
+    // something a teacher can take back.
+    function workbookPublishedToMe() {
+      return isActive()
+        && resource.data.get('status', '') == 'published'
+        && resource.data.get('deleted', false) == false
+        && resource.data.get('audienceKeys', []).hasAny(myAudienceKeys());
+    }
+
+    match /workbooks/{workbookId} {
+      allow get: if isAdmin() || workbookIsMine() || workbookPublishedToMe();
+      // Per-document, so a student's query for published work passes and a
+      // request for somebody's drafts is refused.
+      allow list: if isAdmin() || workbookIsMine() || workbookPublishedToMe();
+
+      allow create: if can('CREATE_WORKBOOK')
+                    && request.resource.data.authorId == request.auth.uid
+                    // Draft on creation, always. Publishing is its own step and
+                    // its own permission.
+                    && request.resource.data.get('status', '') == 'draft'
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() <= 200;
+
+      // An author edits their own; an admin has full control over all of them.
+      // Publishing needs the extra permission, and the author cannot hand the
+      // workbook to somebody else by rewriting authorId.
+      allow update: if (
+                      isAdmin()
+                      || (
+                        workbookIsMine()
+                        && request.resource.data.authorId == request.auth.uid
+                        && (
+                          request.resource.data.get('status', '') != 'published'
+                          || can('PUBLISH_WORKBOOK')
+                        )
+                      )
+                    );
+
+      allow delete: if false;  // Soft-deleted through an update, like everything else.
+
+      // The pages inherit the workbook's audience, which is why every rule here
+      // asks the parent rather than repeating the check. A page carries no
+      // audience of its own precisely so the two can never disagree.
+      match /pages/{pageId} {
+        function parent() {
+          return get(/databases/$(database)/documents/workbooks/$(workbookId)).data;
+        }
+
+        allow read: if isAdmin()
+                    || (isSignedIn() && parent().get('authorId', '') == request.auth.uid)
+                    || (
+                      isActive()
+                      && parent().get('status', '') == 'published'
+                      && parent().get('audienceKeys', []).hasAny(myAudienceKeys())
+                    );
+
+        // A page is written only by the person whose workbook it is, or an
+        // admin. Hard delete is allowed here and nowhere else: a soft-deleted
+        // page still holds its place in the order, and a gap in a book somebody
+        // is reading page by page is worse than losing the page they removed.
+        allow write: if isAdmin()
+                     || (can('CREATE_WORKBOOK') && parent().get('authorId', '') == request.auth.uid);
+      }
+    }
+
     match /notes/{noteId} {
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
       // Per-document, so a query filtered to the caller's own uid passes and an
@@ -954,6 +1110,44 @@ service cloud.firestore {
     // Any signed-in user can append (their own actions are logged by the
     // client), but nobody — admins included — can edit or remove an entry.
     // Rewriting history from a client is simply not expressible here.
+
+    // Ratings, out of five, for the app and for the things in it.
+    //
+    // A person may write their OWN rating and read it back, and nothing else.
+    // Everybody else's opinion is not theirs to browse: a class that can read
+    // the ratings can work out who gave the teacher a one, and that is exactly
+    // the thing that stops people answering honestly.
+    //
+    // The id is `${target}_${targetId}_${uid}`, so the uid check below is what
+    // makes one person unable to write a rating in somebody else's name — and
+    // the whole reason the id has the uid in it at all.
+    match /ratings/{ratingId} {
+      // `resource == null` first, for the same reason as eventRegistrations:
+      // the app reads this exact path to ask "have I rated this already?", and
+      // evaluating resource.data on a missing document throws, which is a
+      // denial. Learning that nothing is there reveals nothing.
+      allow get: if isSignedIn()
+                 && (resource == null
+                     || resource.data.userId == request.auth.uid
+                     || isStaff());
+
+      // Only staff may list. Reading the results is the point of collecting
+      // them, but it is a staff activity.
+      allow list: if isStaff();
+
+      allow create, update: if isSignedIn()
+                            && request.resource.data.userId == request.auth.uid
+                            && request.resource.data.stars is int
+                            && request.resource.data.stars >= 1
+                            && request.resource.data.stars <= 5
+                            && request.resource.data.target in ['app', 'lesson', 'event']
+                            && request.resource.data.get('comment', '') is string
+                            && request.resource.data.get('comment', '').size() <= 2000;
+
+      // Kept, not deleted, so an average cannot be quietly improved by removing
+      // the answers somebody did not like.
+      allow delete: if isAdmin();
+    }
 
     match /auditLogs/{logId} {
       allow read: if isAdmin();

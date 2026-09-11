@@ -14,6 +14,7 @@ import { humanise } from '@/utils/format';
 import { passwordSchema, validate } from '@/utils/validation';
 import { useAsync } from '@/hooks/useAsync';
 import { changePassword, changeSignInEmail } from '@/services/authService';
+import { changeUsername } from '@/services/userService';
 import { isSyntheticAuthEmail } from '@/services/identityService';
 import { updateUser } from '@/services/userService';
 import { getBranch, getClass } from '@/services/orgService';
@@ -51,6 +52,8 @@ export function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [changingEmail, setChangingEmail] = useState(false);
+  const [changingUsername, setChangingUsername] = useState(false);
+  const [nextUsername, setNextUsername] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -340,6 +343,35 @@ export function ProfileScreen() {
             one Firebase will accept a password reset for. */}
         <SectionHeader title={t('profile.signIn')} icon="log-in-outline" />
         <Card>
+          {/*
+            Admins only, deliberately.
+            A student's username is printed on things and quoted back to them
+            by a teacher; letting them change it themselves turns every such
+            reference stale with nobody knowing. An admin can rename anybody
+            from the Users screen when there is a reason to.
+          */}
+          {user.role === 'admin' ? (
+            <>
+              <DetailRow
+                label={t('auth.username')}
+                value={user.username}
+                icon="person-outline"
+              />
+              <Button
+                label={t('profile.changeUsername')}
+                icon="create-outline"
+                variant="outline"
+                fullWidth
+                onPress={() => {
+                  setNextUsername(user.username ?? '');
+                  setErrors({});
+                  setChangingUsername(true);
+                }}
+              />
+              <Divider />
+            </>
+          ) : null}
+
           <DetailRow
             label={t('profile.signInEmail')}
             value={strandedEmail ? t('profile.noSignInEmail') : signInEmail}
@@ -522,6 +554,40 @@ export function ProfileScreen() {
         onCancel={() => setEmailSent(false)}
         onConfirm={() => setEmailSent(false)}
       />
+
+      <FormSheet
+        visible={changingUsername}
+        title={t('profile.changeUsername')}
+        onClose={() => setChangingUsername(false)}
+        submitting={busy}
+        onSubmit={async () => {
+          if (!user) return;
+          setBusy(true);
+          setErrors({});
+          try {
+            await changeUsername(user.uid, nextUsername, user);
+            setChangingUsername(false);
+            toast.success(t('profile.usernameChanged'));
+          } catch (error) {
+            setErrors({ username: friendlyMessage(error, t) });
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {/* Says plainly what does NOT change. Renaming an account is the sort
+            of thing people put off because they cannot tell what it will
+            break, and the answer here is nothing. */}
+        <Text style={styles.hintText}>{t('profile.changeUsernameHint')}</Text>
+        <TextField
+          label={t('auth.username')}
+          value={nextUsername}
+          onChangeText={setNextUsername}
+          error={errors.username}
+          autoCapitalize="none"
+          icon="person-outline"
+        />
+      </FormSheet>
 
       <ConfirmDialog
         visible={confirmLogout}

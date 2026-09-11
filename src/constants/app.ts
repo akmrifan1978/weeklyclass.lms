@@ -38,6 +38,9 @@ export const COLLECTIONS = {
   auditLogs: 'auditLogs',
   counters: 'counters',
   notes: 'notes',
+  workbooks: 'workbooks',
+  ratings: 'ratings',
+  flyers: 'flyers',
   publicSchedule: 'publicSchedule',
   /**
    * Thin public mirrors, written by an admin and readable by anybody.
@@ -57,6 +60,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appName: APP_NAME,
   tagline: APP_TAGLINE,
   venue: '',
+  greeting: '',
   logoUrl: null,
   faviconUrl: null,
   bannerUrl: null,

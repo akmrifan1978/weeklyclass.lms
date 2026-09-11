@@ -67,15 +67,22 @@ const baseRegistration = {
   fullName: fullNameSchema,
   username: usernameSchema,
   /**
-   * Optional, and still validated when given.
+   * Required, by the centre's decision.
    *
-   * Plenty of teachers and older students have no address, and demanding one
-   * turned a contact detail into a barrier to having an account at all. An
-   * account without one signs in at a mobile-derived address instead — see
-   * authService.register — at the cost of not being able to receive a password
-   * reset, which the profile says plainly.
+   * It was optional, and an account without one signed in at a mobile-derived
+   * address instead. That worked, but it made the commonest failure
+   * incomprehensible: a student who typed no address at all was told "an
+   * account already exists with this email address", because the synthetic
+   * address is an email as far as Firebase is concerned.
+   *
+   * An address also gives back the one thing an account without one cannot
+   * have: a password reset that actually reaches somebody.
+   *
+   * The cost is real and should be understood — a student with no address
+   * cannot register themselves and needs an admin to add them from the Users
+   * screen, which does not go through this schema.
    */
-  email: z.union([z.literal(''), emailSchema]),
+  email: emailSchema,
   mobile: mobileSchema,
   country: z.string().trim().min(1, 'validation.countryRequired'),
   language: z.enum(languageCodes),

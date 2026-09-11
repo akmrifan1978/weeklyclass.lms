@@ -12,7 +12,7 @@ import {
   groupByDate,
   groupByTimeSlot,
   listPast,
-  listUpcoming,
+  listUpcomingForUser,
 } from '@/services/calendarService';
 import { EventRow } from '@/components/shared/ContentCards';
 import {
@@ -33,10 +33,19 @@ export default function StudentCalendar() {
   const [mode, setMode] = useState<Mode>('upcoming');
 
   const load = useCallback(async () => {
-    const options = { classId: user?.classId ?? undefined, pageSize: 40 };
-    const page = mode === 'upcoming' ? await listUpcoming(options) : await listPast(options);
+    // Upcoming goes through listUpcomingForUser, which includes the events
+    // open to the whole centre. Filtering by classId alone hid every one of
+    // them, because an event for everybody deliberately belongs to no class.
+    if (mode === 'upcoming') {
+      return listUpcomingForUser({
+        classId: user?.classId ?? null,
+        role: user?.role,
+        pageSize: 40,
+      });
+    }
+    const page = await listPast({ classId: user?.classId ?? undefined, pageSize: 40 });
     return page.items;
-  }, [mode, user?.classId]);
+  }, [mode, user?.classId, user?.role]);
 
   const { data, loading, refreshing, error, refresh, reload } = useAsync(load, [
     mode,

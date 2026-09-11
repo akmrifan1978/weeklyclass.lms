@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { AudienceMode } from './audience';
 import type { PermissionMap } from './permissions';
 
 /** Firestore timestamps arrive as `Timestamp`; we write `Date`/serverTimestamp. */
@@ -67,11 +68,38 @@ export interface AppUser extends BaseDoc {
    * the Admin SDK can do that — see userService.requirePasswordChange.
    */
   mustChangePassword?: boolean;
+  /**
+   * May rename other administrators.
+   *
+   * Not in the permission map and not settable from any screen — it is granted
+   * by editing the user document directly. A privilege whose entire job is to
+   * limit what one admin may do to another cannot be one an admin can hand
+   * themselves, and the permissions screen is a screen admins can reach.
+   */
+  superAdmin?: boolean;
 
   // Student-specific
   studentId?: string;
   dateOfBirth?: string | null;
   gender?: 'male' | 'female' | null;
+  /**
+   * The teachers who come with this student's class group.
+   *
+   * Nobody chooses these. A student joins a group, and the group decides who
+   * teaches them, so the allocation is copied from the class at registration
+   * and kept in step afterwards — by userService when a student is moved to a
+   * different group, and by orgService when a group's teachers change.
+   *
+   * Copied rather than looked up because the places that need it are lists:
+   * an admin scanning who teaches whom, or a teacher's own roll. Resolving a
+   * class document per row would turn one query into fifty.
+   *
+   * The class remains the source of truth. If these two ever disagree, the
+   * class is right and this is stale — which is why both propagation paths
+   * rewrite it wholesale rather than merging into it.
+   */
+  assignedTeacherIds?: string[];
+  assignedTeacherNames?: string[];
 
   // Teacher-specific
   teacherId?: string;
@@ -837,6 +865,20 @@ export interface Announcement extends BaseDoc {
   publishedAt?: FireDate;
   expiresAt?: FireDate;
   status: ContentStatus;
+  /**
+   * Shown as a notice over the screen rather than as a line in a list.
+   *
+   * Off by default and deliberately so. A popup is the loudest thing this app
+   * can do to somebody, and an announcement that interrupts every student on
+   * every device should be a decision an admin makes on purpose — a bank
+   * detail everybody must read, a class cancelled an hour before it starts —
+   * rather than the default shape of an announcement.
+   *
+   * Shown once per person per announcement. Closing it is final: it does not
+   * return tomorrow, and the same text is still in the announcements list for
+   * anybody who wants it again.
+   */
+  popup?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -852,6 +894,86 @@ export type AuditAction =
   | 'ACTIVATE'
   | 'DEACTIVATE'
   | 'PERMISSION_CHANGED';
+
+/** Where a flyer is shown. */
+export type FlyerPosition = 'home' | 'dashboard' | 'both';
+
+/**
+ * A promotional flyer or poster an admin puts in front of people.
+ *
+ * The file may be an image or a PDF. An image is shown; a PDF cannot be, so it
+ * is offered as something to open — a flyer nobody can see is not a flyer, and
+ * silently rendering a broken image is worse than an honest "open this".
+ *
+ * Scheduling is by plain `YYYY-MM-DD` strings rather than instants. A poster
+ * runs "from the first to the fifteenth" in the centre's own reckoning, and
+ * turning that into a timestamp only raises the question of whose midnight.
+ * Either end may be empty: no start means "already running", no end means
+ * "until it is switched off".
+ */
+export interface Flyer extends BaseDoc {
+  title: string;
+  description?: string | null;
+  /** The uploaded image or PDF. */
+  fileUrl: string;
+  fileType: 'image' | 'pdf';
+  /** Where the file lives, so replacing one can clean up after itself. */
+  storagePath?: string | null;
+  /** Opened when somebody taps the flyer. Falls back to the file itself. */
+  link?: string | null;
+  position: FlyerPosition;
+  startDate?: string | null;
+  endDate?: string | null;
+  /**
+   * Times of day, paired with the dates above. `HH:mm`, both optional.
+   *
+   * A flyer for an evening event should come down when the evening ends, not
+   * at the stroke of the following midnight, which is what date-only
+   * scheduling meant. No start time means the start of that day; no end time
+   * means the end of it, so a flyer scheduled by date alone behaves exactly as
+   * it did before.
+   */
+  startTime?: string | null;
+  endTime?: string | null;
+  /** Off means it is not shown, whatever its dates say. */
+  active: boolean;
+  /** Higher shows first. Equal priorities fall back to newest. */
+  priority: number;
+}
+
+/** What a rating is about. */
+export type RatingTarget = 'app' | 'lesson' | 'event';
+
+/**
+ * One person's opinion of one thing, out of five.
+ *
+ * ONE COLLECTION for the app, for lessons and for events, rather than three.
+ * They are the same question asked about different objects, and keeping them
+ * together means an admin reads every rating on one screen and the averaging
+ * is written once. `target` says which kind, `targetId` which one.
+ *
+ * The document id is `${target}_${targetId}_${uid}`, so a person has exactly
+ * one rating per thing and changing their mind overwrites it rather than
+ * stacking a second opinion on top of the first. Same trick the bookings use.
+ *
+ * `targetTitle` is copied in rather than looked up. A lesson can be renamed or
+ * deleted, and a rating whose subject can no longer be named is a number
+ * nobody can act on.
+ */
+export interface Rating extends BaseDoc {
+  target: RatingTarget;
+  /** Null for the app itself, which is the only thing there is one of. */
+  targetId?: string | null;
+  targetTitle?: string | null;
+  /** 1-5. Nothing else is accepted, in the rules as well as here. */
+  stars: number;
+  comment?: string | null;
+  userId: string;
+  userName: string;
+  role: UserRole;
+  /** So a teacher can see how their own class answered. */
+  classId?: string | null;
+}
 
 export interface AuditLog extends BaseDoc {
   actorId: string;
@@ -897,6 +1019,15 @@ export interface AppSettings {
    * matters most on the one screen they see before signing in.
    */
   venue?: string;
+  /**
+   * How the app greets people, overriding the built-in translation.
+   *
+   * Optional and usually empty. The app already says "Assalamu Alaikum" in
+   * every language it speaks; this exists for a centre that wants its own
+   * wording, and a centre that does not should not have to type the default
+   * back in to get it.
+   */
+  greeting?: string;
   /**
    * Set once here and inherited by everything created afterwards — recordings,
    * videos and calendar events all start from these. Each record then keeps its
@@ -1060,6 +1191,59 @@ export interface Note extends BaseDoc {
   body: string;
   /** Kept at the top of the list until unpinned. */
   pinned?: boolean;
+}
+
+/**
+ * A teacher's page of handwriting, published to students.
+ *
+ * The opposite of a Note in every way that matters. A note is private to the
+ * person who wrote it and enforced as such by the rules; a workbook exists to
+ * be given out, and carries an audience saying to whom.
+ *
+ * The pages live in a subcollection rather than on this document. A page of
+ * handwriting is a few tens of kilobytes and Firestore stops at a megabyte, so
+ * a workbook of twenty pages could not be one document — and a student opening
+ * page one should not have to download page twenty to see it.
+ */
+export interface Workbook extends BaseDoc {
+  title: string;
+  /** Typed text, alongside or instead of the handwriting. */
+  body?: string;
+  /** The author. Named `authorId` because an admin may write one too. */
+  authorId: string;
+  authorName: string;
+  authorRole: UserRole;
+  /**
+   * The day it was made, as `YYYY-MM-DD`, stamped when it is created and never
+   * afterwards. A lesson belongs to the day it was taught, and a workbook
+   * edited a week later is still that lesson — so this is deliberately not
+   * `updatedAt`, which moves every time somebody fixes a spelling.
+   */
+  date: string;
+  status: ContentStatus;
+  publishedAt?: FireDate | null;
+  pageCount: number;
+  /** Who it is for. See types/audience.ts for why these are flat. */
+  audienceMode?: AudienceMode;
+  audienceClassIds?: string[];
+  audienceStudentIds?: string[];
+  audienceKeys?: string[];
+  /** Set when it began life as somebody's private note. */
+  fromNoteId?: string | null;
+  /** Learning material handed out with it. */
+  attachments?: { name: string; url: string }[];
+}
+
+/** Stored at `workbooks/{workbookId}/pages/{pageId}`. */
+export interface WorkbookPage extends BaseDoc {
+  workbookId: string;
+  order: number;
+  /** Strokes as JSON — see features/workbook/strokes.ts for the shape. */
+  strokes: string;
+  /** Typed text belonging to this page. */
+  text?: string;
+  /** A photo or scan written on top of. */
+  backgroundUrl?: string | null;
 }
 
 export interface DashboardStats {

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { formatShortDate } from '@/utils/date';
 import * as calendarService from '@/services/calendarService';
 import { InstallPrompt } from '@/components/shared/InstallPrompt';
+import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import { PublicPage } from '@/components/public/PublicPage';
 import { bookingLabelKey, PublicCard, Tag } from '@/components/public/PublicControls';
 import { PUBLIC_NAV } from '@/constants/publicNav';
@@ -126,6 +127,11 @@ export default function SplashScreen() {
       title={settings?.appName?.trim() || APP_NAME}
       subtitle={settings?.tagline?.trim() || t('app.tagline')}
     >
+      {/* At the top, above the sign-in choice. Somebody can close it, which
+          is what makes putting an advertisement in front of the way in
+          defensible rather than merely effective. */}
+      <FlyerStrip position="home" />
+
       <Text style={styles.sectionLabel}>{t('auth.chooseRole')}</Text>
 
       {ROLES.map((item) => (

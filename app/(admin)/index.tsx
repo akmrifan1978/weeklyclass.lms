@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useGreeting } from '@/hooks/useGreeting';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +33,7 @@ import {
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
+  const greeting = useGreeting();
   const { user } = useAuth();
   const { language } = useLanguage();
   // The admin dashboard remembers its own language; see useLanguageScope.
@@ -55,7 +57,7 @@ export default function AdminDashboard() {
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['bottom']}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.welcome}>{t('dashboard.welcomeAdmin')}</Text>
+          <Text style={styles.welcome}>{greeting}</Text>
           <Text style={styles.name} numberOfLines={1} accessibilityRole="header">
             {user?.fullName}
           </Text>

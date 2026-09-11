@@ -31,6 +31,7 @@ export function studentNavSections(islamicVisible: IslamicTile[]): NavSection[] 
         { icon: 'trophy-outline', labelKey: 'nav.results', route: '/(student)/results' },
         { icon: 'stats-chart', labelKey: 'nav.myProgress', route: '/(student)/progress' },
         { icon: 'create-outline', labelKey: 'nav.notes', route: '/(student)/notes' },
+        { icon: 'book-outline', labelKey: 'nav.workbooks', route: '/(student)/workbooks' },
       ],
     },
     {

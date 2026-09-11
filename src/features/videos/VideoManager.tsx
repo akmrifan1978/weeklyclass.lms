@@ -20,6 +20,7 @@ import { getSettings } from '@/services/settingsService';
 import type { ContentStatus, LanguageCode, VideoItem, VideoKind } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
+import { PublishActions } from '@/features/PublishActions';
 import { AdminRow } from '@/features/AdminRow';
 import { DateField, IconButton, Select, TextField, type Option } from '@/components/ui';
 import { ImageField } from '@/components/shared/ImageField';
@@ -55,7 +56,10 @@ const EMPTY: VideoForm = {
   date: '',
   classId: '',
   language: 'en',
-  status: 'published',
+  // New work starts as a DRAFT. Something half-written reaching a class
+  // before its author meant it to is not recoverable by editing it
+  // afterwards — they have already read it.
+  status: 'draft',
   isFeatured: false,
   isLive: false,
 };
@@ -232,16 +236,28 @@ export function VideoManager({
             ...(video.isFeatured ? [{ label: t('video.featured'), tone: 'active' }] : []),
           ]}
           extraActions={
-            kind === 'video' && can('UPLOAD_VIDEO') ? (
-              <IconButton
-                icon={video.isFeatured ? 'star' : 'star-outline'}
-                label={t(video.isFeatured ? 'video.unsetFeatured' : 'video.setFeatured')}
-                size={36}
-                color={colors.accent}
-                background={colors.accentSoft}
-                onPress={() => handleToggleFeatured(video, actions.edit)}
-              />
-            ) : undefined
+            <PublishActions
+              status={video.status}
+              previewUrl={video.videoUrl}
+              canEdit={can('UPLOAD_VIDEO')}
+              onSetStatus={async (next) => {
+                if (!user) return;
+                await saveVideo({ ...video, status: next }, user, video.id);
+                actions.reload();
+              }}
+              extra={
+                kind === 'video' && can('UPLOAD_VIDEO') ? (
+                  <IconButton
+                    icon={video.isFeatured ? 'star' : 'star-outline'}
+                    label={t(video.isFeatured ? 'video.unsetFeatured' : 'video.setFeatured')}
+                    size={36}
+                    color={colors.accent}
+                    background={colors.accentSoft}
+                    onPress={() => handleToggleFeatured(video, actions.edit)}
+                  />
+                ) : undefined
+              }
+            />
           }
           onEdit={can('UPLOAD_VIDEO') ? actions.edit : undefined}
           onDelete={can('DELETE_VIDEO') ? actions.remove : undefined}
@@ -286,13 +302,15 @@ export function VideoManager({
             hint={t('video.venueHint')}
             icon="location-outline"
           />
-          <TextField
+          {/* Was a link box sitting between two proper image fields, which
+              made it the one picture on this form nobody could upload. */}
+          <ImageField
             label={t('video.thumbnail')}
             value={form.thumbnail}
-            onChangeText={(v) => set('thumbnail', v)}
-            hint="YouTube thumbnails are detected automatically."
-            icon="image-outline"
-            autoCapitalize="none"
+            onChange={(url) => set('thumbnail', url)}
+            hint={t('video.thumbnailAuto')}
+            kind="thumbnail"
+            aspectRatio={16 / 9}
           />
 
           <ImageField

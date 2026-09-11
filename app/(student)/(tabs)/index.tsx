@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useGreeting } from '@/hooks/useGreeting';
 import { Ionicons } from '@expo/vector-icons';
 
 import { NotificationBell } from '@/components/shared/NotificationBell';
@@ -26,7 +27,7 @@ import { getLatestArticle, lessonsForStudent } from '@/services/contentService';
 import { getClass } from '@/services/orgService';
 import { announcementsFor } from '@/services/notificationService';
 import { scheduleEventReminders } from '@/services/pushService';
-import { listUpcoming } from '@/services/calendarService';
+import { listUpcomingForUser } from '@/services/calendarService';
 import {
   AnnouncementCard,
   ArticleCard,
@@ -37,6 +38,8 @@ import {
 } from '@/components/shared/ContentCards';
 import { NavDrawer } from '@/components/shared/NavDrawer';
 import { useVisibleIslamicTiles } from '@/components/shared/IslamicTiles';
+import { RatingPrompt } from '@/components/shared/RatingPrompt';
+import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import { studentNavSections } from '@/constants/studentNav';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
@@ -60,6 +63,7 @@ import {
  */
 export default function StudentHome() {
   const { t } = useTranslation();
+  const greeting = useGreeting();
   const { user } = useAuth();
   const { language } = useLanguage();
   // This dashboard remembers its own language; see useLanguageScope.
@@ -90,12 +94,12 @@ export default function StudentHome() {
       progressService.loadUserProgress(user).catch(() => null),
       // Already fetched for the reminder scheduler and then discarded. Kept
       // now, because the same list is what the photographs are drawn from.
-      listUpcoming({ classId: user.classId ?? undefined, pageSize: 6 })
+      listUpcomingForUser({ classId: user.classId ?? null, role: user.role, pageSize: 6 })
         // Classes only. An entry carrying `registration` is a ticketed
         // event and lives on the events screen, with its seat count and
         // its booking button; showing it here as a class is what made
         // the two look like one thing.
-        .then((page) => page.items.filter((event) => !event.registration))
+        .then((events) => events.filter((event) => !event.registration))
         .catch(() => []),
       getLiveVideo().catch(() => null),
       getFeaturedVideo().catch(() => null),
@@ -133,9 +137,9 @@ export default function StudentHome() {
   // Schedules on-device reminders for the next few classes.
   useEffect(() => {
     if (!user) return;
-    listUpcoming({ classId: user.classId ?? undefined, pageSize: 5 })
-      .then((page) => {
-        const events = page.items.flatMap((event) => {
+    listUpcomingForUser({ classId: user.classId ?? null, role: user.role, pageSize: 5 })
+      .then((upcoming) => {
+        const events = upcoming.flatMap((event) => {
           const startsAt = toDate(event.startsAt);
           // Events without a resolvable instant cannot be scheduled against.
           return startsAt
@@ -149,6 +153,10 @@ export default function StudentHome() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['top', 'bottom']}>
+      {/* At the top, as asked. It draws nothing when no flyer is
+          running, so it costs no space on the ordinary day. */}
+      <FlyerStrip position="dashboard" />
+
       {/* A panel rather than loose text.
           The same words sat directly on the page background, which made the
           screen open on nothing in particular. Given a ground of its own, the
@@ -163,7 +171,7 @@ export default function StudentHome() {
 
         <View style={styles.greetingRow}>
         <View style={styles.greetingText}>
-          <Text style={styles.salaam}>{t('app.greeting')}</Text>
+          <Text style={styles.salaam}>{greeting}</Text>
           <Text style={styles.name} numberOfLines={1} accessibilityRole="header">
             {user?.fullName ?? ''}
           </Text>
@@ -415,6 +423,10 @@ export default function StudentHome() {
       )}
 
       <Spacer size={spacing.xxl} />
+      {/* Asked once, at the foot of the screen somebody opens every day.
+          Never at the top: a person arriving to check their homework is not
+          there to review the software. */}
+      <RatingPrompt target="app" />
     </Screen>
   );
 }

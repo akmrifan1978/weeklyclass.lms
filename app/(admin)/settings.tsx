@@ -119,6 +119,13 @@ function SettingsScreen() {
             multiline
           />
           <TextField
+            label={t('settings.greeting')}
+            value={form.greeting ?? ''}
+            onChangeText={(v) => set('greeting', v)}
+            icon="hand-left-outline"
+            hint={t('settings.greetingHint')}
+          />
+          <TextField
             label={t('settings.venueLabel')}
             value={form.venue ?? ''}
             onChangeText={(v) => set('venue', v)}
@@ -133,11 +140,17 @@ function SettingsScreen() {
         <Card>
           <Text style={styles.brandingNote}>{t('settings.brandingNote')}</Text>
 
+          {/* Says where a new logo lands and where it does not.
+              Inside the app and on the browser tab it is immediate; the icon
+              on somebody's home screen is copied by their phone when the app
+              was installed, and only a new release replaces it. Leaving that
+              unsaid is how an admin concludes the upload silently failed. */}
           <ImageField
             label={t('settings.logo')}
             value={form.logoUrl ?? ''}
             onChange={(url) => set('logoUrl', url || null)}
             aspectRatio={1}
+            hint={t('settings.logoHint')}
           />
           <ImageField
             label={t('settings.banner')}

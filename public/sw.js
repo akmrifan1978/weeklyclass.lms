@@ -103,6 +103,67 @@ function isImmutableAsset(url) {
  * site has been updated in the background" notice instead, which is worse than
  * anything we could write.
  */
+/**
+ * The count on the app icon, kept across restarts.
+ *
+ * A service worker is stopped and started constantly, so a plain variable
+ * forgets everything between one push and the next. The Cache API is the
+ * simplest store that survives that — a single response holding a number.
+ *
+ * The worker keeps its own running count because it cannot ask the app: when a
+ * push arrives the app is usually closed, which is the entire reason a badge
+ * is wanted. Whenever the app IS open it sends the true count over and this is
+ * overwritten, so any drift lasts only until somebody next opens the app.
+ */
+const BADGE_CACHE = 'weeklyclass-badge';
+const BADGE_KEY = '/__badge';
+
+async function readBadge() {
+  try {
+    const cache = await caches.open(BADGE_CACHE);
+    const hit = await cache.match(BADGE_KEY);
+    if (!hit) return 0;
+    const value = Number(await hit.text());
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function writeBadge(count) {
+  try {
+    const cache = await caches.open(BADGE_CACHE);
+    await cache.put(BADGE_KEY, new Response(String(count)));
+  } catch {
+    // A badge that forgets its count is a badge that starts again from one.
+    // Not worth failing a notification over.
+  }
+}
+
+/** Marks the icon, or takes the mark off at zero. Never throws. */
+async function paintBadge(count) {
+  await writeBadge(count);
+  try {
+    if (count > 0) await self.navigator.setAppBadge?.(count);
+    else await self.navigator.clearAppBadge?.();
+  } catch {
+    // Not installed, unsupported, or badges denied in the OS. All three mean
+    // no badge, and none is an error worth surfacing.
+  }
+}
+
+/**
+ * The app telling the worker what is actually unread.
+ *
+ * The app has the real number — it is watching the inbox — so whatever it says
+ * wins over the worker's running count.
+ */
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || data.type !== 'badge') return;
+  event.waitUntil(paintBadge(Number(data.count) || 0));
+});
+
 self.addEventListener('push', (event) => {
   let payload = {};
   try {
@@ -149,6 +210,10 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     (async () => {
       await self.registration.showNotification(title, options);
+
+      // One more unread thing than a moment ago. The app corrects this to the
+      // true figure the next time somebody opens it.
+      await paintBadge((await readBadge()) + 1);
 
       // The count on the app icon, where the platform supports it.
       if (typeof payload.badgeCount === 'number' && 'setAppBadge' in self.navigator) {

@@ -94,10 +94,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           COLLECTIONS.users,
           uid,
           (profile) => {
-            if (!profile || profile.status !== 'active' || profile.deleted) {
+            /*
+             * A MISSING profile is not a dead account.
+             *
+             * It is the normal state for the few seconds between creating an
+             * auth account and writing the profile document for it, which is
+             * exactly what registration does. Treating it as a dead account
+             * and signing the person out destroyed the registration in
+             * progress: the very next write — allocating the student id — then
+             * had no credentials and was refused, and every retry refreshed a
+             * token for somebody who was no longer signed in.
+             *
+             * It was a race, so it looked intermittent. On a fast connection
+             * the id was allocated before the empty snapshot arrived; on mobile
+             * data it was not.
+             *
+             * So the session is left alone and the listener is left running.
+             * `user` stays null, which keeps them out of the app until the
+             * profile lands — and when it does, this same listener fires again
+             * and lets them in.
+             */
+            if (!profile) {
               setUser(null);
-              stopWatching();
-              void authService.logout(null);
+              if (!settled) {
+                settled = true;
+                resolve();
+              }
+              return;
+            }
+
+            /*
+             * An account that EXISTS and has been suspended or deleted is a
+             * different matter, and is still shown the door.
+             *
+             * Unless it is being created right now. A centre that requires
+             * approval writes the new profile as `pending`, which is
+             * indistinguishable here from an account an admin just suspended —
+             * and signing out mid-registration stripped the credentials from
+             * the writes that had not finished yet. The identity claim was
+             * usually the one caught, because it is a transaction and lands
+             * last, and it failed with "you do not have permission to do that".
+             *
+             * So while a registration is in flight the session is left alone.
+             * `user` stays null either way, so nobody reaches the app on a
+             * pending profile; register() signs them out itself once the record
+             * is complete. Only the MOMENT of the sign-out changes.
+             */
+            if (profile.status !== 'active' || profile.deleted) {
+              setUser(null);
+              if (!authService.isRegistering()) {
+                stopWatching();
+                void authService.logout(null);
+              }
             } else {
               setUser(profile);
               void AsyncStorage.setItem(

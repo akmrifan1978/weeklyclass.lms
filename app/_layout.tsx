@@ -18,6 +18,7 @@ import { initAppCheck } from '@/firebase/appCheck';
 import { addNotificationResponseListener } from '@/services/pushService';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { PasswordChangeGate } from '@/components/shared/PasswordChangeGate';
+import { NoticePopup } from '@/components/shared/NoticePopup';
 import { brand } from '@/constants/theme';
 import { useCalendarSystem } from '@/hooks/useCalendarSystem';
 import { LoadingState } from '@/components/ui';
@@ -194,6 +195,11 @@ function RootNavigator() {
           <Stack.Screen name="(teacher)" />
           <Stack.Screen name="(admin)" />
         </Stack>
+
+        {/* Over whatever screen is showing. An admin marks an
+            announcement as a notice and it interrupts once, then never
+            again for that person. */}
+        <NoticePopup />
       </PasswordChangeGate>
     </RoleGate>
   );

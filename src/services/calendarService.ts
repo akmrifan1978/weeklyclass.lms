@@ -55,6 +55,72 @@ export function listUpcoming(options: EventQuery = {}): Promise<Page<CalendarEve
   });
 }
 
+/**
+ * The upcoming events one person should actually see.
+ *
+ * THE BUG THIS FIXES. Screens asked `listUpcoming({ classId })`, which filters
+ * to events belonging to that class — and an event open to the whole centre
+ * belongs to NO class, because `classId` being empty is precisely how an event
+ * is marked as everybody's (see syncPublicSchedule). So a student in a class
+ * saw their class's events and nothing else: every centre-wide event an admin
+ * created was filtered out of the calendar that existed to show it. A student
+ * in no class saw everything and looked fine, which is why it survived.
+ *
+ * Two queries, because Firestore cannot ask for "classId is empty OR classId
+ * is mine" in one. Merged, sorted and cut to size here.
+ *
+ * The audience is filtered in memory rather than in the query. An event saved
+ * before `targetAudience` had a default has no such field, and an `in` filter
+ * skips documents missing the field entirely — which would have hidden exactly
+ * the older events this function exists to stop hiding. Absent is read as
+ * "everybody", which is what it meant.
+ */
+export async function listUpcomingForUser(
+  options: { classId?: string | null; role?: AppUser['role']; pageSize?: number } = {}
+): Promise<CalendarEvent[]> {
+  const pageSize = options.pageSize ?? 20;
+  const now = new Date();
+
+  const everyones = listAll<CalendarEvent>(COLLECTIONS.calendarEvents, {
+    filters: [
+      ['startsAt', '>=', now],
+      ['classId', '==', null],
+    ],
+    orderByField: 'startsAt',
+    direction: 'asc',
+    pageSize,
+  }).catch(() => [] as CalendarEvent[]);
+
+  const mine = options.classId
+    ? listAll<CalendarEvent>(COLLECTIONS.calendarEvents, {
+        filters: [
+          ['startsAt', '>=', now],
+          ['classId', '==', options.classId],
+        ],
+        orderByField: 'startsAt',
+        direction: 'asc',
+        pageSize,
+      }).catch(() => [] as CalendarEvent[])
+    : Promise.resolve<CalendarEvent[]>([]);
+
+  const [open, scoped] = await Promise.all([everyones, mine]);
+
+  const merged = new Map<string, CalendarEvent>();
+  for (const event of [...open, ...scoped]) merged.set(event.id, event);
+
+  return Array.from(merged.values())
+    .filter((event) => {
+      const audience = event.targetAudience ?? 'all';
+      if (audience === 'all' || !options.role) return true;
+      if (options.role === 'student') return audience === 'students';
+      if (options.role === 'teacher') return audience === 'teachers';
+      // An admin is nobody's target audience and should see the lot.
+      return true;
+    })
+    .sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')))
+    .slice(0, pageSize);
+}
+
 export function listPast(options: EventQuery = {}): Promise<Page<CalendarEvent>> {
   return listPage<CalendarEvent>(COLLECTIONS.calendarEvents, {
     filters: [

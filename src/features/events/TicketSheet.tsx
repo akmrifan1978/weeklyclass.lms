@@ -8,6 +8,7 @@ import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme
 import * as bookings from '@/services/eventRegistrationService';
 import type { CalendarEvent, EventRegistration } from '@/types';
 import { FormSheet } from '@/components/ui';
+import { RatingPrompt } from '@/components/shared/RatingPrompt';
 
 /**
  * The ticket, once an admin has confirmed the booking.
@@ -46,6 +47,17 @@ export function TicketSheet({
    * frozen at booking time would send half the attendees somewhere nobody is.
    */
   const whatsapp = event?.registration?.whatsappLink ?? null;
+
+  /**
+   * Whether the event has happened, so the rating can be asked afterwards.
+   *
+   * Compared as the plain date strings the event stores rather than by parsing
+   * into instants: both sides are `YYYY-MM-DD`, which sorts correctly as text,
+   * and doing it this way asks no questions about which timezone "today" means
+   * for somebody who booked from another country.
+   */
+  const today = new Date().toISOString().slice(0, 10);
+  const hasHappened = Boolean(event?.date) && String(event?.date) < today;
 
   return (
     <FormSheet
@@ -158,6 +170,12 @@ export function TicketSheet({
           <Ionicons name="logo-whatsapp" size={18} color={colors.textInverse} />
           <Text style={styles.whatsappText}>{t('event.joinWhatsapp')}</Text>
         </Pressable>
+      ) : null}
+
+      {/* Only once it is over. Asking somebody how an event was while they are
+          still holding the ticket to get into it is asking them to guess. */}
+      {hasHappened && event ? (
+        <RatingPrompt target="event" targetId={event.id} targetTitle={event.title} />
       ) : null}
 
       <Text style={styles.note}>{t('event.ticketNote')}</Text>

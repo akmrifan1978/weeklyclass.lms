@@ -28,7 +28,7 @@ import { AppError, denialContext } from '@/utils/errors';
 import { searchTokens } from '@/utils/format';
 import { isEmail } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS } from '@/types/permissions';
-import type { AppUser, LanguageCode, UserRole, UserStatus } from '@/types';
+import type { AppUser, ClassRoom, LanguageCode, UserRole, UserStatus } from '@/types';
 
 import {
   authEmailForMobile,
@@ -37,6 +37,7 @@ import {
   emailForUsername,
   isMobileAvailable,
   isSyntheticAuthEmail,
+  isUsernameAvailable,
   nextSequentialId,
   normaliseUsername,
   usernameForEmail,
@@ -128,6 +129,38 @@ async function waitForAuthToken(user: FirebaseUser): Promise<void> {
  * registration refused for a permission the account definitely had.
  */
 const RETRY_BACKOFF_MS = [500, 1000, 1500, 3000];
+
+/*
+ * Registration is in progress — hold the door.
+ *
+ * For the few seconds it takes, `users/{uid}` passes through states that look
+ * exactly like a dead account to anything watching it: absent at first, then
+ * present but `pending` when the centre requires approval. The session watcher
+ * in AuthContext reacts to a non-active profile by signing the person out,
+ * which is right for an account an admin has just suspended and catastrophic
+ * for one that is being created — the remaining writes lose their credentials
+ * mid-flight and are refused.
+ *
+ * That is what "Refused: claim usernames/... + mobiles/..." was. The profile
+ * write and the identity claim run together; the profile landed first, the
+ * watcher saw `pending` and signed out, and the claim — a transaction, so
+ * slower — committed with no auth at all. Every retry then refreshed a token
+ * for somebody who was no longer signed in. Being a race, it struck some
+ * registrations and not others, and it left behind an auth account with no
+ * profile and no index rows, which is precisely the wreckage found in this
+ * project.
+ *
+ * A counter rather than a boolean so that two registrations on one device
+ * cannot have the first to finish lift the guard for the second.
+ *
+ * register() signs a pending account out itself when it is done, so nothing is
+ * lost by deferring — only the moment it happens changes.
+ */
+let registrationsInFlight = 0;
+
+export function isRegistering(): boolean {
+  return registrationsInFlight > 0;
+}
 
 async function withTokenRetry<T>(
   label: string,
@@ -651,13 +684,69 @@ export async function register(
   role: Extract<UserRole, 'student' | 'teacher'>,
   input: RegistrationInput
 ): Promise<RegistrationResult> {
-  // One more round-trip before anything happens. getSettings already falls back
-  // to safe defaults, so cap the wait rather than let a slow network stall the
-  // form before it has even started.
-  const settings = await Promise.race([
+  registrationsInFlight += 1;
+  try {
+    return await runRegistration(role, input);
+  } finally {
+    registrationsInFlight -= 1;
+  }
+}
+
+async function runRegistration(
+  role: Extract<UserRole, 'student' | 'teacher'>,
+  input: RegistrationInput
+): Promise<RegistrationResult> {
+  /*
+   * Both reads at once, because neither needs the other.
+   *
+   * They were sequential, which on a database in another country is a second
+   * of waiting for no reason — the settings say whether registration is open,
+   * the mobile check says whether this number is free, and neither answer
+   * changes the other's question. Started together, the pair costs one
+   * round-trip instead of two.
+   *
+   * The settings wait is still capped: getSettings falls back to safe defaults,
+   * so a slow network should not stall a form before it has started.
+   */
+  const settingsPromise = Promise.race([
     getSettings(),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000)),
   ]);
+  // The mobile number is the unique identity. The transaction in claimIdentity
+  // is still the real guard against a race; this exists to fail early with a
+  // message that says what is wrong, rather than after an auth account has
+  // already been made.
+  const mobileFreePromise = isMobileAvailable(input.mobile).catch(() => true);
+  // And the username, in the same breath. The transaction in claimIdentity is
+  // still what actually enforces it; this only means somebody is told which
+  // field is wrong BEFORE an account is created, rather than after.
+  const username = normaliseUsername(input.username);
+  const usernameFreePromise = isUsernameAvailable(username).catch(() => true);
+
+  /*
+   * The teachers who come with the chosen group, fetched in the same breath.
+   *
+   * A student does not pick a teacher — the group they join decides who
+   * teaches them — so allocating one by hand afterwards was admin work that
+   * never needed a person. It happens here instead, at the moment the group
+   * is chosen.
+   *
+   * Read from the class rather than taken from the sign-up form. The form
+   * already holds the class document and could hand the names over for free,
+   * but then the allocation on a student's record would be whatever their
+   * device claimed it was, which is not something to take on trust. The read
+   * goes out with the other two checks and has landed long before the profile
+   * is written, so being authoritative here costs no waiting.
+   *
+   * A failure is deliberately swallowed. Not knowing the teachers is a gap an
+   * admin can fill in a moment; refusing the registration over it is not.
+   */
+  const classPromise =
+    role === 'student' && input.classId
+      ? getDoc(doc(db, COLLECTIONS.classes, input.classId)).catch(() => null)
+      : Promise.resolve(null);
+
+  const settings = await settingsPromise;
 
   if (settings && !settings.registrationEnabled) {
     throw new AppError('auth.registrationClosed', 'failed-precondition');
@@ -666,7 +755,6 @@ export async function register(
 
   step('1/6 settings read ok', { requireApproval });
 
-  const username = normaliseUsername(input.username);
   const email = input.email.trim().toLowerCase();
 
   // No address given at all. Plenty of teachers and older students simply do
@@ -683,9 +771,12 @@ export async function register(
   // created. The transaction in claimIdentity is still the real guard against a
   // race; this exists to fail early with a message that says what is wrong,
   // rather than after an auth account has already been made.
-  step('2/6 checking mobile number', input.mobile);
-  if (!(await isMobileAvailable(input.mobile).catch(() => true))) {
+  step('2/6 checking mobile number and username', input.mobile);
+  if (!(await mobileFreePromise)) {
     throw new AppError('validation.mobileTaken', 'already-exists');
+  }
+  if (!(await usernameFreePromise)) {
+    throw new AppError('validation.usernameTaken', 'already-exists');
   }
 
   // An email address may be shared — a household registering several children
@@ -706,9 +797,48 @@ export async function register(
     credential = await createUserWithEmailAndPassword(auth, signInAddress, input.password);
   } catch (error) {
     if ((error as { code?: string })?.code !== 'auth/email-already-in-use') throw error;
+
+    // A household shares one inbox, so the address may already belong to a
+    // sibling. This account signs in under an address derived from its own
+    // (unique) mobile number instead.
     authEmail = authEmailForMobile(input.mobile);
     step('2/6 address already in use — signing in by mobile instead', authEmail);
-    credential = await createUserWithEmailAndPassword(auth, authEmail, input.password);
+
+    try {
+      credential = await createUserWithEmailAndPassword(auth, authEmail, input.password);
+    } catch (second) {
+      if ((second as { code?: string })?.code !== 'auth/email-already-in-use') throw second;
+
+      /*
+       * BOTH addresses are taken, and the mobile-derived one can only belong to
+       * this very person — it is derived from the number they just gave, and
+       * the number was checked as free a moment ago.
+       *
+       * So this is an account a PREVIOUS attempt created and then failed to
+       * finish: a sign-in exists, no profile was ever written, and the index
+       * row that would have said "this number is taken" was never written
+       * either. Registration used to die here, telling somebody who may have
+       * typed no address at all that "an account already exists with this
+       * email address" — and it died the same way every time they tried again,
+       * which is exactly what was reported.
+       *
+       * The account is ADOPTED instead. Signing in to it gives the same uid,
+       * and the rest of registration then writes the profile and the index
+       * that were missing. The half-made account becomes the finished one.
+       *
+       * The password has to match, which is what keeps this safe: without it
+       * this would be a way to attach yourself to somebody else's sign-in by
+       * claiming their phone number.
+       */
+      step('2/6 an unfinished account exists for this number — signing in to finish it');
+      try {
+        credential = await signInWithEmailAndPassword(auth, authEmail, input.password);
+      } catch {
+        // Wrong password, so we cannot prove it is theirs. Say what is actually
+        // true rather than blaming an email address.
+        throw new AppError('auth.mobileHasUnfinishedAccount', 'already-exists');
+      }
+    }
   }
   const uid = credential.user.uid;
   step('2/6 auth account created', uid);
@@ -722,10 +852,56 @@ export async function register(
   try {
     const status: UserStatus = requireApproval ? 'pending' : 'active';
     step('3/6 allocating sequential id');
-    const generatedId = await withTokenRetry('counter allocation', credential.user, () =>
-      nextSequentialId(role === 'student' ? 'STU' : 'TCH')
-    );
-    step('3/6 id allocated', generatedId);
+
+    /*
+     * A refused counter no longer costs somebody their registration.
+     *
+     * The id is a CONVENIENCE — a human-readable STU-2026-0013 to quote on a
+     * form — and the account works perfectly without a pretty one. Yet this
+     * was the step most likely to fail, and when it failed the whole
+     * registration was abandoned: no profile, no username, and a sign-in left
+     * behind that made every retry fail differently. People were being turned
+     * away at the door over a serial number.
+     *
+     * Every check is still made and the counter is still the preferred source,
+     * with the retry that refreshes the token behind it. Only the CONSEQUENCE
+     * of failing has changed.
+     *
+     * The fallback is derived from the uid, which is itself unique, and it
+     * deliberately does not pretend to be sequential — an admin looking at
+     * STU-2026-H7H5K2 can see at a glance that it was not issued by the
+     * counter, and can renumber it if the order matters to them.
+     */
+    const prefix = role === 'student' ? 'STU' : 'TCH';
+    let generatedId: string;
+    try {
+      generatedId = await withTokenRetry('counter allocation', credential.user, () =>
+        nextSequentialId(prefix)
+      );
+      step('3/6 id allocated', generatedId);
+    } catch (error) {
+      generatedId = `${prefix}-${new Date().getFullYear()}-${uid.slice(0, 6).toUpperCase()}`;
+      console.warn(
+        `[WeeklyClass] the id counter was refused, so ${generatedId} was issued instead. ` +
+          'The account is complete; only the number is out of sequence.',
+        error
+      );
+      step('3/6 counter refused — issued a non-sequential id', generatedId);
+    }
+
+    /*
+     * Resolved, not awaited — the read above finished during the auth account
+     * creation, so this is already sitting there.
+     */
+    const classSnap = await classPromise;
+    const classData = classSnap?.exists() ? (classSnap.data() as Partial<ClassRoom>) : null;
+    const allocatedTeachers = {
+      assignedTeacherIds: classData?.teacherIds ?? [],
+      assignedTeacherNames: classData?.teacherNames ?? [],
+    };
+    if (role === 'student') {
+      step('3/6 teachers allocated from the class group', allocatedTeachers.assignedTeacherNames);
+    }
 
     const profile: Omit<AppUser, 'id'> = {
       uid,
@@ -752,6 +928,7 @@ export async function register(
             studentId: generatedId,
             dateOfBirth: input.dateOfBirth ?? null,
             gender: input.gender ?? null,
+            ...allocatedTeachers,
           }
         : {
             teacherId: generatedId,
@@ -762,17 +939,22 @@ export async function register(
       declarationAcceptedAt: new Date(),
     };
 
-    step('4/6 writing profile document', `users/${uid}`);
-    // A profile may already exist if this uid was set up by hand in the Firebase
-    // console. The security rules treat an overwrite as an UPDATE, and the
-    // update rule forbids touching `role`, so the write would fail with a bare
-    // "insufficient permissions". Say what actually happened instead.
-    const existingProfile = await getDoc(doc(db, COLLECTIONS.users, uid));
-    if (existingProfile.exists()) {
-      throw new AppError('auth.profileAlreadyExists', 'already-exists');
-    }
+    step('4/6 writing profile and claiming username');
 
-    await withTokenRetry('profile write', credential.user, () =>
+    /*
+     * The profile write and the username claim run TOGETHER.
+     *
+     * They were one after the other, and neither needs the other's result: the
+     * claim writes `usernames/{username}`, the profile writes `users/{uid}`.
+     * Sequential, that is two crossings of the network for work that could
+     * have gone at once.
+     *
+     * The failure behaviour is unchanged. Sequentially, a failed claim already
+     * left the profile written, because the profile went first — so running
+     * them side by side ends in exactly the same state, reached sooner. Either
+     * rejection still lands in the catch below, which keeps the auth account.
+     */
+    const writeProfile = withTokenRetry('profile write', credential.user, () =>
       denialContext('create', `${COLLECTIONS.users}/${uid}`, () =>
         setDoc(doc(db, COLLECTIONS.users, uid), {
           ...profile,
@@ -782,13 +964,31 @@ export async function register(
           createdBy: uid,
         })
       )
-    );
+    ).catch(async (error) => {
+      /*
+       * A profile may already exist if this uid was set up by hand in the
+       * Firebase console. The rules treat an overwrite as an UPDATE, and the
+       * update rule forbids touching `role`, so the write fails with a bare
+       * "insufficient permissions".
+       *
+       * That check used to run BEFORE every write — one guaranteed round-trip
+       * on every registration to explain a case that almost never happens. It
+       * now runs only when the write has actually failed, where the cost is
+       * paid by the rare failure rather than by everybody.
+       */
+      const existing = await getDoc(doc(db, COLLECTIONS.users, uid)).catch(() => null);
+      if (existing?.exists()) {
+        throw new AppError('auth.profileAlreadyExists', 'already-exists');
+      }
+      throw error;
+    });
 
-    step('5/6 claiming username index', username);
-    await withTokenRetry('identity claim', credential.user, () =>
+    const claim = withTokenRetry('identity claim', credential.user, () =>
       claimIdentity({ username, email, authEmail, uid, role, mobile: input.mobile })
     );
-    step('5/6 username index claimed');
+
+    await Promise.all([writeProfile, claim]);
+    step('5/6 profile written and username claimed');
 
     // Everything above is essential and is awaited. These two are not: the
     // account already exists and is usable. Awaiting them added two more

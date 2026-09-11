@@ -10,6 +10,7 @@ import { listClasses } from '@/services/orgService';
 import type { ClassRoom, ContentStatus, LanguageCode, Lesson } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
+import { PublishActions } from '@/features/PublishActions';
 import { AdminRow } from '@/features/AdminRow';
 import { DateField, Select, TextField, type Option } from '@/components/ui';
 
@@ -40,7 +41,10 @@ const EMPTY: LessonForm = {
   duration: '',
   language: 'en',
   publishDate: '',
-  status: 'published',
+  // New work starts as a DRAFT. Something half-written reaching a class
+  // before its author meant it to is not recoverable by editing it
+  // afterwards — they have already read it.
+  status: 'draft',
 };
 
 /**
@@ -169,6 +173,17 @@ export function LessonManager({ classScope }: { classScope?: string[] }) {
             ...(lesson.videoUrl ? [{ label: 'Video' }] : []),
             ...(lesson.pdfUrl ? [{ label: 'PDF' }] : []),
           ]}
+          extraActions={
+            <PublishActions
+              status={lesson.status}
+              previewUrl={lesson.videoUrl || lesson.pdfUrl || lesson.audioUrl || null}
+              onSetStatus={async (next) => {
+                if (!user) return;
+                await saveLesson({ ...lesson, status: next }, user, lesson.id);
+                actions.reload?.();
+              }}
+            />
+          }
           onEdit={can('EDIT_LESSONS') ? actions.edit : undefined}
           onDelete={can('DELETE_LESSONS') ? actions.remove : undefined}
         />

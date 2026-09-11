@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useGreeting } from '@/hooks/useGreeting';
 
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +25,7 @@ import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
 import { UpcomingClasses } from '@/components/shared/UpcomingClasses';
+import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import {
   Avatar,
   Card,
@@ -44,6 +46,7 @@ import {
  */
 export default function TeacherHome() {
   const { t } = useTranslation();
+  const greeting = useGreeting();
   const { user, can } = useAuth();
   const { language } = useLanguage();
   // This dashboard remembers its own language; see useLanguageScope.
@@ -98,9 +101,13 @@ export default function TeacherHome() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['top', 'bottom']}>
+      {/* At the top, as asked. It draws nothing when no flyer is
+          running, so it costs no space on the ordinary day. */}
+      <FlyerStrip position="dashboard" />
+
       <View style={styles.greetingRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.salaam}>{t('app.greeting')}</Text>
+          <Text style={styles.salaam}>{greeting}</Text>
           <Text style={styles.name} numberOfLines={1} accessibilityRole="header">
             {user?.fullName ?? ''}
           </Text>
@@ -203,6 +210,16 @@ export default function TeacherHome() {
               tint={brand.slate}
               onPress={() => router.push('/(teacher)/notes')}
             />
+            {/* The teaching board. Gated, unlike the notebook beside it: a
+                workbook is written to be given to a class. */}
+            {can('CREATE_WORKBOOK') ? (
+              <QuickAccessTile
+                icon="book-outline"
+                label={t('nav.workbooks')}
+                tint={brand.navy}
+                onPress={() => router.push('/(teacher)/workbooks')}
+              />
+            ) : null}
             {visibleTiles.map((tile) => (
               <QuickAccessTile
                 key={tile.route}

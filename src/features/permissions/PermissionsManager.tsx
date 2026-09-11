@@ -19,6 +19,7 @@ import {
   Card,
   Divider,
   Screen,
+  ChipGroup,
   SearchField,
   SectionHeader,
   SkeletonList,
@@ -44,15 +45,26 @@ export function PermissionsManager() {
   const [selected, setSelected] = useState<AppUser | null>(null);
   const [draft, setDraft] = useState<PermissionMap>({});
   const [term, setTerm] = useState('');
+  /*
+   * Which staff-or-student list is being looked at.
+   *
+   * Teachers first, because that is who permissions were built for and who an
+   * admin is nearly always here to change. Students are the deliberate
+   * exception — a senior student marking attendance, say — and having to pick
+   * them explicitly is a small friction worth keeping in front of a decision
+   * that hands somebody else's account real power.
+   */
+  const [role, setRole] = useState<'teacher' | 'student'>('teacher');
   const [busy, setBusy] = useState(false);
   const search = useDebounced(term, 400);
 
-  const loadTeachers = useCallback(async () => {
-    const page = await listUsers({ role: 'teacher', search: search || undefined, pageSize: 50 });
+  const loadPeople = useCallback(async () => {
+    const page = await listUsers({ role, search: search || undefined, pageSize: 50 });
     return page.items;
-  }, [search]);
+  }, [role, search]);
 
-  const { data: teachers, loading, error, reload, refreshing, refresh } = useAsync(loadTeachers, [
+  const { data: teachers, loading, error, reload, refreshing, refresh } = useAsync(loadPeople, [
+    role,
     search,
   ]);
 
@@ -230,6 +242,25 @@ export function PermissionsManager() {
 
       <Spacer />
 
+      {/* Said before anything is ticked, not discovered afterwards.
+          Some rules require a teacher role on top of the permission, so a few
+          grants simply will not take effect for a student — and a grant that
+          silently does nothing is worse than one that was never offered. */}
+      {role === 'student' ? (
+        <Text style={styles.studentNote}>{t('admin.studentPermissionsNote')}</Text>
+      ) : null}
+
+      <ChipGroup<'teacher' | 'student'>
+        value={role}
+        onChange={setRole}
+        options={[
+          { value: 'teacher', label: t('admin.roleTeacher') },
+          { value: 'student', label: t('admin.roleStudent') },
+        ]}
+      />
+
+      <Spacer />
+
       <SearchField value={term} onChangeText={setTerm} />
 
       <Spacer />
@@ -276,6 +307,15 @@ export function PermissionsManager() {
 }
 
 const styles = StyleSheet.create({
+  studentNote: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    backgroundColor: colors.infoSoft,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
   title: {
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,

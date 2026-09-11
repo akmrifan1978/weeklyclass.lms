@@ -1554,6 +1554,127 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "//": "ratings - the admin list, newest first",
+      "collectionGroup": "ratings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "//": "flyers - what is on show, highest priority first",
+      "collectionGroup": "flyers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priority",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "//": "flyers - the ADMIN list: every flyer by priority, active or not. Distinct from the display index because `active` sits between `deleted` and `priority` there, and an index cannot be used with a middle field skipped.",
+      "collectionGroup": "flyers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "priority",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "//": "workbooks - what ONE student is given: published, addressed to them, newest first. The array field must sit before the ordering field, and an index is only usable from a prefix, which is why this cannot also serve the two lists below.",
+      "collectionGroup": "workbooks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "audienceKeys",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "//": "workbooks - one teacher's own, drafts included, newest first",
+      "collectionGroup": "workbooks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "authorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "//": "workbooks - every workbook for an admin, newest first",
+      "collectionGroup": "workbooks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "//": "workbook pages - the pages of one workbook, in reading order",
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "order",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

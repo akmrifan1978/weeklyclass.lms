@@ -447,7 +447,7 @@ export function CalendarManager({ classScope }: { classScope?: string[] }) {
             }}
             icon="videocam-outline"
             autoCapitalize="none"
-            hint="Paste a Zoom or Google Meet link"
+            hint={t('calendar.meetingLinkHint')}
           />
 
           {form.meetingUrl.trim() ? (

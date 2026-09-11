@@ -418,9 +418,24 @@ async function shrinkIfImage(
     context.resize({ width: MAX_EDGE[kind] });
 
     const rendered = await context.renderAsync();
+
+    /*
+     * A PNG stays a PNG.
+     *
+     * Re-encoding one as JPEG fills every transparent pixel with black, which
+     * is exactly how an uploaded logo or a poster with a cut-out background
+     * arrives with a dark box around it. JPEG is the right choice for a
+     * photograph and the wrong one for artwork, and the source format is the
+     * best signal available for telling those apart.
+     *
+     * PNG ignores the compress value — it is lossless — so the saving there
+     * comes from the resize alone. That is the trade: a smaller file that is
+     * still correct, rather than a smaller file that is wrong.
+     */
+    const isPng = contentType === 'image/png';
     const result = await rendered.saveAsync({
       compress: 0.8,
-      format: ImageManipulator.SaveFormat.JPEG,
+      format: isPng ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG,
     });
     return result.uri;
   } catch {
@@ -444,6 +459,21 @@ async function shrinkIfImage(
 function optimisedUrl(url: string, kind: UploadKind): string {
   const marker = '/image/upload/';
   if (!url.includes('res.cloudinary.com') || !url.includes(marker)) return url;
+
+  /*
+   * A PDF is left exactly as it was uploaded.
+   *
+   * Cloudinary stores a PDF under its IMAGE path, which is why it reaches this
+   * function at all — and the transformation below would then rasterise it:
+   * `f_auto` picks a web image format and `w_1200` sizes it, so what comes back
+   * is a flattened picture of page one. The file stops being a document. Every
+   * page after the first is simply gone, and the text is no longer selectable
+   * or searchable.
+   *
+   * Nothing about that is visible at upload time. It looks like a successful
+   * upload and the thumbnail even looks right.
+   */
+  if (/\.pdf($|\?)/i.test(url)) return url;
   // Already carrying a transformation — leave it be rather than stack a second.
   if (/\/image\/upload\/[a-z]{1,3}_/.test(url)) return url;
 

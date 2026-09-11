@@ -72,7 +72,12 @@
     "done": "Done",
     "showLess": "Show less",
     "showAllCount": "Show {{count}} more",
-    "menu": "Menu"
+    "menu": "Menu",
+    "preview": "Preview",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "publishedToast": "Published. Everyone can see it now.",
+    "unpublishedToast": "Moved back to draft. Hidden from everyone."
   },
   "auth": {
     "studentLogin": "Student Login",
@@ -169,7 +174,8 @@
     "newPasswordOptional": "New password (optional)",
     "newPasswordOptionalHint": "Leave blank to keep the current password. Setting one replaces it within a minute — and means you know it, so prefer a reset link where you can.",
     "passwordQueued": "Saved. The new password takes effect within a minute.",
-    "setPasswordUnavailable": "This device cannot set a password securely. Use a desktop browser, or create a reset link instead."
+    "setPasswordUnavailable": "This device cannot set a password securely. Use a desktop browser, or create a reset link instead.",
+    "mobileHasUnfinishedAccount": "An unfinished account already exists for this mobile number. Use the same password you chose before, or sign in instead."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
@@ -274,7 +280,10 @@
     "myClass": "My class",
     "myWork": "My work",
     "more": "More",
-    "contact": "Contact"
+    "contact": "Contact",
+    "ratings": "Ratings",
+    "flyers": "Flyers",
+    "workbooks": "Workbooks"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -350,7 +359,8 @@
     "logo": "Logo",
     "banner": "Banner",
     "brandingHint": "Shown with this class. Published classes keep the logo and banner they were created with.",
-    "startsInThePast": "This starts in the past, so it will be saved under Past rather than Upcoming."
+    "startsInThePast": "This starts in the past, so it will be saved under Past rather than Upcoming.",
+    "meetingLinkHint": "Paste a Zoom or Google Meet link"
   },
   "video": {
     "title": "Videos",
@@ -387,7 +397,9 @@
     "topic": "Topic",
     "topicHint": "Subject of the session, used for grouping and search",
     "location": "Location",
-    "locationHint": "Town or country, e.g. Jeddah, Saudi Arabia"
+    "locationHint": "Town or country, e.g. Jeddah, Saudi Arabia",
+    "thumbnailAuto": "YouTube thumbnails are detected automatically.",
+    "video": "Video"
   },
   "record": {
     "title": "Record a lesson",
@@ -457,7 +469,9 @@
     "coverImage": "Cover image",
     "publishedOn": "Published on",
     "noArticles": "No articles published yet",
-    "setFeatured": "Feature on home screen"
+    "setFeatured": "Feature on home screen",
+    "machineTranslated": "Translated by software, not by a person. It may be wrong.",
+    "paragraphHint": "Separate paragraphs with a blank line."
   },
   "lesson": {
     "title": "Weekly lessons",
@@ -607,7 +621,11 @@
     "priorityHigh": "High",
     "priorityUrgent": "Urgent",
     "expiresAt": "Expires on",
-    "noAnnouncements": "No announcements right now"
+    "noAnnouncements": "No announcements right now",
+    "notice": "Notice",
+    "understood": "I have read this",
+    "showAsPopup": "Show as a notice over the screen",
+    "showAsPopupHint": "Interrupts everyone it is addressed to, once each, until they close it. Use it for something that must be read, not for ordinary news."
   },
   "profile": {
     "title": "Profile",
@@ -637,7 +655,10 @@
     "newSignInEmail": "New sign-in email",
     "newSignInEmailHint": "You will sign in with this address from now on.",
     "verifyInbox": "Check that inbox",
-    "verifyInboxHelp": "We have sent a confirmation link to the new address. Nothing changes until you open it. Until then, keep signing in exactly as you do now — and the first time after you open it, sign in with the new email address."
+    "verifyInboxHelp": "We have sent a confirmation link to the new address. Nothing changes until you open it. Until then, keep signing in exactly as you do now — and the first time after you open it, sign in with the new email address.",
+    "changeUsername": "Change username",
+    "changeUsernameHint": "Your password, role, permissions and every record stay exactly as they are. Only the name you sign in with changes.",
+    "usernameChanged": "Username changed."
   },
   "admin": {
     "manageUsers": "Manage users",
@@ -686,7 +707,12 @@
     "publicProfileShow": "Show on the public website",
     "publicProfileHide": "Remove from the public website",
     "publicProfileShown": "This teacher now appears on the public website.",
-    "publicProfileHidden": "This teacher no longer appears on the public website."
+    "publicProfileHidden": "This teacher no longer appears on the public website.",
+    "usernameNotYours": "Only a super admin can change another administrator’s username.",
+    "isoCode": "ISO code",
+    "studentPermissionsNote": "Attendance, announcements, the calendar and uploading videos all work for a student. Lessons, quizzes and the materials list need a teacher account as well, so granting those here will have no effect.",
+    "allocatedTeachers": "Teachers",
+    "allocatedTeachersNone": "None allocated yet"
   },
   "settings": {
     "title": "Settings",
@@ -775,7 +801,10 @@
     "calendar_hijri": "Hijri only",
     "calendar_hijriHint": "Ramadan 23, 1447 AH",
     "calendarNote": "Applies everywhere dates are shown — lessons, events, tickets and recordings. Hijri dates follow the Umm al-Qura calendar and are a calculation, not a moon sighting.",
-    "calendarApproximate": "On this device the Hijri date is worked out arithmetically and may be a day or two out."
+    "calendarApproximate": "On this device the Hijri date is worked out arithmetically and may be a day or two out.",
+    "greeting": "Greeting",
+    "greetingHint": "Leave empty to use \"Assalamu Alaikum\" in each person’s own language. Typing one here uses that wording for everybody.",
+    "logoHint": "Changes everywhere in the app and on the browser tab straight away. The icon on a phone home screen is copied when the app is installed, so it changes at the next release — and on iPhone only if the app is removed and added again."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -1076,7 +1105,24 @@
     "level_2": "Bad",
     "level_3": "Okay",
     "level_4": "Good",
-    "level_5": "Very good"
+    "level_5": "Very good",
+    "ask_app": "How are you finding the app?",
+    "ask_lesson": "How was this lesson?",
+    "ask_event": "How was this event?",
+    "thanks": "Thank you — your rating has been saved.",
+    "yourRating": "You rated this {{stars}} out of 5.",
+    "commentLabel": "Anything you would like to add?",
+    "commentHint": "Optional",
+    "adminTitle": "Ratings",
+    "overall": "The app overall",
+    "byLesson": "Lessons",
+    "byEvent": "Events",
+    "responses_one": "{{count}} rating",
+    "responses_other": "{{count}} ratings",
+    "noneYet": "Nobody has rated this yet.",
+    "noRatings": "No ratings yet",
+    "noRatingsBody": "Ratings appear here as soon as somebody gives one.",
+    "averageOf": "out of 5"
   },
   "qa": {
     "askTitle": "Ask a question",
@@ -1340,7 +1386,9 @@
     "emptyHelp": "Somewhere to write things down during a lesson. Only you can read these — not your teacher, not an admin.",
     "pin": "Pin",
     "unpin": "Unpin",
-    "deleteConfirm": "Delete this note?"
+    "deleteConfirm": "Delete this note?",
+    "toWorkbook": "Make a workbook",
+    "toWorkbookHint": "This copies the note into a new workbook you can write on by hand and give to students. The note itself stays private and stays where it is."
   },
   "about": {
     "title": "About the Program",
@@ -1515,5 +1563,100 @@
       "emptyTitle": "Nothing released yet",
       "emptyBody": "Published recordings appear here as soon as they go out."
     }
+  },
+  "flyer": {
+    "active": "Active",
+    "activeHint": "Off hides it everywhere, whatever its dates say.",
+    "add": "Add flyer",
+    "chooseFile": "Choose file",
+    "description": "Description",
+    "endBeforeStart": "The end date is before the start date, so this would never show.",
+    "endDate": "Ends",
+    "endHint": "Leave empty to run until you switch it off. It stops by itself at the end time.",
+    "endTime": "End time",
+    "fileHint": "JPG, PNG or PDF. A PDF is offered as a document to open rather than shown in place.",
+    "fileRequired": "Choose an image or a PDF first.",
+    "flyerTitle": "Title",
+    "fromNow": "Now",
+    "hide": "Hide",
+    "link": "Link",
+    "linkHint": "Opened when somebody taps the flyer. Leave empty to open the file itself.",
+    "noEnd": "No end",
+    "none": "No flyers yet",
+    "open": "Open",
+    "position": "Where it appears",
+    "position_both": "Both",
+    "position_dashboard": "Dashboard",
+    "position_home": "Front page",
+    "priority": "Priority",
+    "priorityHint": "Higher numbers show first.",
+    "replaceFile": "Replace file",
+    "show": "Show",
+    "showing": "Showing",
+    "startDate": "Starts",
+    "startHint": "Leave empty to start straight away. Add a time to start partway through the day.",
+    "startTime": "Start time",
+    "title": "Flyers & advertising",
+    "wrongType": "Only JPG, PNG and PDF files can be used."
+  },
+  "audience": {
+    "label": "Who can see this",
+    "all": "All students",
+    "classes": "Class / group",
+    "students": "Selected students",
+    "noClasses": "No class groups yet.",
+    "noStudents": "No active students yet.",
+    "searchStudents": "Search students by name or ID",
+    "summaryAll": "Every student will see this.",
+    "summaryNobody": "Nobody is selected yet, so this would reach no one.",
+    "summaryClasses": "Goes to {{names}}.",
+    "summaryStudents": "Goes to {{names}}."
+  },
+  "workbook": {
+    "title": "Title",
+    "untitled": "Untitled workbook",
+    "new": "New workbook",
+    "search": "Search workbooks",
+    "empty": "No workbooks yet",
+    "emptyHelp": "Write on the board like a classroom whiteboard, then hand the page to your students.",
+    "studentEmpty": "Nothing yet",
+    "studentEmptyHelp": "Workbooks your teacher publishes will appear here.",
+    "pages": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "pageOf": "Page {{page}} of {{total}}",
+    "noPages": "This workbook has no pages yet.",
+    "addPage": "Add page",
+    "removePage": "Remove page",
+    "previous": "Previous",
+    "next": "Next",
+    "pen": "Pen",
+    "highlighter": "Highlighter",
+    "eraser": "Eraser",
+    "undo": "Undo",
+    "clearPage": "Clear page",
+    "clearPageConfirm": "Erase everything on this page? The other pages are not affected.",
+    "nib": "Nib size {{size}}",
+    "inkBlack": "Black ink",
+    "inkBlue": "Blue ink",
+    "inkRed": "Red ink",
+    "inkGreen": "Green ink",
+    "markYellow": "Yellow marker",
+    "markGreen": "Green marker",
+    "markBlue": "Blue marker",
+    "markPink": "Pink marker",
+    "typedNotes": "Typed notes for this page",
+    "typedNotesHint": "Optional. Useful for anything that should be searchable or read aloud.",
+    "description": "About this workbook",
+    "publish": "Publish",
+    "unpublish": "Take back to draft",
+    "publishedToast": "Published. Your students can see it now.",
+    "unpublishedToast": "Back to draft. Students can no longer see it.",
+    "convertedToast": "Saved as a draft workbook. Publish it when it is ready.",
+    "pickAudience": "Choose who this is for before publishing.",
+    "unsaved": "Unsaved changes",
+    "unsavedHelp": "Save this workbook before leaving?",
+    "discard": "Leave without saving",
+    "deleteConfirm": "Delete this workbook and all its pages?",
+    "pageTooBig": "Page {{page}} has too much on it to save. Move some of it to a new page."
   }
 }
