@@ -181,19 +181,33 @@ export async function claimIdentity(params: {
   await withContext(() =>
    runTransaction(db, async (tx) => {
     const usernameRef = doc(db, COLLECTIONS.usernames, username);
-    const existing = await tx.get(usernameRef);
+    const mobileRef = mobileKey ? doc(db, MOBILES, mobileKey) : null;
+
+    /*
+     * Both reads at once.
+     *
+     * A transaction must read before it writes, and these two were read one
+     * after the other — two crossings to a database in another country for
+     * two questions that do not depend on each other. Measured against the
+     * live project, this transaction was the slowest step in registration at
+     * roughly three and a half seconds; half of that was the second read
+     * waiting for the first.
+     *
+     * Both are still inside the transaction, so both are still guarded against
+     * somebody claiming the same name or number in the moment between.
+     */
+    const [existing, existingMobile] = await Promise.all([
+      tx.get(usernameRef),
+      mobileRef ? tx.get(mobileRef) : Promise.resolve(null),
+    ]);
+
     if (existing.exists() && existing.data().uid !== params.uid) {
       throw new AppError('validation.usernameTaken', 'already-exists');
     }
 
-    // One phone number, one account — read before any write, as a Firestore
-    // transaction requires.
-    const mobileRef = mobileKey ? doc(db, MOBILES, mobileKey) : null;
-    if (mobileRef) {
-      const existingMobile = await tx.get(mobileRef);
-      if (existingMobile.exists() && existingMobile.data().uid !== params.uid) {
-        throw new AppError('validation.mobileTaken', 'already-exists');
-      }
+    // One phone number, one account.
+    if (existingMobile?.exists() && existingMobile.data().uid !== params.uid) {
+      throw new AppError('validation.mobileTaken', 'already-exists');
     }
 
     tx.set(usernameRef, {

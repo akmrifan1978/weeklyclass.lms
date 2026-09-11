@@ -233,7 +233,25 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isSignedIn()
                     && (request.resource.data.uid == request.auth.uid || isAdmin());
-      allow update, delete: if isAdmin();
+
+      // An account may rewrite its OWN row, which `usernames` has always
+      // allowed and this did not.
+      //
+      // The asymmetry broke finishing a half-made registration. A first attempt
+      // that got as far as claiming the number leaves the row in place; the
+      // retry then writes the same row again, which is an UPDATE, and update
+      // was admin-only — so the claim was refused with "Refused: claim
+      // usernames/... + mobiles/...". It also made the repair-on-sign-in path
+      // impossible for a number, though it works for a username.
+      //
+      // Both sides must name the caller, so this cannot take a number from
+      // somebody else: the row has to already be yours before you may touch it.
+      allow update: if isAdmin()
+                    || (isSignedIn()
+                        && resource.data.uid == request.auth.uid
+                        && request.resource.data.uid == request.auth.uid);
+
+      allow delete: if isAdmin();
     }
 
     // Sequential id counters (STU-2026-0001), incremented in a transaction while
