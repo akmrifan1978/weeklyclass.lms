@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { AudienceMode } from './audience';
 import type { PermissionMap } from './permissions';
 
 /** Firestore timestamps arrive as `Timestamp`; we write `Date`/serverTimestamp. */
@@ -1190,6 +1191,59 @@ export interface Note extends BaseDoc {
   body: string;
   /** Kept at the top of the list until unpinned. */
   pinned?: boolean;
+}
+
+/**
+ * A teacher's page of handwriting, published to students.
+ *
+ * The opposite of a Note in every way that matters. A note is private to the
+ * person who wrote it and enforced as such by the rules; a workbook exists to
+ * be given out, and carries an audience saying to whom.
+ *
+ * The pages live in a subcollection rather than on this document. A page of
+ * handwriting is a few tens of kilobytes and Firestore stops at a megabyte, so
+ * a workbook of twenty pages could not be one document — and a student opening
+ * page one should not have to download page twenty to see it.
+ */
+export interface Workbook extends BaseDoc {
+  title: string;
+  /** Typed text, alongside or instead of the handwriting. */
+  body?: string;
+  /** The author. Named `authorId` because an admin may write one too. */
+  authorId: string;
+  authorName: string;
+  authorRole: UserRole;
+  /**
+   * The day it was made, as `YYYY-MM-DD`, stamped when it is created and never
+   * afterwards. A lesson belongs to the day it was taught, and a workbook
+   * edited a week later is still that lesson — so this is deliberately not
+   * `updatedAt`, which moves every time somebody fixes a spelling.
+   */
+  date: string;
+  status: ContentStatus;
+  publishedAt?: FireDate | null;
+  pageCount: number;
+  /** Who it is for. See types/audience.ts for why these are flat. */
+  audienceMode?: AudienceMode;
+  audienceClassIds?: string[];
+  audienceStudentIds?: string[];
+  audienceKeys?: string[];
+  /** Set when it began life as somebody's private note. */
+  fromNoteId?: string | null;
+  /** Learning material handed out with it. */
+  attachments?: { name: string; url: string }[];
+}
+
+/** Stored at `workbooks/{workbookId}/pages/{pageId}`. */
+export interface WorkbookPage extends BaseDoc {
+  workbookId: string;
+  order: number;
+  /** Strokes as JSON — see features/workbook/strokes.ts for the shape. */
+  strokes: string;
+  /** Typed text belonging to this page. */
+  text?: string;
+  /** A photo or scan written on top of. */
+  backgroundUrl?: string | null;
 }
 
 export interface DashboardStats {

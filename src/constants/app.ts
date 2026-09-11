@@ -38,6 +38,7 @@ export const COLLECTIONS = {
   auditLogs: 'auditLogs',
   counters: 'counters',
   notes: 'notes',
+  workbooks: 'workbooks',
   ratings: 'ratings',
   flyers: 'flyers',
   publicSchedule: 'publicSchedule',

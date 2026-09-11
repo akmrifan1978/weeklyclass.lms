@@ -10,6 +10,9 @@ import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme
 import { friendlyMessage } from '@/utils/errors';
 import { relativeTime } from '@/utils/date';
 import * as noteService from '@/services/noteService';
+import * as workbookService from '@/services/workbookService';
+import { AudiencePicker } from '@/components/shared/AudiencePicker';
+import { audienceIsUsable, EVERYONE, type Audience } from '@/types/audience';
 import type { Note } from '@/types';
 import {
   AppHeader,
@@ -41,6 +44,7 @@ export function NotesScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const toast = useToast();
+  const isStaff = user?.role === 'admin' || user?.role === 'teacher';
 
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Note | null>(null);
@@ -48,6 +52,11 @@ export function NotesScreen() {
   const [form, setForm] = useState({ title: '', body: '' });
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Note | null>(null);
+  // Turning a private note into a workbook is a real decision — it moves
+  // something nobody else could read into something a class can — so it asks
+  // who it is for rather than guessing.
+  const [converting, setConverting] = useState<Note | null>(null);
+  const [audience, setAudience] = useState<Audience>(EVERYONE);
 
   const load = useCallback(async () => {
     if (!user) return [] as Note[];
@@ -92,6 +101,32 @@ export function NotesScreen() {
       else await noteService.createNote(form, user);
       setCreating(false);
       await reload();
+    } catch (err) {
+      toast.error(friendlyMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const convert = async () => {
+    if (!converting || !user) return;
+    if (!audienceIsUsable(audience)) {
+      toast.error(t('workbook.pickAudience'));
+      return;
+    }
+    setBusy(true);
+    try {
+      await workbookService.fromNote(
+        { id: converting.id, title: converting.title, body: converting.body },
+        audience,
+        user
+      );
+      setConverting(null);
+      setAudience(EVERYONE);
+      // Deliberately a draft, and said so. The note's words are now in a
+      // workbook, but nothing has reached a student until it is published —
+      // and the teacher still has a blank board to write on first.
+      toast.success(t('workbook.convertedToast'));
     } catch (err) {
       toast.error(friendlyMessage(err, t));
     } finally {
@@ -160,6 +195,21 @@ export function NotesScreen() {
               </Pressable>
 
               <View style={styles.cardActions}>
+                {/* Only staff: a student's notebook has nowhere to publish
+                    to, and offering the button would be a promise the rules
+                    would refuse to keep. */}
+                {isStaff ? (
+                  <Button
+                    label={t('notes.toWorkbook')}
+                    icon="book-outline"
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => {
+                      setAudience(EVERYONE);
+                      setConverting(note);
+                    }}
+                  />
+                ) : null}
                 <Button
                   label={t(note.pinned ? 'notes.unpin' : 'notes.pin')}
                   icon={note.pinned ? 'pin-outline' : 'pin'}
@@ -201,6 +251,17 @@ export function NotesScreen() {
           multiline
           containerStyle={{ marginBottom: 0 }}
         />
+      </FormSheet>
+
+      <FormSheet
+        visible={Boolean(converting)}
+        title={t('notes.toWorkbook')}
+        onClose={() => setConverting(null)}
+        onSubmit={convert}
+        submitting={busy}
+      >
+        <Text style={styles.convertHint}>{t('notes.toWorkbookHint')}</Text>
+        <AudiencePicker value={audience} onChange={setAudience} />
       </FormSheet>
 
       <ConfirmDialog
@@ -248,6 +309,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cardTime: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.sm },
+  convertHint: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
   cardActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',

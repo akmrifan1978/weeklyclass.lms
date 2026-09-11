@@ -282,7 +282,8 @@
     "more": "More",
     "contact": "Contact",
     "ratings": "Ratings",
-    "flyers": "Flyers"
+    "flyers": "Flyers",
+    "workbooks": "Workbooks"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -1385,7 +1386,9 @@
     "emptyHelp": "Somewhere to write things down during a lesson. Only you can read these — not your teacher, not an admin.",
     "pin": "Pin",
     "unpin": "Unpin",
-    "deleteConfirm": "Delete this note?"
+    "deleteConfirm": "Delete this note?",
+    "toWorkbook": "Make a workbook",
+    "toWorkbookHint": "This copies the note into a new workbook you can write on by hand and give to students. The note itself stays private and stays where it is."
   },
   "about": {
     "title": "About the Program",
@@ -1608,5 +1611,52 @@
     "summaryNobody": "Nobody is selected yet, so this would reach no one.",
     "summaryClasses": "Goes to {{names}}.",
     "summaryStudents": "Goes to {{names}}."
+  },
+  "workbook": {
+    "title": "Title",
+    "untitled": "Untitled workbook",
+    "new": "New workbook",
+    "search": "Search workbooks",
+    "empty": "No workbooks yet",
+    "emptyHelp": "Write on the board like a classroom whiteboard, then hand the page to your students.",
+    "studentEmpty": "Nothing yet",
+    "studentEmptyHelp": "Workbooks your teacher publishes will appear here.",
+    "pages": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "pageOf": "Page {{page}} of {{total}}",
+    "noPages": "This workbook has no pages yet.",
+    "addPage": "Add page",
+    "removePage": "Remove page",
+    "previous": "Previous",
+    "next": "Next",
+    "pen": "Pen",
+    "highlighter": "Highlighter",
+    "eraser": "Eraser",
+    "undo": "Undo",
+    "clearPage": "Clear page",
+    "clearPageConfirm": "Erase everything on this page? The other pages are not affected.",
+    "nib": "Nib size {{size}}",
+    "inkBlack": "Black ink",
+    "inkBlue": "Blue ink",
+    "inkRed": "Red ink",
+    "inkGreen": "Green ink",
+    "markYellow": "Yellow marker",
+    "markGreen": "Green marker",
+    "markBlue": "Blue marker",
+    "markPink": "Pink marker",
+    "typedNotes": "Typed notes for this page",
+    "typedNotesHint": "Optional. Useful for anything that should be searchable or read aloud.",
+    "description": "About this workbook",
+    "publish": "Publish",
+    "unpublish": "Take back to draft",
+    "publishedToast": "Published. Your students can see it now.",
+    "unpublishedToast": "Back to draft. Students can no longer see it.",
+    "convertedToast": "Saved as a draft workbook. Publish it when it is ready.",
+    "pickAudience": "Choose who this is for before publishing.",
+    "unsaved": "Unsaved changes",
+    "unsavedHelp": "Save this workbook before leaving?",
+    "discard": "Leave without saving",
+    "deleteConfirm": "Delete this workbook and all its pages?",
+    "pageTooBig": "Page {{page}} has too much on it to save. Move some of it to a new page."
   }
 }

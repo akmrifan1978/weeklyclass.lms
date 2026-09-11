@@ -930,6 +930,95 @@ service cloud.firestore {
     // Delete is soft, through an update, so the row survives a mistimed tap.
     // Hard delete is refused outright — a purge belongs to the owner's account
     // being removed, not to a stray call.
+    // =========================================================================
+    // Workbooks — the teaching board, written by staff and handed to students
+    // =========================================================================
+    //
+    // The opposite of a note in every way that matters. A note is private to
+    // whoever wrote it; a workbook exists to be given out, and carries an
+    // audience saying to whom.
+    //
+    // WHO MAY SEE ONE is decided here rather than by a screen choosing what to
+    // draw. `audienceKeys` holds the flattened audience — 'all', 'class:<id>'
+    // or 'user:<uid>' — so the check is a `hasAny` against the at most three
+    // keys that can match this reader, with no extra document reads. See
+    // src/types/audience.ts for why the shape is what it is.
+    function myAudienceKeys() {
+      return isActive()
+        ? ['all', 'user:' + request.auth.uid, 'class:' + string(myClassId())]
+        : ['all'];
+    }
+
+    function workbookIsMine() {
+      return isSignedIn() && resource.data.get('authorId', '') == request.auth.uid;
+    }
+
+    // A published workbook, addressed to this reader. A draft is nobody's but
+    // its author's and an admin's — half a lesson on thirty phones is not
+    // something a teacher can take back.
+    function workbookPublishedToMe() {
+      return isActive()
+        && resource.data.get('status', '') == 'published'
+        && resource.data.get('deleted', false) == false
+        && resource.data.get('audienceKeys', []).hasAny(myAudienceKeys());
+    }
+
+    match /workbooks/{workbookId} {
+      allow get: if isAdmin() || workbookIsMine() || workbookPublishedToMe();
+      // Per-document, so a student's query for published work passes and a
+      // request for somebody's drafts is refused.
+      allow list: if isAdmin() || workbookIsMine() || workbookPublishedToMe();
+
+      allow create: if can('CREATE_WORKBOOK')
+                    && request.resource.data.authorId == request.auth.uid
+                    // Draft on creation, always. Publishing is its own step and
+                    // its own permission.
+                    && request.resource.data.get('status', '') == 'draft'
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() <= 200;
+
+      // An author edits their own; an admin has full control over all of them.
+      // Publishing needs the extra permission, and the author cannot hand the
+      // workbook to somebody else by rewriting authorId.
+      allow update: if (
+                      isAdmin()
+                      || (
+                        workbookIsMine()
+                        && request.resource.data.authorId == request.auth.uid
+                        && (
+                          request.resource.data.get('status', '') != 'published'
+                          || can('PUBLISH_WORKBOOK')
+                        )
+                      )
+                    );
+
+      allow delete: if false;  // Soft-deleted through an update, like everything else.
+
+      // The pages inherit the workbook's audience, which is why every rule here
+      // asks the parent rather than repeating the check. A page carries no
+      // audience of its own precisely so the two can never disagree.
+      match /pages/{pageId} {
+        function parent() {
+          return get(/databases/$(database)/documents/workbooks/$(workbookId)).data;
+        }
+
+        allow read: if isAdmin()
+                    || (isSignedIn() && parent().get('authorId', '') == request.auth.uid)
+                    || (
+                      isActive()
+                      && parent().get('status', '') == 'published'
+                      && parent().get('audienceKeys', []).hasAny(myAudienceKeys())
+                    );
+
+        // A page is written only by the person whose workbook it is, or an
+        // admin. Hard delete is allowed here and nowhere else: a soft-deleted
+        // page still holds its place in the order, and a gap in a book somebody
+        // is reading page by page is worse than losing the page they removed.
+        allow write: if isAdmin()
+                     || (can('CREATE_WORKBOOK') && parent().get('authorId', '') == request.auth.uid);
+      }
+    }
+
     match /notes/{noteId} {
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
       // Per-document, so a query filtered to the caller's own uid passes and an

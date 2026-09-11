@@ -77,6 +77,8 @@ export const ADMIN_NAV: NavItem[] = [
   { labelKey: 'nav.auditLogs', route: '/(admin)/audit', icon: 'document-text-outline', permission: 'MANAGE_SETTINGS', group: 'system' },
   // No permission gate: a notebook belongs to the person, not to a role.
   { labelKey: 'nav.notes', route: '/(admin)/notes', icon: 'create-outline', group: 'system' },
+  // Workbooks ARE gated, because unlike a notebook they are handed out.
+  { labelKey: 'nav.workbooks', route: '/(admin)/workbooks', icon: 'book-outline', permission: 'CREATE_WORKBOOK', group: 'content' },
   { labelKey: 'nav.profile', route: '/(admin)/profile', icon: 'person-outline', group: 'system' },
 ];
 

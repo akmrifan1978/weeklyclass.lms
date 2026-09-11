@@ -210,6 +210,16 @@ export default function TeacherHome() {
               tint={brand.slate}
               onPress={() => router.push('/(teacher)/notes')}
             />
+            {/* The teaching board. Gated, unlike the notebook beside it: a
+                workbook is written to be given to a class. */}
+            {can('CREATE_WORKBOOK') ? (
+              <QuickAccessTile
+                icon="book-outline"
+                label={t('nav.workbooks')}
+                tint={brand.navy}
+                onPress={() => router.push('/(teacher)/workbooks')}
+              />
+            ) : null}
             {visibleTiles.map((tile) => (
               <QuickAccessTile
                 key={tile.route}

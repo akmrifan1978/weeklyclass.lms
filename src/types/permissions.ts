@@ -40,6 +40,12 @@ export const PERMISSIONS = [
   // Attendance
   'VIEW_ATTENDANCE',
   'EDIT_ATTENDANCE',
+  // Workbooks — the teaching board, handed out to students
+  'CREATE_WORKBOOK',
+  'PUBLISH_WORKBOOK',
+  // Questions asked and answered in the open
+  'ANSWER_QUESTIONS',
+  'PUBLISH_QUESTIONS',
   // Quizzes
   'CREATE_QUIZ',
   'EDIT_QUIZ',
@@ -72,6 +78,8 @@ export const PERMISSION_GROUPS: { group: string; permissions: Permission[] }[] =
   { group: 'Videos', permissions: ['UPLOAD_VIDEO', 'DELETE_VIDEO'] },
   { group: 'Study Materials', permissions: ['UPLOAD_MATERIAL', 'DELETE_MATERIAL'] },
   { group: 'Attendance', permissions: ['VIEW_ATTENDANCE', 'EDIT_ATTENDANCE'] },
+  { group: 'Workbooks', permissions: ['CREATE_WORKBOOK', 'PUBLISH_WORKBOOK'] },
+  { group: 'Questions & Answers', permissions: ['ANSWER_QUESTIONS', 'PUBLISH_QUESTIONS'] },
   { group: 'Quizzes', permissions: ['CREATE_QUIZ', 'EDIT_QUIZ', 'DELETE_QUIZ'] },
   { group: 'Results', permissions: ['VIEW_RESULTS', 'EDIT_RESULTS'] },
   {
@@ -93,6 +101,12 @@ export const DEFAULT_TEACHER_PERMISSIONS: PermissionMap = {
   EDIT_LESSONS: true,
   VIEW_ATTENDANCE: true,
   EDIT_ATTENDANCE: true,
+  // A teacher can write on the board and answer what is asked of them from
+  // the day they are added. Both are the ordinary work of teaching, and
+  // withholding them by default means every new teacher starts by asking.
+  CREATE_WORKBOOK: true,
+  PUBLISH_WORKBOOK: true,
+  ANSWER_QUESTIONS: true,
   VIEW_RESULTS: true,
   UPLOAD_MATERIAL: true,
 };
