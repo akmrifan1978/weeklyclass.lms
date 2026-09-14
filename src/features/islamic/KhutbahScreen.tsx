@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +15,7 @@ import { matchesSearch } from '@/utils/format';
 import * as khutbahs from '@/services/khutbahService';
 import { VideoPlayer } from '@/components/shared/VideoPlayer';
 import { MediaField } from './MediaField';
+import { ImageField } from '@/components/shared/ImageField';
 import type { ContentStatus, KhutbahEntry, KhutbahKind, LanguageCode } from '@/types';
 import {
   AppHeader,
@@ -110,6 +111,7 @@ export function KhutbahScreen() {
           audioUrl: form.audioUrl.trim() || null,
           mediaUrl: form.mediaUrl || null,
           mediaType: form.mediaType,
+          imageUrl: form.imageUrl || null,
           status: form.status,
           // Only what was actually written. An empty box is not a translation
           // and must not be stored as one, or the reader is offered a language
@@ -220,6 +222,15 @@ export function KhutbahScreen() {
                   ) : null}
                 </View>
 
+                {entry.imageUrl ? (
+                  <Image
+                    source={{ uri: entry.imageUrl }}
+                    style={styles.headThumb}
+                    resizeMode="cover"
+                    accessibilityIgnoresInvertColors
+                  />
+                ) : null}
+
                 <Ionicons
                   name={expanded ? 'chevron-up' : 'chevron-down'}
                   size={16}
@@ -275,6 +286,15 @@ export function KhutbahScreen() {
                   ) : (
                     <Text style={styles.noTranslation}>{t('khutbah.noTranslation')}</Text>
                   )}
+
+                  {entry.imageUrl ? (
+                    <Image
+                      source={{ uri: entry.imageUrl }}
+                      style={styles.detailImage}
+                      resizeMode="cover"
+                      accessibilityLabel={entry.title}
+                    />
+                  ) : null}
 
                   {/* An uploaded file plays in place; a pasted link opens
                       wherever it lives. Both can be present, and both are
@@ -355,6 +375,18 @@ export function KhutbahScreen() {
           onChangeText={(v) => setForm((f) => ({ ...f, venue: v }))}
           icon="location-outline"
         />
+
+        {/* One image per khutbah or bayan. A single field, so choosing another
+            replaces it rather than adding a second. */}
+        <ImageField
+          label={t('khutbah.image')}
+          hint={t('khutbah.imageHint')}
+          value={form.imageUrl}
+          onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+          kind="thumbnail"
+          ownerId={user?.uid ?? 'shared'}
+          aspectRatio={16 / 9}
+        />
         <Select<LanguageCode>
           label={t('khutbah.deliveredIn')}
           value={form.deliveredIn}
@@ -421,6 +453,7 @@ interface FormState {
   audioUrl: string;
   mediaUrl: string;
   mediaType: 'audio' | 'video' | null;
+  imageUrl: string;
   status: ContentStatus;
   translations: Partial<Record<LanguageCode, string>>;
 }
@@ -438,6 +471,7 @@ function emptyForm(): FormState {
     audioUrl: '',
     mediaUrl: '',
     mediaType: null,
+    imageUrl: '',
     status: 'published',
     translations: {},
   };
@@ -454,6 +488,7 @@ function toForm(entry: KhutbahEntry): FormState {
     audioUrl: entry.audioUrl ?? '',
     mediaUrl: entry.mediaUrl ?? '',
     mediaType: entry.mediaType ?? null,
+    imageUrl: entry.imageUrl ?? '',
     status: entry.status,
     translations: { ...(entry.translations ?? {}) },
   };
@@ -461,6 +496,19 @@ function toForm(entry: KhutbahEntry): FormState {
 
 const styles = StyleSheet.create({
   card: { marginBottom: spacing.md, padding: 0, overflow: 'hidden' },
+  headThumb: {
+    width: 56,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceMuted,
+  },
+  detailImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    marginBottom: spacing.md,
+  },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   kindDot: {
     width: 32,

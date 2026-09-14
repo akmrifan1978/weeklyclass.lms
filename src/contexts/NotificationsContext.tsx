@@ -56,8 +56,9 @@ const NotificationsContext = createContext<NotificationsValue>({
 const PAGE_SIZE = 40;
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const uid = user?.uid;
+  const { user, isGuest } = useAuth();
+  // A guest has no inbox. Watching one would be refused, and retried forever.
+  const uid = isGuest ? undefined : user?.uid;
 
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);

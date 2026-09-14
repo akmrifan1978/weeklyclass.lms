@@ -110,6 +110,59 @@ export function getLesson(id: string): Promise<Lesson | null> {
   return getById<Lesson>(COLLECTIONS.lessons, id);
 }
 
+/**
+ * Every published lesson, from every class — what a guest is shown.
+ *
+ * A guest belongs to no class, so "my class's lessons" would be nothing. The
+ * rules allow this read without an account only because the query asks for
+ * published lessons and nothing else.
+ */
+export function watchPublishedLessons(
+  onNext: (lessons: Lesson[]) => void,
+  onError?: (error: unknown) => void,
+  pageSize = 60
+): Unsubscribe {
+  return watchList<Lesson>(
+    COLLECTIONS.lessons,
+    {
+      filters: [['status', '==', 'published']],
+      orderByField: 'weekNumber',
+      direction: 'desc',
+      pageSize,
+    },
+    onNext,
+    onError
+  );
+}
+
+export function listPublishedLessons(pageSize = 20): Promise<Lesson[]> {
+  return listAll<Lesson>(COLLECTIONS.lessons, {
+    filters: [['status', '==', 'published']],
+    orderByField: 'weekNumber',
+    direction: 'desc',
+    pageSize,
+  });
+}
+
+/** Every published material, from every class — what a guest is shown. */
+export function watchPublishedMaterials(
+  onNext: (materials: Material[]) => void,
+  onError?: (error: unknown) => void,
+  pageSize = 60
+): Unsubscribe {
+  return watchList<Material>(
+    COLLECTIONS.materials,
+    {
+      filters: [['status', '==', 'published']],
+      orderByField: 'createdAt',
+      direction: 'desc',
+      pageSize,
+    },
+    onNext,
+    onError
+  );
+}
+
 export async function saveLesson(
   data: Partial<Lesson> & { title: string; classId: string },
   actor: AppUser,

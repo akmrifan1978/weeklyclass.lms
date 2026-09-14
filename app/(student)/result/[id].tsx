@@ -31,6 +31,7 @@ import {
 import type { QuizAttempt } from '@/types';
 import { getById } from '@/services/firestore';
 import { COLLECTIONS } from '@/constants/app';
+import { GuestGate } from '@/components/shared/GuestGate';
 
 /**
  * Result screen with answer review.
@@ -38,7 +39,7 @@ import { COLLECTIONS } from '@/constants/app';
  * The answer key is readable here because the student has a submitted attempt —
  * that is exactly the condition the security rules check.
  */
-export default function ResultDetail() {
+function ResultDetailInner() {
   const { t } = useTranslation();
   const { language } = useLanguage();
 
@@ -385,3 +386,15 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 });
+
+/**
+ * A guest sees why this needs an account, and a way to get one, instead of
+ * a screen whose data the database would refuse them.
+ */
+export default function ResultDetail() {
+  return (
+    <GuestGate messageKey="guestMode.assignments" titleKey="quiz.title">
+      <ResultDetailInner />
+    </GuestGate>
+  );
+}

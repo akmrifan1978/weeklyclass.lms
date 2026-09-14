@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { StatTile } from '@/components/shared/StatTile';
+import { GuestSignInCard } from '@/components/shared/GuestGate';
 import * as progressService from '@/services/progressService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -23,7 +24,11 @@ import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { toDate } from '@/utils/date';
 import { nextEventFor } from '@/services/calendarService';
 import { getFeaturedVideo, getLiveVideo, listVideosForStudent } from '@/services/videoService';
-import { getLatestArticle, lessonsForStudent } from '@/services/contentService';
+import {
+  getLatestArticle,
+  lessonsForStudent,
+  listPublishedLessons,
+} from '@/services/contentService';
 import { getClass } from '@/services/orgService';
 import { announcementsFor } from '@/services/notificationService';
 import { scheduleEventReminders } from '@/services/pushService';
@@ -64,7 +69,7 @@ import {
 export default function StudentHome() {
   const { t } = useTranslation();
   const greeting = useGreeting();
-  const { user } = useAuth();
+  const { user, isGuest, can: canUseTool } = useAuth();
   const { language } = useLanguage();
   // This dashboard remembers its own language; see useLanguageScope.
   const { language: dashboardLanguage, setLanguage: setDashboardLanguage } =
@@ -104,9 +109,11 @@ export default function StudentHome() {
       getLiveVideo().catch(() => null),
       getFeaturedVideo().catch(() => null),
       getLatestArticle().catch(() => null),
-      user.classId
-        ? lessonsForStudent(user.classId, 4).then((p) => p.items).catch(() => [])
-        : Promise.resolve([]),
+      isGuest
+        ? listPublishedLessons(4).catch(() => [])
+        : user.classId
+          ? lessonsForStudent(user.classId, 4).then((p) => p.items).catch(() => [])
+          : Promise.resolve([]),
       listVideosForStudent(user.classId, 'recording', 3).catch(() => []),
       announcementsFor(user, 3).catch(() => []),
       // The group this student is in, for the names of whoever teaches it.
@@ -125,14 +132,19 @@ export default function StudentHome() {
       announcements,
       classGroup,
     };
-  }, [user]);
+  }, [user, isGuest]);
 
-  const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, user?.classId]);
+  const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, user?.classId, isGuest]);
 
   // Built from the same list the Islamic grid used, filtered the same way,
   // so switching a section off in settings removes it from both at once.
   const islamicTiles = useVisibleIslamicTiles();
-  const navSections = useMemo(() => studentNavSections(islamicTiles), [islamicTiles]);
+  // The tools an admin has granted this student appear in the menu. A guest,
+  // and any student granted nothing, sees no tools section at all.
+  const navSections = useMemo(
+    () => studentNavSections(islamicTiles, canUseTool),
+    [islamicTiles, canUseTool]
+  );
 
   // Schedules on-device reminders for the next few classes.
   useEffect(() => {
@@ -228,7 +240,14 @@ export default function StudentHome() {
         </View>
       </View>
 
-      {!user?.classId ? (
+      {/* A guest is told they are browsing as a guest, with the way to get an
+          account. "Not assigned to a class, contact your administrator" is
+          true of a student and wrong for somebody who has no account at all. */}
+      {isGuest ? (
+        <View style={{ marginBottom: spacing.md }}>
+          <GuestSignInCard message={t('guestMode.profile')} />
+        </View>
+      ) : !user?.classId ? (
         <Card style={styles.noticeCard}>
           <View style={styles.noticeRow}>
             <Ionicons name="information-circle-outline" size={20} color={colors.warning} />
@@ -240,7 +259,9 @@ export default function StudentHome() {
       {/* Their own figures, on the screen they land on. These were computed
           for the progress screen already and never shown here, which is where
           somebody actually wonders how they are doing. */}
-      {data?.progress ? (
+      {/* A guest has no attendance, submissions or class of their own, so
+          these would only ever read zero. */}
+      {data?.progress && !isGuest ? (
         <View style={styles.statRow}>
           <StatTile
             icon="calendar-outline"

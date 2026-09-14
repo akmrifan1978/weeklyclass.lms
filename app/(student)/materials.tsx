@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { spacing } from '@/constants/theme';
 import { useLive } from '@/hooks/useLive';
 import { matchesSearch } from '@/utils/format';
-import { watchMaterialsForStudent } from '@/services/contentService';
+import { watchMaterialsForStudent, watchPublishedMaterials } from '@/services/contentService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import { MaterialRow } from '@/components/shared/ContentCards';
 import {
@@ -23,7 +23,7 @@ type Filter = MaterialType | 'all';
 
 export default function StudentMaterials() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [term, setTerm] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
 
@@ -31,11 +31,16 @@ export default function StudentMaterials() {
   // pulling to refresh — which is the whole point of putting it there.
   const subscribe = useCallback(
     (onNext: (items: Material[]) => void, onError: (error: unknown) => void) =>
-      watchMaterialsForStudent(user?.classId, onNext, onError, 60),
-    [user?.classId]
+      isGuest
+        ? watchPublishedMaterials(onNext, onError, 60)
+        : watchMaterialsForStudent(user?.classId, onNext, onError, 60),
+    [user?.classId, isGuest]
   );
 
-  const { data, loading, error, refreshing, refresh, reload } = useLive(subscribe, [user?.classId]);
+  const { data, loading, error, refreshing, refresh, reload } = useLive(subscribe, [
+    user?.classId,
+    isGuest,
+  ]);
 
   const visible = useMemo(() => {
     const items = data ?? [];

@@ -1173,6 +1173,13 @@ export interface KhutbahEntry extends BaseDoc {
   audioUrl?: string | null;
   mediaUrl?: string | null;
   mediaType?: 'audio' | 'video' | null;
+  /**
+   * One picture for this khutbah or bayan — a poster, the speaker, the venue.
+   *
+   * A single field, so one image by construction: choosing another replaces it
+   * rather than adding a second.
+   */
+  imageUrl?: string | null;
   status: ContentStatus;
 }
 

@@ -20,8 +20,9 @@ import {
   StatCard,
 } from '@/components/ui';
 import type { Cursor } from '@/services/firestore';
+import { GuestGate } from '@/components/shared/GuestGate';
 
-export default function StudentResults() {
+function StudentResultsInner() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { language } = useLanguage();
@@ -86,5 +87,17 @@ export default function StudentResults() {
         </AsyncBoundary>
       </Screen>
     </View>
+  );
+}
+
+/**
+ * A guest sees why this needs an account, and a way to get one, instead of
+ * a screen whose data the database would refuse them.
+ */
+export default function StudentResults() {
+  return (
+    <GuestGate messageKey="guestMode.personal" titleKey="nav.results">
+      <StudentResultsInner />
+    </GuestGate>
   );
 }

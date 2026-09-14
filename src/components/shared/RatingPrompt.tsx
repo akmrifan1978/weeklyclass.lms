@@ -41,7 +41,7 @@ export function RatingPrompt({
   question?: string;
 }) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const toast = useToast();
 
   const [checked, setChecked] = useState(false);
@@ -53,7 +53,7 @@ export function RatingPrompt({
 
   useEffect(() => {
     let live = true;
-    if (!user) return undefined;
+    if (!user || isGuest) return undefined;
 
     myRating(target, targetId, user.uid)
       .then((existing) => {
@@ -90,7 +90,7 @@ export function RatingPrompt({
   }, [user, stars, comment, target, targetId, targetTitle, toast, t]);
 
   // Nobody to attribute it to, or we do not yet know whether they answered.
-  if (!user || !checked) return null;
+  if (!user || isGuest || !checked) return null;
 
   if (saved !== null && !editing) {
     return (

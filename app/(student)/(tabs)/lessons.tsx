@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { spacing } from '@/constants/theme';
 import { useLive } from '@/hooks/useLive';
-import { watchLessonsForStudent } from '@/services/contentService';
+import { watchLessonsForStudent, watchPublishedLessons } from '@/services/contentService';
 import type { Lesson } from '@/types';
 import { LessonRow } from '@/components/shared/ContentCards';
 import {
@@ -19,7 +19,7 @@ import {
 
 export default function StudentLessons() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const router = useRouter();
 
   /*
@@ -33,11 +33,16 @@ export default function StudentLessons() {
    */
   const subscribe = useCallback(
     (onNext: (items: Lesson[]) => void, onError: (error: unknown) => void) =>
-      watchLessonsForStudent(user?.classId ?? '', onNext, onError, 60),
-    [user?.classId]
+      // A guest belongs to no class, so they are shown every published lesson.
+      isGuest
+        ? watchPublishedLessons(onNext, onError, 60)
+        : watchLessonsForStudent(user?.classId ?? '', onNext, onError, 60),
+    [user?.classId, isGuest]
   );
 
-  const list = useLive(subscribe, [user?.classId], { enabled: Boolean(user?.classId) });
+  const list = useLive(subscribe, [user?.classId, isGuest], {
+    enabled: Boolean(user?.classId) || isGuest,
+  });
   const lessons = list.data ?? [];
 
   return (
@@ -53,7 +58,8 @@ export default function StudentLessons() {
           emptyProps={{
             icon: 'book-outline',
             title: t('lesson.noLessons'),
-            message: user?.classId ? t('empty.checkBackSoon') : t('empty.notAssignedClass'),
+            message:
+              user?.classId || isGuest ? t('empty.checkBackSoon') : t('empty.notAssignedClass'),
           }}
         >
           <View style={{ gap: spacing.md }}>
