@@ -17,6 +17,8 @@ import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { useAsync } from '@/hooks/useAsync';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import * as quranService from '@/services/quranService';
+import { loadBookmark, saveBookmark } from '@/services/quranBookmarkService';
+import { useAuth } from '@/contexts/AuthContext';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { ScriptureText } from './ScriptureText';
 import { MushafPage, arabicNumber, mushaf } from './MushafPage';
@@ -39,7 +41,8 @@ import { AppHeader, Card, ErrorState, Screen, SkeletonList } from '@/components/
 
 const SIZE_KEY = '@weeklyclass/quran/textSize';
 /** Where the reader stopped. One bookmark, because a reader has one place. */
-export const BOOKMARK_KEY = '@weeklyclass/quran/bookmark';
+// Kept with the account now, not on the device alone. See quranBookmarkService.
+export { BOOKMARK_KEY } from '@/services/quranBookmarkService';
 const MIN_SIZE = 20;
 const MAX_SIZE = 46;
 const STEP = 3;
@@ -68,6 +71,7 @@ export function SurahScreen({
 }) {
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguageScope('quran');
+  const { user } = useAuth();
 
   const load = useCallback(
     () => quranService.getSurah(number, language),
@@ -121,32 +125,24 @@ export function SurahScreen({
 
   // Whether this surah is the one bookmarked, so the button shows the truth.
   useEffect(() => {
-    void AsyncStorage.getItem(BOOKMARK_KEY)
-      .then((raw) => {
-        const saved = raw ? (JSON.parse(raw) as { surah?: number }) : null;
-        setBookmarked(saved?.surah === number);
-      })
-      .catch(() => undefined);
+    void loadBookmark().then((saved) => setBookmarked(saved?.surah === number));
   }, [number]);
 
   const toggleBookmark = useCallback(() => {
     if (!data) return;
     if (bookmarked) {
       setBookmarked(false);
-      void AsyncStorage.removeItem(BOOKMARK_KEY).catch(() => undefined);
+      void saveBookmark(user, null);
       return;
     }
     setBookmarked(true);
-    void AsyncStorage.setItem(
-      BOOKMARK_KEY,
-      JSON.stringify({
-        surah: data.number,
-        name: data.englishName,
-        arabicName: data.name,
-        at: Date.now(),
-      })
-    ).catch(() => undefined);
-  }, [data, bookmarked]);
+    void saveBookmark(user, {
+      surah: data.number,
+      name: data.englishName,
+      arabicName: data.name,
+      at: Date.now(),
+    });
+  }, [data, bookmarked, user]);
 
   // Reading size is a property of the reader's eyes, not of the surah, so it is
   // remembered rather than reset each time one is opened.

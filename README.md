@@ -148,6 +148,7 @@ appearing to work and quietly failing.
 | [docs/SECURITY.md](docs/SECURITY.md) | The permission model, what the rules guarantee, and the known gaps |
 | [docs/I18N.md](docs/I18N.md) | How translation works and how to add a fifth language |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Building for Android, iOS and web; Vercel and Firebase Hosting |
+| [docs/NEW-COMPUTER.md](docs/NEW-COMPUTER.md) | Moving to a new computer: what runs without it, and the two files to keep a private copy of |
 | [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) | What sends today, and the Cloud Function to add when you upgrade |
 
 ---
