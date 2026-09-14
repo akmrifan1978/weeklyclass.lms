@@ -30,6 +30,7 @@ import type {
   Result,
   VideoItem,
 } from '@/types';
+import { LogoImage } from '@/components/shared/AppLogo';
 
 /** The prominent "next event" card at the top of the student dashboard. */
 export function UpcomingEventCard({
@@ -143,10 +144,10 @@ export function FeaturedVideoCard({
       <View style={styles.cardBody}>
         <View style={styles.titleWithLogo}>
           {video.logoUrl ? (
-            <Image
-              source={{ uri: video.logoUrl }}
+            <LogoImage
+              uri={video.logoUrl}
+              size={40}
               style={styles.logo}
-              resizeMode="contain"
               accessibilityLabel={t('video.logo')}
             />
           ) : null}
@@ -224,7 +225,7 @@ export function VideoRow({
           ) : null}
         </View>
         {video.logoUrl ? (
-          <Image source={{ uri: video.logoUrl }} style={styles.rowLogo} resizeMode="contain" />
+          <LogoImage uri={video.logoUrl} size={28} style={styles.rowLogo} />
         ) : null}
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </View>
@@ -404,7 +405,7 @@ export function EventRow({
         <View style={styles.rowBody}>
           <View style={styles.titleWithLogo}>
             {event.logoUrl ? (
-              <Image source={{ uri: event.logoUrl }} style={styles.rowLogo} resizeMode="contain" />
+              <LogoImage uri={event.logoUrl} size={28} style={styles.rowLogo} />
             ) : null}
             <Text style={[styles.rowTitle, styles.titleFlex]} numberOfLines={2}>
               {event.title}

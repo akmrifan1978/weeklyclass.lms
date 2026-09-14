@@ -27,6 +27,7 @@ import {
   SkeletonList,
   Spacer,
 } from '@/components/ui';
+import { LogoImage } from '@/components/shared/AppLogo';
 
 export default function LessonDetail() {
   const { t } = useTranslation();
@@ -80,10 +81,10 @@ export default function LessonDetail() {
                         top of a control somebody is reaching for. */}
                     {logoUrl ? (
                       <View pointerEvents="none" style={styles.logoBadge}>
-                        <Image
-                          source={{ uri: logoUrl }}
+                        <LogoImage
+                          uri={logoUrl}
+                          size={40}
                           style={styles.logoImage}
-                          resizeMode="contain"
                           accessibilityLabel={t('video.logo')}
                         />
                       </View>
@@ -97,10 +98,10 @@ export default function LessonDetail() {
                 {/* No video to mark, so the logo sits in the corner of the
                     content itself instead. */}
                 {!lesson.videoUrl && logoUrl ? (
-                  <Image
-                    source={{ uri: logoUrl }}
+                  <LogoImage
+                    uri={logoUrl}
+                    size={36}
                     style={styles.cardLogo}
-                    resizeMode="contain"
                     accessibilityLabel={t('video.logo')}
                   />
                 ) : null}

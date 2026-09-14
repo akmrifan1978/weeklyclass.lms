@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { brand, colors, fontSize, fontWeight, layout } from '@/constants/theme';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { useResponsive } from '@/hooks/useResponsive';
 
 export default function StudentTabsLayout() {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ export default function StudentTabsLayout() {
    * went on being counted. Now it changes when the data does.
    */
   const { unread } = useNotifications();
+  const { isDesktop } = useResponsive();
 
   return (
     <Tabs
@@ -25,13 +27,25 @@ export default function StudentTabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.divider,
-          height: Platform.OS === 'ios' ? 84 : layout.tabBarHeight,
-          paddingTop: 6,
-          paddingBottom: Platform.OS === 'ios' ? 26 : 8,
-        },
+        // A phone's tab bar belongs at the bottom, under the thumb. On a
+        // desktop it is a strip across a wide monitor, far from everything, so
+        // there it becomes a rail down the left-hand side instead.
+        tabBarPosition: isDesktop ? 'left' : 'bottom',
+        tabBarVariant: isDesktop ? 'material' : 'uikit',
+        tabBarStyle: isDesktop
+          ? {
+              backgroundColor: colors.surface,
+              borderRightColor: colors.divider,
+              minWidth: 200,
+              paddingTop: 12,
+            }
+          : {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.divider,
+              height: Platform.OS === 'ios' ? 84 : layout.tabBarHeight,
+              paddingTop: 6,
+              paddingBottom: Platform.OS === 'ios' ? 26 : 8,
+            },
         tabBarLabelStyle: { fontSize: fontSize.xs, fontWeight: fontWeight.medium },
         tabBarBadgeStyle: { backgroundColor: brand.red, fontSize: 10 },
       }}

@@ -7,6 +7,7 @@ import { APP_NAME } from '@/constants/app';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { tone } from './tone';
 import type { AppSettings } from '@/types';
+import { logoImageStyle } from '@/utils/branding';
 
 /**
  * The logo lockup: a mark, the name in two tones, and a line under it.
@@ -64,7 +65,7 @@ export function BrandMark({
 
   return (
     <View style={styles.row}>
-      <View style={box}>
+      <View style={[box, logoImageStyle(settings?.logoShape, hero ? 56 : 38)]}>
         {settings?.logoUrl ? (
           <Image
             source={{ uri: settings.logoUrl }}

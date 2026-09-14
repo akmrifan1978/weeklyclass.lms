@@ -1150,7 +1150,9 @@ service cloud.firestore {
                       && request.time < resource.data.createdAt + duration.value(11, 'm')
                       && onlyChanged([
                            'question', 'audioUrl', 'audioSeconds', 'updatedAt',
-                           'deleted', 'deletedAt', 'deletedBy'
+                           'deleted', 'deletedAt', 'deletedBy',
+                           // Which Mowlavi it is for, which the asker chose.
+                           'scholarId', 'scholarName'
                          ])
                     );
       allow delete: if isAdmin();

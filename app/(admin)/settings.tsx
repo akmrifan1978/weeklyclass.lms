@@ -14,6 +14,10 @@ import { friendlyMessage } from '@/utils/errors';
 import { getSettings, updateSettings } from '@/services/settingsService';
 import { PermissionGuard } from '@/components/shared/RoleGuard';
 import { ImageField } from '@/components/shared/ImageField';
+import { BannerManager } from '@/features/settings/BannerManager';
+import { LogoShapePicker } from '@/features/settings/LogoShapePicker';
+import { ScholarListEditor } from '@/features/settings/ScholarListEditor';
+import { scholarsFrom } from '@/utils/branding';
 import { hijriIsApproximate } from '@/utils/hijri';
 import type { AppSettings, CalendarSystem, IslamicFeature, LanguageCode } from '@/types';
 import {
@@ -152,6 +156,11 @@ function SettingsScreen() {
             aspectRatio={1}
             hint={t('settings.logoHint')}
           />
+          <LogoShapePicker
+            value={form.logoShape}
+            logoUrl={form.logoUrl ?? null}
+            onChange={(shape) => set('logoShape', shape)}
+          />
           <ImageField
             label={t('settings.banner')}
             value={form.bannerUrl ?? ''}
@@ -170,6 +179,16 @@ function SettingsScreen() {
             value={form.faviconUrl ?? ''}
             onChange={(url) => set('faviconUrl', url || null)}
             aspectRatio={1}
+          />
+        </Card>
+
+        <Spacer />
+
+        <SectionHeader title={t('settings.appBanner')} icon="albums-outline" />
+        <Card>
+          <BannerManager
+            items={form.bannerItems ?? []}
+            onChange={(items) => set('bannerItems', items)}
           />
         </Card>
 
@@ -367,13 +386,13 @@ function SettingsScreen() {
 
         <SectionHeader title={t('settings.liveQa')} icon="chatbubbles-outline" />
         <Card>
-          <TextField
-            label={t('settings.scholarName')}
-            value={form.qaScholarName ?? ''}
-            onChangeText={(v) => set('qaScholarName', v)}
-            icon="person-outline"
-            hint={t('settings.scholarNameHint')}
-            containerStyle={{ marginBottom: 0 }}
+          <ScholarListEditor
+            scholars={scholarsFrom(form)}
+            onChange={(next) => {
+              set('qaScholars', next);
+              // Kept in step for anything still reading the single name.
+              set('qaScholarName', next.length === 1 ? next[0].name : '');
+            }}
           />
         </Card>
 

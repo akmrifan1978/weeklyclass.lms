@@ -42,7 +42,7 @@ jobs:
       # React Native and the rest of a mobile toolchain to send an email, and
       # would turn a twenty second job into a three minute one.
       - name: Install what the service needs
-        run: npm install --no-save --no-audit --no-fund firebase-admin web-push nodemailer
+        run: npm install --no-save --no-audit --no-fund firebase-admin web-push nodemailer google-auth-library
 
       # Named, not guessed. Without this the script stops at the first thing it
       # cannot find and reports only that, which is unhelpful when the real
@@ -135,6 +135,15 @@ jobs:
           tail -25 /tmp/deliver.log >> "$GITHUB_STEP_SUMMARY"
           printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
           exit $status
+
+      # The installed app's icon comes from the web manifest, which only a new
+      # release can change. When the logo, its shape or the app name has changed
+      # since last time, this releases a copy of the live site with only the
+      # manifest replaced. It never fails the job: a stale icon is not worth a
+      # red run, and it must not stand in the way of notifications.
+      - name: Keep the installed app icon in step with the logo
+        if: always()
+        run: node scripts/sync-branding.js
 
       # Whatever happened, the key does not outlive the job. Belt and braces:
       # the runner is thrown away anyway.
