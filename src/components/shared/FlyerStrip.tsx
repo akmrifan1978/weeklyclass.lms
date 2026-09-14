@@ -153,7 +153,15 @@ function FlyerCard({
 
   return (
     <View style={[styles.card, width ? { width } : styles.cardFull]}>
-      <Pressable onPress={open} accessibilityRole="link" accessibilityLabel={flyer.title}>
+      {/* Read aloud as what it says, never as its title. The title is an
+          admin's filing name — often just the uploaded file's name — and a
+          screen reader announcing "595d9717-d4f9…" is the same leak as
+          printing it. */}
+      <Pressable
+        onPress={open}
+        accessibilityRole="link"
+        accessibilityLabel={flyer.description?.trim() || openLabel}
+      >
         {flyer.fileType === 'pdf' ? (
           // A PDF cannot be shown in place, so it is offered rather than
           // pretended at. A broken image frame would be worse than an honest
@@ -166,16 +174,22 @@ function FlyerCard({
           <Image source={{ uri: flyer.fileUrl }} style={styles.image} resizeMode="cover" />
         )}
 
-        <View style={styles.body}>
-          <Text style={styles.title} numberOfLines={2}>
-            {flyer.title}
-          </Text>
-          {flyer.description ? (
+        {/*
+         * The title is NOT shown to the people looking at the flyer.
+         *
+         * It is the admin's name for it — how they find it again in the flyer
+         * list — and in practice it is often the name of the uploaded file,
+         * which put strings like "595d9717-d4f9-4c86…" under a poster on every
+         * dashboard. The artwork already says what it is advertising. The title
+         * stays on the record and in the admin screen, where it is useful.
+         */}
+        {flyer.description ? (
+          <View style={styles.body}>
             <Text style={styles.description} numberOfLines={2}>
               {flyer.description}
             </Text>
-          ) : null}
-        </View>
+          </View>
+        ) : null}
       </Pressable>
 
       {/* Its own control, outside the pressable area, or closing it would open
@@ -220,7 +234,6 @@ const styles = StyleSheet.create({
   },
   pdfText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: brand.orangeDark },
   body: { padding: spacing.md, gap: 3 },
-  title: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: brand.navyDeep },
   description: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
   close: {
     position: 'absolute',

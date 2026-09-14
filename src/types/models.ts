@@ -277,6 +277,16 @@ export interface Lesson extends BaseDoc {
   audioUrl?: string | null;
   pdfUrl?: string | null;
   imageUrl?: string | null;
+  /**
+   * Who gave the lesson, and where, in words.
+   *
+   * Free text rather than a link to a user record. The speaker is often a
+   * visiting scholar with no account here, and a lesson recorded at another
+   * masjid still needs the masjid named — neither fits a dropdown of this
+   * centre's own teachers.
+   */
+  speaker?: string | null;
+  venue?: string | null;
   language: LanguageCode;
   /** Minutes. */
   duration?: number;

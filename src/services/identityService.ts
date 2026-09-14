@@ -78,6 +78,31 @@ export function authEmailForMobile(mobile: string): string {
   return `${normaliseMobile(mobile)}@${AUTH_EMAIL_DOMAIN}`;
 }
 
+/**
+ * ANOTHER sign-in address for the same phone number.
+ *
+ * Needed because an abandoned registration leaves a Firebase Auth account
+ * behind that owns an address and nothing else — no profile, no index row,
+ * nothing anybody can sign in to or recover. The number itself is still free,
+ * because claiming it is a later step that never ran.
+ *
+ * Without this, that dead account held the number hostage: the only way past
+ * it was to guess the password of an attempt that failed, and somebody who
+ * could not was refused forever through no fault of their own.
+ *
+ * The number stays unique regardless. Uniqueness is enforced by `mobiles/{key}`
+ * and the transaction that claims it, never by the shape of the sign-in
+ * address — which is exactly why a second address for one number is safe: only
+ * one account can ever hold the row.
+ *
+ * Random rather than counted, so it needs no read to work out which suffixes
+ * are already taken.
+ */
+export function altAuthEmailForMobile(mobile: string): string {
+  const token = Math.random().toString(36).slice(2, 8);
+  return `${normaliseMobile(mobile)}.${token}@${AUTH_EMAIL_DOMAIN}`;
+}
+
 /** True when this is one of the synthetic addresses above, not a real inbox. */
 export function isSyntheticAuthEmail(email: string | null | undefined): boolean {
   return Boolean(email && email.toLowerCase().endsWith(`@${AUTH_EMAIL_DOMAIN}`));
@@ -293,7 +318,23 @@ export async function nextSequentialId(prefix: 'STU' | 'TCH'): Promise<string> {
     const value = current + 1;
     tx.set(ref, { value, prefix, year, updatedAt: serverTimestamp() }, { merge: true });
     return value;
-   })
+   },
+   /*
+    * More attempts than the default five.
+    *
+    * Every registration in a year increments the SAME document, so this is the
+    * one place in the app where simultaneous users genuinely collide. Firestore
+    * resolves a collision by aborting one transaction and retrying it with
+    * backoff; five attempts was measured running out when thirty people
+    * registered in the same moment, which is exactly what an enrolment day
+    * looks like.
+    *
+    * Each retry backs off further, so extra attempts cost waiting only in the
+    * crush itself, never on an ordinary registration. And if even these run
+    * out, registration still completes — see the non-sequential fallback id in
+    * authService — so this buys a tidier number, not a working account.
+    */
+   { maxAttempts: 15 })
   );
 
   return `${prefix}-${year}-${String(next).padStart(4, '0')}`;

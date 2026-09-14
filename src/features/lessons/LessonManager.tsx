@@ -19,6 +19,8 @@ interface LessonForm {
   description: string;
   weekNumber: string;
   subject: string;
+  speaker: string;
+  venue: string;
   classId: string;
   videoUrl: string;
   audioUrl: string;
@@ -34,6 +36,8 @@ const EMPTY: LessonForm = {
   description: '',
   weekNumber: '1',
   subject: '',
+  speaker: '',
+  venue: '',
   classId: '',
   videoUrl: '',
   audioUrl: '',
@@ -118,6 +122,8 @@ export function LessonManager({ classScope }: { classScope?: string[] }) {
         description: lesson.description ?? '',
         weekNumber: String(lesson.weekNumber ?? 1),
         subject: lesson.subject ?? '',
+        speaker: lesson.speaker ?? '',
+        venue: lesson.venue ?? '',
         classId: lesson.classId,
         videoUrl: lesson.videoUrl ?? '',
         audioUrl: lesson.audioUrl ?? '',
@@ -141,6 +147,10 @@ export function LessonManager({ classScope }: { classScope?: string[] }) {
             description: form.description.trim(),
             weekNumber: Number(form.weekNumber) || 1,
             subject: form.subject.trim() || undefined,
+            // Null rather than undefined when cleared, so emptying the field
+            // actually removes the name instead of leaving the old one behind.
+            speaker: form.speaker.trim() || null,
+            venue: form.venue.trim() || null,
             classId: form.classId,
             branchId: form.classId
               ? (branchForClass.get(form.classId) ?? null)
@@ -224,6 +234,18 @@ export function LessonManager({ classScope }: { classScope?: string[] }) {
             value={form.subject}
             onChangeText={(v) => set('subject', v)}
             icon="bookmark-outline"
+          />
+          <TextField
+            label={t('video.speaker')}
+            value={form.speaker}
+            onChangeText={(v) => set('speaker', v)}
+            icon="mic-outline"
+          />
+          <TextField
+            label={t('video.venue')}
+            value={form.venue}
+            onChangeText={(v) => set('venue', v)}
+            icon="location-outline"
           />
           <TextField
             label={t('video.videoUrl')}

@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +8,7 @@ import { colors, fontSize, fontWeight, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
 import { formatDate, formatDuration } from '@/utils/date';
 import { getLesson, listMaterials } from '@/services/contentService';
+import { watchSettings } from '@/services/settingsService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import { MaterialRow } from '@/components/shared/ContentCards';
 import { VideoPlayer } from '@/components/shared/VideoPlayer';
@@ -45,6 +46,12 @@ export default function LessonDetail() {
   const { data, loading, error, reload, refreshing, refresh } = useAsync(load, [id]);
   const lesson = data?.lesson;
 
+  // The centre's CURRENT logo, live. Unlike a recording, a lesson does not
+  // carry a copy of the branding it went out with, so this follows whatever
+  // the admin has set — and changes with it.
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  useEffect(() => watchSettings((settings) => setLogoUrl(settings.logoUrl?.trim() || null)), []);
+
   return (
     <View style={{ flex: 1 }}>
       <AppHeader
@@ -66,12 +73,37 @@ export default function LessonDetail() {
             <>
               {lesson.videoUrl ? (
                 <>
-                  <VideoPlayer url={lesson.videoUrl} title={lesson.title} />
+                  <View style={styles.playerWrap}>
+                    <VideoPlayer url={lesson.videoUrl} title={lesson.title} />
+                    {/* In the top corner, over the picture, the way a broadcaster
+                        marks its feed. It ignores touches so it can never sit on
+                        top of a control somebody is reaching for. */}
+                    {logoUrl ? (
+                      <View pointerEvents="none" style={styles.logoBadge}>
+                        <Image
+                          source={{ uri: logoUrl }}
+                          style={styles.logoImage}
+                          resizeMode="contain"
+                          accessibilityLabel={t('video.logo')}
+                        />
+                      </View>
+                    ) : null}
+                  </View>
                   <Spacer />
                 </>
               ) : null}
 
               <Card>
+                {/* No video to mark, so the logo sits in the corner of the
+                    content itself instead. */}
+                {!lesson.videoUrl && logoUrl ? (
+                  <Image
+                    source={{ uri: logoUrl }}
+                    style={styles.cardLogo}
+                    resizeMode="contain"
+                    accessibilityLabel={t('video.logo')}
+                  />
+                ) : null}
                 <Text style={styles.title}>{lesson.title}</Text>
                 <View style={styles.badges}>
                   <Badge label={t('lesson.week', { number: lesson.weekNumber })} tone="active" />
@@ -86,6 +118,18 @@ export default function LessonDetail() {
               <Spacer />
 
               <Card>
+                {lesson.speaker ? (
+                  <>
+                    <DetailRow label={t('video.speaker')} value={lesson.speaker} icon="mic-outline" />
+                    <Divider />
+                  </>
+                ) : null}
+                {lesson.venue ? (
+                  <>
+                    <DetailRow label={t('video.venue')} value={lesson.venue} icon="location-outline" />
+                    <Divider />
+                  </>
+                ) : null}
                 <DetailRow
                   label={t('lesson.publishDate')}
                   value={formatDate(lesson.publishDate ?? lesson.createdAt, language)}
@@ -166,6 +210,23 @@ const styles = StyleSheet.create({
   audioRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   audioLabel: { fontSize: fontSize.sm, color: colors.text, fontWeight: fontWeight.medium },
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  playerWrap: { position: 'relative' },
+  logoBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    padding: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  logoImage: { width: 40, height: 40 },
+  cardLogo: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    width: 36,
+    height: 36,
+  },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   description: {
     fontSize: fontSize.md,

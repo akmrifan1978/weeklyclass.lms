@@ -1,5 +1,7 @@
 import i18n from '@/i18n';
 import { COLLECTIONS } from '@/constants/app';
+import { toDate } from '@/utils/date';
+import { AppError } from '@/utils/errors';
 import type {
   AppUser,
   LanguageCode,
@@ -385,12 +387,103 @@ export async function answerQuestion(
   void announce(
     {
       kind: 'article',
-      title: question.question.slice(0, 80),
+      // A spoken question carries no text to quote, and a notification with an
+      // empty title reads as a bug. Name the asker instead.
+      title:
+        question.question.trim().slice(0, 80) ||
+        `${question.askedByName}`.trim().slice(0, 80),
       classId: question.classId ?? null,
       route: '/(student)/qa',
     },
     actor
   );
+}
+
+/**
+ * How long somebody may change their own question after asking it.
+ *
+ * Long enough to notice a typo, re-record a question that came out garbled, or
+ * take one back that was asked in the wrong place. Short enough that nobody can
+ * quietly rewrite a question after a teacher has started answering it, which
+ * would leave the answer replying to words that are no longer there.
+ */
+export const QUESTION_EDIT_MINUTES = 10;
+
+/** Minutes left to change this question, or 0 once the window has closed. */
+export function editMinutesLeft(question: QaQuestion, now = Date.now()): number {
+  // A question saved a moment ago has no server timestamp yet. It is, by
+  // definition, inside its window.
+  const asked = toDate(question.createdAt)?.getTime() ?? now;
+  const left = asked + QUESTION_EDIT_MINUTES * 60_000 - now;
+  return left > 0 ? Math.ceil(left / 60_000) : 0;
+}
+
+/**
+ * Whether this person may still edit or delete this question themselves.
+ *
+ * Only their own, only while it is unanswered, and only inside the window.
+ * The security rules check the same three things — this is what decides
+ * whether the buttons are offered, not what enforces it.
+ */
+export function canChangeOwnQuestion(
+  question: QaQuestion,
+  user: AppUser | null,
+  now = Date.now()
+): boolean {
+  if (!user || question.askedBy !== user.uid) return false;
+  if (question.status !== 'open' || question.answeredBy) return false;
+  return editMinutesLeft(question, now) > 0;
+}
+
+/**
+ * Corrects a question. Text, recording, or both.
+ *
+ * The same "must contain something" rule as asking: an edit that empties both
+ * the text and the recording is a deletion by accident, and deletion has its
+ * own, confirmed, button.
+ */
+export async function editQuestion(
+  question: QaQuestion,
+  input: { question: string; audioUrl: string | null; audioSeconds: number | null },
+  user: AppUser
+): Promise<void> {
+  if (!input.question.trim() && !input.audioUrl) {
+    throw new AppError('qa.sayOrWriteSomething', 'invalid-argument');
+  }
+  await updateDocById<QaQuestion>(COLLECTIONS.qaQuestions, question.id, {
+    question: input.question.trim(),
+    audioUrl: input.audioUrl,
+    audioSeconds: input.audioSeconds,
+  });
+  void audit.log({
+    actor: user,
+    action: 'UPDATE',
+    collection: COLLECTIONS.qaQuestions,
+    documentId: question.id,
+    summary: 'Edited a question',
+  });
+}
+
+/**
+ * Removes a question.
+ *
+ * Soft, like everything else somebody wrote. The asker may do this inside
+ * their window; an admin may do it at any time. A teacher hides rather than
+ * deletes — see hideQuestion — so nothing a student wrote is destroyed by
+ * anyone below an admin.
+ */
+export async function deleteQuestion(question: QaQuestion, user: AppUser): Promise<void> {
+  await softDelete(COLLECTIONS.qaQuestions, question.id, user.uid);
+  void audit.log({
+    actor: user,
+    action: 'DELETE',
+    collection: COLLECTIONS.qaQuestions,
+    documentId: question.id,
+    summary:
+      question.askedBy === user.uid
+        ? 'Withdrew their own question'
+        : `Deleted a question from ${question.askedByName}`,
+  });
 }
 
 export async function hideQuestion(

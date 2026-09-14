@@ -1130,7 +1130,6 @@
     "placeholder": "What would you like to ask?",
     "ask": "Ask",
     "asked": "Your question has been posted.",
-    "questionTooShort": "Please write your question more fully",
     "none": "No questions yet",
     "noneHelp": "Be the first to ask. Your teacher will answer here.",
     "awaitingAnswer": "Not answered yet",
@@ -1148,7 +1147,17 @@
     "spokenQuestion": "Spoken question · {{seconds}}s",
     "spokenAnswer": "Spoken answer · {{seconds}}s",
     "microphoneDenied": "Microphone access was not granted.",
-    "withScholar": "with {{name}}"
+    "withScholar": "with {{name}}",
+    "sayOrWriteSomething": "Type something or record a voice message first.",
+    "spokenOnly": "Spoken question — tap play to listen",
+    "spokenAnswerOnly": "Spoken answer — tap play to listen",
+    "answerHint": "Optional if you record a spoken answer.",
+    "editTitle": "Edit your question",
+    "editWindow": "You can edit or delete this for {{minutes}} more min",
+    "updated": "Your question has been updated.",
+    "removed": "Question deleted.",
+    "deleteConfirm": "Delete this question? This cannot be undone from the app.",
+    "replaceRecording": "Record again to replace it"
   },
   "hadith": {
     "authenticityNote": "Sahih al-Bukhari and Sahih Muslim are the two collections whose authenticity is least disputed. Within the other books individual narrations carry different gradings, which are not shown here — each one lists its book and number so you can check it.",
