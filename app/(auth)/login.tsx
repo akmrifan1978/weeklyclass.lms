@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -166,13 +174,20 @@ export default function LoginScreen() {
                * refuse both to anybody without one. There is no guest flag for a
                * screen to forget to check.
                */}
-              <Button
-                label={t('guest.enter')}
+              {/* A text link, in the same light colour as the line above it.
+                  The ghost button drew navy text on this navy background and
+                  was all but invisible; a second outlined button would have
+                  competed with Create account. */}
+              <Pressable
                 onPress={() => router.push('/(auth)/guest')}
-                variant="ghost"
-                size="sm"
-                icon="eye-outline"
-              />
+                accessibilityRole="link"
+                accessibilityLabel={t('guest.enter')}
+                hitSlop={8}
+                style={({ pressed }) => [styles.guestLink, pressed && { opacity: 0.7 }]}
+              >
+                <Ionicons name="eye-outline" size={16} color={brand.sandLight} />
+                <Text style={styles.guestLinkText}>{t('guest.enter')}</Text>
+              </Pressable>
             </View>
           ) : (
             <Text style={styles.adminNote}>
@@ -245,6 +260,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   footerText: { color: brand.sandLight, fontSize: fontSize.sm },
+  guestLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
+  guestLinkText: {
+    color: brand.sandLight,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    textDecorationLine: 'underline',
+  },
   adminNote: {
     color: brand.slate,
     fontSize: fontSize.xs,
