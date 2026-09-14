@@ -55,15 +55,62 @@ interface AuthContextValue {
   refresh: () => Promise<void>;
   /** Asks for push permission and stores the token on the profile. */
   enablePush: () => Promise<pushService.PushRegistration>;
+  /**
+   * Browsing without an account.
+   *
+   * A guest is signed OUT. `user` is a stand-in so the student screens have
+   * something to render against, but it has no permissions, belongs to no
+   * class, and the database treats every request from it as anonymous — which
+   * is what keeps booking and assignments closed without any screen having to
+   * remember to check.
+   */
+  isGuest: boolean;
+  enterGuest: () => Promise<void>;
+  exitGuest: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+/** Remembered on the device, so a guest who closes the app comes back a guest. */
+const GUEST_MODE_KEY = 'weeklyclass.guestMode';
+
+/**
+ * The stand-in a guest browses as.
+ *
+ * A student with no class and no permissions, so every screen renders and none
+ * of them can do anything a student with an account could. The uid is not a
+ * real account's and never reaches the database as one: a guest is signed out.
+ */
+export const GUEST_USER: AppUser = {
+  id: 'guest',
+  uid: 'guest',
+  fullName: 'Guest',
+  username: 'guest',
+  email: '',
+  mobile: '',
+  role: 'student',
+  status: 'active',
+  country: '',
+  language: 'en',
+  classId: null,
+  permissions: {},
+  deleted: false,
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [initialising, setInitialising] = useState(true);
   const [busy, setBusy] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [guest, setGuest] = useState(false);
+  const [guestLoaded, setGuestLoaded] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(GUEST_MODE_KEY)
+      .then((value) => setGuest(value === '1'))
+      .catch(() => undefined)
+      .finally(() => setGuestLoaded(true));
+  }, []);
   const profileUnsubscribe = useRef<(() => void) | null>(null);
   /** Who the live listener is currently following, so it is not rebuilt. */
   const watchedUid = useRef<string | null>(null);
@@ -190,6 +237,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setInitialising(false);
         return;
       }
+      // Signing in to a real account ends a guest visit.
+      setGuest(false);
+      void AsyncStorage.removeItem(GUEST_MODE_KEY).catch(() => undefined);
       await watchProfile(firebaseUser.uid);
       setInitialising(false);
     });
@@ -230,6 +280,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    // A guest has no session to end, only a visit.
+    if (!user && guest) {
+      setGuest(false);
+      await AsyncStorage.removeItem(GUEST_MODE_KEY).catch(() => undefined);
+      return;
+    }
     setBusy(true);
     setSigningOut(true);
     try {
@@ -259,7 +315,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBusy(false);
       setSigningOut(false);
     }
-  }, [stopWatching, user]);
+  }, [stopWatching, user, guest]);
 
   // Signed in and idle for too long ends the session. `logout` is already
   // safe to call when nothing is signed in, and the hook only runs while
@@ -286,6 +342,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return registration;
   }, [user]);
 
+  const enterGuest = useCallback(async () => {
+    setGuest(true);
+    await AsyncStorage.setItem(GUEST_MODE_KEY, '1').catch(() => undefined);
+  }, []);
+
+  const exitGuest = useCallback(async () => {
+    setGuest(false);
+    await AsyncStorage.removeItem(GUEST_MODE_KEY).catch(() => undefined);
+  }, []);
+
+  // A real account always wins over a remembered guest visit.
+  const isGuest = !user && guest;
+  const effectiveUser = user ?? (isGuest ? GUEST_USER : null);
+
   const permissions = useMemo<PermissionMap>(() => {
     if (!user) return {};
     return user.role === 'admin' ? allPermissions() : (user.permissions ?? {});
@@ -307,8 +377,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
-      initialising,
+      user: effectiveUser,
+      initialising: initialising || !guestLoaded,
       signingOut,
       busy,
       permissions,
@@ -316,13 +386,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       canAny,
       isAdmin: user?.role === 'admin',
       isTeacher: user?.role === 'teacher',
-      isStudent: user?.role === 'student',
+      isStudent: effectiveUser?.role === 'student',
       login,
       logout,
       refresh,
       enablePush,
+      isGuest,
+      enterGuest,
+      exitGuest,
     }),
-    [user, initialising, busy, signingOut, permissions, can, canAny, login, logout, refresh, enablePush]
+    [
+      user,
+      effectiveUser,
+      initialising,
+      guestLoaded,
+      busy,
+      signingOut,
+      permissions,
+      can,
+      canAny,
+      login,
+      logout,
+      refresh,
+      enablePush,
+      isGuest,
+      enterGuest,
+      exitGuest,
+    ]
   );
 
   return (

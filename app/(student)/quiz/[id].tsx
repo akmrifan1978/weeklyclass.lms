@@ -26,6 +26,7 @@ import {
   SkeletonList,
   Spacer,
 } from '@/components/ui';
+import { GuestGate } from '@/components/shared/GuestGate';
 
 /**
  * Quiz player.
@@ -34,7 +35,7 @@ import {
  * questions, so a dropped connection or a closed app does not lose progress.
  * When the timer runs out the attempt submits itself.
  */
-export default function QuizPlayer() {
+function QuizPlayerInner() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { language } = useLanguage();
@@ -546,3 +547,15 @@ const styles = StyleSheet.create({
   mapDotText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   mapDotTextDone: { color: colors.accentDark, fontWeight: fontWeight.bold },
 });
+
+/**
+ * A guest sees why this needs an account, and a way to get one, instead of
+ * a screen whose data the database would refuse them.
+ */
+export default function QuizPlayer() {
+  return (
+    <GuestGate messageKey="guestMode.assignments" titleKey="quiz.title">
+      <QuizPlayerInner />
+    </GuestGate>
+  );
+}

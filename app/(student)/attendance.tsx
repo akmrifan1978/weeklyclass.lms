@@ -20,10 +20,11 @@ import {
   SkeletonList,
   Spacer,
 } from '@/components/ui';
+import { GuestGate } from '@/components/shared/GuestGate';
 
 type View_ = 'overall' | 'monthly';
 
-export default function StudentAttendance() {
+function StudentAttendanceInner() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { language } = useLanguage();
@@ -144,3 +145,15 @@ const styles = StyleSheet.create({
   recordDateText: { fontSize: fontSize.md, color: colors.text },
   recordNote: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
 });
+
+/**
+ * A guest sees why this needs an account, and a way to get one, instead of
+ * a screen whose data the database would refuse them.
+ */
+export default function StudentAttendance() {
+  return (
+    <GuestGate messageKey="guestMode.personal" titleKey="nav.attendance">
+      <StudentAttendanceInner />
+    </GuestGate>
+  );
+}

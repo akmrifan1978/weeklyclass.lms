@@ -10,7 +10,7 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { formatShortDate, toDate } from '@/utils/date';
 import { listVideosForStudent } from '@/services/videoService';
 import { listKhutbahs } from '@/services/khutbahService';
-import { lessonsForStudent } from '@/services/contentService';
+import { lessonsForStudent, listPublishedLessons } from '@/services/contentService';
 import { VideoRow } from '@/components/shared/ContentCards';
 import type { FireDate, KhutbahEntry, Lesson, VideoItem } from '@/types';
 import {
@@ -56,7 +56,7 @@ function time(value: FireDate | string | undefined | null): number {
 export function NewReleasesScreen({ basePath }: { basePath: string }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
 
   const isStudent = user?.role === 'student';
 
@@ -71,9 +71,11 @@ export function NewReleasesScreen({ basePath }: { basePath: string }) {
       listKhutbahs({ publishedOnly: true, pageSize: 20 }).catch(() => [] as KhutbahEntry[]),
       // Lessons belong to a class, so only a student has "their" lessons to
       // show, and only students have a lesson screen to open them in.
-      isStudent && user?.classId
-        ? lessonsForStudent(user.classId, 20).then((p) => p.items).catch(() => [] as Lesson[])
-        : Promise.resolve([] as Lesson[]),
+      isGuest
+        ? listPublishedLessons(20).catch(() => [] as Lesson[])
+        : isStudent && user?.classId
+          ? lessonsForStudent(user.classId, 20).then((p) => p.items).catch(() => [] as Lesson[])
+          : Promise.resolve([] as Lesson[]),
     ]);
 
     const releases: Release[] = [
@@ -101,7 +103,7 @@ export function NewReleasesScreen({ basePath }: { basePath: string }) {
         })),
     ];
     return releases.sort((a, b) => b.posted - a.posted);
-  }, [isStudent, user?.classId]);
+  }, [isStudent, user?.classId, isGuest]);
 
   const { data, loading, refreshing, error, reload, refresh } = useAsync(load, [load]);
 

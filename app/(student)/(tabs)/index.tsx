@@ -23,7 +23,11 @@ import { useLanguageScope } from '@/hooks/useLanguageScope';
 import { toDate } from '@/utils/date';
 import { nextEventFor } from '@/services/calendarService';
 import { getFeaturedVideo, getLiveVideo, listVideosForStudent } from '@/services/videoService';
-import { getLatestArticle, lessonsForStudent } from '@/services/contentService';
+import {
+  getLatestArticle,
+  lessonsForStudent,
+  listPublishedLessons,
+} from '@/services/contentService';
 import { getClass } from '@/services/orgService';
 import { announcementsFor } from '@/services/notificationService';
 import { scheduleEventReminders } from '@/services/pushService';
@@ -64,7 +68,7 @@ import {
 export default function StudentHome() {
   const { t } = useTranslation();
   const greeting = useGreeting();
-  const { user } = useAuth();
+  const { user, isGuest, can: canUseTool } = useAuth();
   const { language } = useLanguage();
   // This dashboard remembers its own language; see useLanguageScope.
   const { language: dashboardLanguage, setLanguage: setDashboardLanguage } =
@@ -104,9 +108,11 @@ export default function StudentHome() {
       getLiveVideo().catch(() => null),
       getFeaturedVideo().catch(() => null),
       getLatestArticle().catch(() => null),
-      user.classId
-        ? lessonsForStudent(user.classId, 4).then((p) => p.items).catch(() => [])
-        : Promise.resolve([]),
+      isGuest
+        ? listPublishedLessons(4).catch(() => [])
+        : user.classId
+          ? lessonsForStudent(user.classId, 4).then((p) => p.items).catch(() => [])
+          : Promise.resolve([]),
       listVideosForStudent(user.classId, 'recording', 3).catch(() => []),
       announcementsFor(user, 3).catch(() => []),
       // The group this student is in, for the names of whoever teaches it.
@@ -125,14 +131,19 @@ export default function StudentHome() {
       announcements,
       classGroup,
     };
-  }, [user]);
+  }, [user, isGuest]);
 
-  const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, user?.classId]);
+  const { data, loading, refreshing, refresh } = useAsync(load, [user?.uid, user?.classId, isGuest]);
 
   // Built from the same list the Islamic grid used, filtered the same way,
   // so switching a section off in settings removes it from both at once.
   const islamicTiles = useVisibleIslamicTiles();
-  const navSections = useMemo(() => studentNavSections(islamicTiles), [islamicTiles]);
+  // The tools an admin has granted this student appear in the menu. A guest,
+  // and any student granted nothing, sees no tools section at all.
+  const navSections = useMemo(
+    () => studentNavSections(islamicTiles, canUseTool),
+    [islamicTiles, canUseTool]
+  );
 
   // Schedules on-device reminders for the next few classes.
   useEffect(() => {

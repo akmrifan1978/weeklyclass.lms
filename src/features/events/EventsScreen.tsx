@@ -24,6 +24,7 @@ import {
   Screen,
   SkeletonList,
 } from '@/components/ui';
+import { GuestEventsList } from './GuestEventsList';
 
 /**
  * Events, with booking.
@@ -36,7 +37,7 @@ import {
 export function EventsScreen({ basePath }: { basePath: string }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { user, can } = useAuth();
+  const { user, can, isGuest } = useAuth();
 
   const isOrganiser = can('MANAGE_CALENDAR');
 
@@ -47,6 +48,10 @@ export function EventsScreen({ basePath }: { basePath: string }) {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
+    // A guest is shown the public schedule instead — see GuestEventsList. The
+    // full events would be refused, and they carry the meeting links that
+    // list deliberately leaves out.
+    if (isGuest) return { events: [] as CalendarEvent[], mine: [] as EventRegistration[] };
     const page = await calendar.listUpcoming({ pageSize: 50 });
     // Only events that actually take bookings. A class reminder lives in the
     // same collection and has no business on a page about tickets.
@@ -60,7 +65,7 @@ export function EventsScreen({ basePath }: { basePath: string }) {
       : [];
 
     return { events, mine };
-  }, [user?.uid]);
+  }, [user?.uid, isGuest]);
 
   const { data, loading, refreshing, error, reload, refresh } = useAsync(load, [load]);
 
@@ -116,6 +121,8 @@ export function EventsScreen({ basePath }: { basePath: string }) {
       toast.error(friendlyMessage(err, t));
     }
   };
+
+  if (isGuest) return <GuestEventsList />;
 
   return (
     <>

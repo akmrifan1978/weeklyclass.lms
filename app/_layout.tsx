@@ -34,7 +34,7 @@ import { useDocumentBranding } from '@/hooks/useDocumentBranding';
 function RoleGate({ children }: { children: React.ReactNode }) {
   // The tab's title and icon follow the organisation's own settings, live.
   useDocumentBranding();
-  const { user, initialising, signingOut } = useAuth();
+  const { user, initialising, signingOut, isGuest } = useAuth();
   const { ready: languageReady } = useLanguage();
   const segments = useSegments();
   const pathname = usePathname();
@@ -83,6 +83,10 @@ function RoleGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // A guest may still reach sign-in, registration and the website — that is
+    // how a guest stops being one. Only the other roles' areas stay closed.
+    if (isGuest && inPublicArea) return;
+
     if (!user) {
       // Signed out but sitting in a protected area.
       if (!inPublicArea) router.replace('/');
@@ -101,7 +105,7 @@ function RoleGate({ children }: { children: React.ReactNode }) {
     if (inPublicArea || (group?.startsWith('(') && group !== expectedGroup)) {
       router.replace(home);
     }
-  }, [booting, user, segments, pathname, router]);
+  }, [booting, user, isGuest, segments, pathname, router]);
 
   /**
    * Signing out, and the gap it used to leave.

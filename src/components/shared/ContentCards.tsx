@@ -285,6 +285,12 @@ export function LessonRow({
 }) {
   const { t } = useTranslation();
 
+  // A small still from the lesson's own video, so the list shows what each
+  // lesson looks like. A YouTube link needs no uploaded image for this — see
+  // autoThumbnail. A still rather than a player: a list of live players would
+  // load every video at once, which is slow for everyone on a weak connection.
+  const thumb = lesson.videoUrl ? autoThumbnail(lesson.videoUrl, lesson.imageUrl) : null;
+
   return (
     <Card onPress={onPress} accessibilityLabel={lesson.title}>
       <View style={styles.row}>
@@ -310,6 +316,19 @@ export function LessonRow({
             ) : null}
           </View>
         </View>
+        {thumb ? (
+          <View style={styles.lessonThumb}>
+            <Image
+              source={{ uri: thumb }}
+              style={styles.lessonThumbImage}
+              resizeMode="cover"
+              accessibilityIgnoresInvertColors
+            />
+            <View style={styles.lessonThumbPlay} pointerEvents="none">
+              <Ionicons name="play" size={14} color={colors.textInverse} />
+            </View>
+          </View>
+        ) : null}
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </View>
     </Card>
@@ -784,6 +803,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   rowBody: { flex: 1, paddingVertical: spacing.md },
+  lessonThumb: {
+    width: 96,
+    height: 54,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lessonThumbImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  lessonThumbPlay: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   rowTitle: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,

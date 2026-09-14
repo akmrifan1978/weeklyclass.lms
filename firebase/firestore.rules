@@ -155,6 +155,21 @@ service cloud.firestore {
       return changedKeys().hasOnly(allowed);
     }
 
+    // Published and not deleted.
+    //
+    // The centre chose to let a guest — somebody with no account at all — view
+    // every feature of the app. That makes a published lesson, material,
+    // assignment, khutbah or announcement readable by anybody. A draft stays
+    // behind a sign-in, and so does anything soft-deleted.
+    //
+    // Deliberately NOT applied to three collections, whose records carry
+    // things a stranger should not have: calendar events (the online class
+    // join links), Q&A (students' names), and the answer keys.
+    function isPublishedContent() {
+      return resource.data.get('status', 'draft') == 'published'
+        && resource.data.get('deleted', false) == false;
+    }
+
     function isSoftDeleteOnly() {
       return onlyChanged(['deleted', 'deletedAt', 'deletedBy', 'updatedAt']);
     }
@@ -454,7 +469,8 @@ service cloud.firestore {
 
     match /lessons/{lessonId} {
       allow read: if isStaff()
-                  || (isStudent() && resource.data.classId == myClassId());
+                  || (isStudent() && resource.data.classId == myClassId())
+                  || isPublishedContent();
 
       allow create: if can('CREATE_LESSONS')
                     && teachesClass(request.resource.data.classId);
@@ -479,10 +495,12 @@ service cloud.firestore {
       // Evaluated per document, so a query filtered to published shared videos
       // passes and one asking for anything wider is refused. A draft, and
       // anything scoped to a class, stays behind a sign-in.
+      // Every published recording, whichever class it was made for. It used to
+      // exclude class recordings; a guest now views every feature, so it no
+      // longer does. Drafts and deleted recordings stay behind a sign-in.
       function isPubliclyVisible() {
         return resource.data.get('status', 'draft') == 'published'
-          && resource.data.get('deleted', false) == false
-          && !('classId' in resource.data.keys() && resource.data.classId != null);
+          && resource.data.get('deleted', false) == false;
       }
 
       allow read: if isPubliclyVisible()
@@ -564,13 +582,14 @@ service cloud.firestore {
     }
 
     match /khutbahs/{khutbahId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() || isPublishedContent();
       allow create, update: if can('MANAGE_ARTICLES');
       allow delete: if isAdmin();
     }
 
     match /divineNames/{nameNumber} {
-      allow read: if isSignedIn();
+      // The ninety-nine names. Nothing here belongs to anybody.
+      allow read: if true;
       allow write: if can('MANAGE_ARTICLES');
     }
 
@@ -586,7 +605,8 @@ service cloud.firestore {
 
     match /materials/{materialId} {
       allow read: if isStaff()
-                  || (isStudent() && inMyClassOrShared(resource.data.get('classId', null)));
+                  || (isStudent() && inMyClassOrShared(resource.data.get('classId', null)))
+                  || isPublishedContent();
 
       allow create: if can('UPLOAD_MATERIAL');
       allow update: if can('UPLOAD_MATERIAL')
@@ -772,8 +792,11 @@ service cloud.firestore {
     // =========================================================================
 
     match /quizzes/{quizId} {
+      // A guest may see that a published assignment exists. Its questions and
+      // answer key stay behind a sign-in, and taking it needs an account.
       allow read: if isStaff()
-                  || (isStudent() && resource.data.classId == myClassId());
+                  || (isStudent() && resource.data.classId == myClassId())
+                  || isPublishedContent();
 
       allow create: if can('CREATE_QUIZ')
                     && teachesClass(request.resource.data.classId);
@@ -905,7 +928,11 @@ service cloud.firestore {
     }
 
     match /announcements/{announcementId} {
-      allow read: if isSignedIn();
+      // Only what was addressed to everybody. An announcement sent to one
+      // person, or to one class, stays behind a sign-in.
+      allow read: if isSignedIn()
+                  || (isPublishedContent()
+                      && resource.data.get('targetRole', 'all') in ['all', 'students']);
       allow write: if can('MANAGE_ANNOUNCEMENTS');
     }
 
@@ -956,9 +983,11 @@ service cloud.firestore {
     // A published workbook, addressed to this reader. A draft is nobody's but
     // its author's and an admin's — half a lesson on thirty phones is not
     // something a teacher can take back.
+    // No longer requires an account: a workbook published to everybody is
+    // readable by a guest too. myAudienceKeys() gives a guest only 'all', so
+    // anything addressed to a class or a named student stays closed to them.
     function workbookPublishedToMe() {
-      return isActive()
-        && resource.data.get('status', '') == 'published'
+      return resource.data.get('status', '') == 'published'
         && resource.data.get('deleted', false) == false
         && resource.data.get('audienceKeys', []).hasAny(myAudienceKeys());
     }
@@ -1005,8 +1034,7 @@ service cloud.firestore {
         allow read: if isAdmin()
                     || (isSignedIn() && parent().get('authorId', '') == request.auth.uid)
                     || (
-                      isActive()
-                      && parent().get('status', '') == 'published'
+                      parent().get('status', '') == 'published'
                       && parent().get('audienceKeys', []).hasAny(myAudienceKeys())
                     );
 

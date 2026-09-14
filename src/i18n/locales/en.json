@@ -284,7 +284,8 @@
     "contact": "Contact",
     "ratings": "Ratings",
     "flyers": "Flyers",
-    "workbooks": "Workbooks"
+    "workbooks": "Workbooks",
+    "staffTools": "Tools you can use"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -711,7 +712,7 @@
     "publicProfileHidden": "This teacher no longer appears on the public website.",
     "usernameNotYours": "Only a super admin can change another administrator’s username.",
     "isoCode": "ISO code",
-    "studentPermissionsNote": "Attendance, announcements, the calendar and uploading videos all work for a student. Lessons, quizzes and the materials list need a teacher account as well, so granting those here will have no effect.",
+    "studentPermissionsNote": "Whatever you grant a student appears in their menu under ‘Tools you can use’. Attendance, announcements, the calendar, videos, recordings, materials, articles and workbooks all work for a student. Editing lessons and quizzes also needs a teacher account, so granting those to a student has no effect.",
     "allocatedTeachers": "Teachers",
     "allocatedTeachersNone": "None allocated yet"
   },
@@ -1474,7 +1475,9 @@
     "attachMedia": "Attach audio or video",
     "attachHintNative": "Large video files may not upload on a slow connection.",
     "audioAttached": "Audio attached",
-    "videoAttached": "Video attached"
+    "videoAttached": "Video attached",
+    "image": "Image",
+    "imageHint": "One image for this khutbah or bayan. Choosing another replaces it."
   },
   "push": {
     "section": "Notifications on this device",
@@ -1668,5 +1671,16 @@
     "discard": "Leave without saving",
     "deleteConfirm": "Delete this workbook and all its pages?",
     "pageTooBig": "Page {{page}} has too much on it to save. Move some of it to a new page."
+  },
+  "guestMode": {
+    "title": "Guest",
+    "personal": "This is personal to each student, so it needs an account. Log in or register to see your own.",
+    "assignments": "You can look through the weekly assignments as a guest. Taking and submitting one needs an account.",
+    "booking": "You can see the events as a guest. Booking a place needs an account.",
+    "schedule": "This is the public schedule. Online class links and bookings need an account.",
+    "qa": "Questions and answers show students' names, so they are only visible with an account.",
+    "onlineClasses": "Joining an online class needs an account. The class schedule is on the Calendar page.",
+    "profile": "You are browsing as a guest. Log in or register to have your own profile, results and notes.",
+    "exit": "Stop browsing as a guest"
   }
 }

@@ -23,16 +23,19 @@ import {
   Screen,
   SkeletonList,
 } from '@/components/ui';
+import { GuestEventsList } from '@/features/events/GuestEventsList';
 
 type Mode = 'upcoming' | 'past';
 
 export default function StudentCalendar() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { language } = useLanguage();
   const [mode, setMode] = useState<Mode>('upcoming');
 
   const load = useCallback(async () => {
+    // A guest is shown the public schedule instead, which carries no join links.
+    if (isGuest) return [];
     // Upcoming goes through listUpcomingForUser, which includes the events
     // open to the whole centre. Filtering by classId alone hid every one of
     // them, because an event for everybody deliberately belongs to no class.
@@ -45,7 +48,7 @@ export default function StudentCalendar() {
     }
     const page = await listPast({ classId: user?.classId ?? undefined, pageSize: 40 });
     return page.items;
-  }, [mode, user?.classId, user?.role]);
+  }, [mode, user?.classId, user?.role, isGuest]);
 
   const { data, loading, refreshing, error, refresh, reload } = useAsync(load, [
     mode,
@@ -56,6 +59,10 @@ export default function StudentCalendar() {
   const dates = Object.keys(grouped).sort((a, b) =>
     mode === 'upcoming' ? a.localeCompare(b) : b.localeCompare(a)
   );
+
+  if (isGuest) {
+    return <GuestEventsList titleKey="nav.calendar" onlyBookable={false} backButton={false} />;
+  }
 
   return (
     <View style={{ flex: 1 }}>

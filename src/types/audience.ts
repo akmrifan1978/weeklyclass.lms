@@ -62,7 +62,10 @@ export function audienceKeys(audience: Audience): string[] {
  * spare if a student ever belongs to more than one class.
  */
 export function keysForUser(user: Pick<AppUser, 'uid' | 'classId'> | null): string[] {
-  if (!user) return ['all'];
+  // A guest has no account, so nothing can be addressed to them by name. Asking
+  // for 'user:guest' as well would make the query unprovable against the rule,
+  // and Firestore refuses a query it cannot prove — the whole list, not one row.
+  if (!user || user.uid === 'guest') return ['all'];
   const keys = ['all', `user:${user.uid}`];
   if (user.classId) keys.push(`class:${user.classId}`);
   return keys;
