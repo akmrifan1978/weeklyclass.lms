@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
+import { promptInstall, subscribeInstall } from '@/services/installService';
 
 /**
  * "Add this to your phone", offered once the browser says it is possible.
@@ -44,21 +45,11 @@ export function InstallPrompt() {
     }
     if (dismissed) return;
 
-    const onPrompt = (raw: Event) => {
-      // Stop the browser's own mini-infobar so there is one offer, not two
-      // saying slightly different things in different places.
-      raw.preventDefault();
-      setEvent(raw as InstallEvent);
-    };
-
-    const onInstalled = () => setEvent(null);
-
-    window.addEventListener('beforeinstallprompt', onPrompt);
-    window.addEventListener('appinstalled', onInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt);
-      window.removeEventListener('appinstalled', onInstalled);
-    };
+    // The browser's offer is captured once, early, by installService — it
+    // fires before this banner exists, so listening here would miss it.
+    return subscribeInstall((state) =>
+      setEvent(state.oneTap && !state.installed ? ({} as InstallEvent) : null)
+    );
   }, []);
 
   if (!event) return null;
@@ -83,17 +74,11 @@ export function InstallPrompt() {
 
       <Pressable
         onPress={async () => {
-          const pending = event;
-          // Cleared first: the browser allows one prompt per event, and leaving
+          // Cleared first: the browser allows one prompt per offer, and leaving
           // the button on screen would invite a second tap that does nothing.
           setEvent(null);
-          try {
-            await pending.prompt();
-            const choice = await pending.userChoice;
-            if (choice.outcome === 'dismissed') remember();
-          } catch {
-            // The browser refused to show it; nothing useful to say about that.
-          }
+          const outcome = await promptInstall();
+          if (outcome === 'dismissed') remember();
         }}
         accessibilityRole="button"
         style={({ pressed }) => [styles.action, { opacity: pressed ? 0.85 : 1 }]}
