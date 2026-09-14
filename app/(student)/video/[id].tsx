@@ -21,6 +21,7 @@ import {
   SkeletonList,
   Spacer,
 } from '@/components/ui';
+import { LogoImage } from '@/components/shared/AppLogo';
 
 export default function VideoDetail() {
   const { t } = useTranslation();
@@ -73,10 +74,10 @@ export default function VideoDetail() {
               <Card>
                 <View style={styles.titleRow}>
                   {video.logoUrl ? (
-                    <Image
-                      source={{ uri: video.logoUrl }}
+                    <LogoImage
+                      uri={video.logoUrl}
+                      size={48}
                       style={styles.logo}
-                      resizeMode="contain"
                       accessibilityLabel={t('video.logo')}
                     />
                   ) : null}

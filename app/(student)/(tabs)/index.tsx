@@ -58,6 +58,7 @@ import {
   SkeletonList,
   Spacer,
 } from '@/components/ui';
+import { AppBanner } from '@/components/shared/AppBanner';
 
 /**
  * Student home.
@@ -168,6 +169,10 @@ export default function StudentHome() {
       {/* At the top, as asked. It draws nothing when no flyer is
           running, so it costs no space on the ordinary day. */}
       <FlyerStrip position="dashboard" />
+
+      {/* The app banner an admin chose in Settings. Nothing is drawn until
+          they choose something. */}
+      <AppBanner />
 
       {/* A panel rather than loose text.
           The same words sat directly on the page background, which made the

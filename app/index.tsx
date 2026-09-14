@@ -26,6 +26,7 @@ import {
 } from '@/constants/theme';
 import { tone } from '@/components/public/tone';
 import type { UserRole } from '@/types';
+import { AppBanner } from '@/components/shared/AppBanner';
 
 /**
  * The front page.
@@ -131,6 +132,10 @@ export default function SplashScreen() {
           is what makes putting an advertisement in front of the way in
           defensible rather than merely effective. */}
       <FlyerStrip position="home" />
+
+      {/* The app banner an admin chose in Settings. Nothing is drawn until
+          they choose something. */}
+      <AppBanner />
 
       <Text style={styles.sectionLabel}>{t('auth.chooseRole')}</Text>
 

@@ -36,6 +36,7 @@ import {
   Spacer,
   StatCard,
 } from '@/components/ui';
+import { AppBanner } from '@/components/shared/AppBanner';
 
 /**
  * Teacher home.
@@ -104,6 +105,10 @@ export default function TeacherHome() {
       {/* At the top, as asked. It draws nothing when no flyer is
           running, so it costs no space on the ordinary day. */}
       <FlyerStrip position="dashboard" />
+
+      {/* The app banner an admin chose in Settings. Nothing is drawn until
+          they choose something. */}
+      <AppBanner />
 
       <View style={styles.greetingRow}>
         <View style={{ flex: 1 }}>

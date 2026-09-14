@@ -21,6 +21,7 @@ import {
   SectionHeader,
   SkeletonList,
 } from '@/components/ui';
+import { LogoImage } from '@/components/shared/AppLogo';
 
 /**
  * Online classes, for whoever is attending them.
@@ -153,7 +154,7 @@ function SessionCard({
 
       <View style={styles.headerRow}>
         {event.logoUrl ? (
-          <Image source={{ uri: event.logoUrl }} style={styles.logo} resizeMode="contain" />
+          <LogoImage uri={event.logoUrl} size={40} style={styles.logo} />
         ) : null}
         <View style={{ flex: 1 }}>
           <Text style={styles.title} numberOfLines={2}>

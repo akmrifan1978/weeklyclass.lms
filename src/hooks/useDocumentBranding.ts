@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 
 import { APP_NAME } from '@/constants/app';
 import { watchSettings } from '@/services/settingsService';
+import { brandIconUrl } from '@/utils/branding';
 
 /**
  * Puts the organisation's own identity on the browser tab.
@@ -48,8 +49,19 @@ export function useDocumentBranding(): void {
       const icon = settings.faviconUrl?.trim() || settings.logoUrl?.trim();
       if (!icon) return;
 
-      iconLink('icon').href = icon;
-      iconLink('apple-touch-icon').href = icon;
+      // Shaped as the admin chose. The tab keeps the artwork's own outline
+      // unless a shape was picked; the iPhone home-screen icon is always
+      // square, because iOS requires it and rounds the corners itself.
+      iconLink('icon').href = brandIconUrl(icon, {
+        size: 64,
+        shape: settings.logoShape,
+        purpose: 'tab',
+      });
+      iconLink('apple-touch-icon').href = brandIconUrl(icon, {
+        size: 180,
+        shape: settings.logoShape === 'round' ? 'square' : settings.logoShape,
+        purpose: 'install',
+      });
     });
   }, []);
 }

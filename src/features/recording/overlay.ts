@@ -16,6 +16,8 @@
 export interface OverlayBranding {
   /** Already-loaded images. Null when there is none, or when one failed. */
   logo: CanvasImageSource | null;
+  /** The frame chosen in Settings. Unset draws the logo as it always was. */
+  logoShape?: 'round' | 'square' | 'original' | null;
   banner: CanvasImageSource | null;
   /** The organisation's name — the one part of the mark that is always there. */
   name: string;
@@ -111,7 +113,25 @@ export function drawOverlay(
     const logoWidth = scaledWidth(branding.logo, logoHeight);
     if (logoWidth > 0) {
       ctx.globalAlpha = 0.88;
-      ctx.drawImage(branding.logo, width - pad - logoWidth, pad, logoWidth, logoHeight);
+      const logoX = width - pad - logoWidth;
+      if (branding.logoShape === 'round') {
+        // Clipped to a circle inside the logo's box, so the artwork is framed
+        // rather than squashed.
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(
+          logoX + logoWidth / 2,
+          pad + logoHeight / 2,
+          Math.min(logoWidth, logoHeight) / 2,
+          0,
+          Math.PI * 2
+        );
+        ctx.clip();
+        ctx.drawImage(branding.logo, logoX, pad, logoWidth, logoHeight);
+        ctx.restore();
+      } else {
+        ctx.drawImage(branding.logo, logoX, pad, logoWidth, logoHeight);
+      }
       ctx.globalAlpha = 1;
     }
   }

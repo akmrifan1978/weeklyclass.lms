@@ -700,6 +700,14 @@ export interface QaQuestion extends BaseDoc {
   status: 'open' | 'answered';
   /** Staff can hide a question without deleting what someone wrote. */
   hidden?: boolean;
+  /**
+   * The Mowlavi the question is for, chosen by the asker.
+   *
+   * The name is COPIED onto the question, not looked up, so a question still
+   * says who it was for after that Mowlavi is renamed or removed from the list.
+   */
+  scholarId?: string | null;
+  scholarName?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1017,6 +1025,24 @@ export interface AppLanguage extends BaseDoc {
  */
 export type CalendarSystem = 'gregorian' | 'hijri' | 'both';
 
+/** How the logo is framed wherever it appears. */
+export type LogoShape = 'round' | 'square' | 'original';
+
+/** One Mowlavi a Live Q&A question can be addressed to. */
+export interface QaScholar {
+  id: string;
+  name: string;
+}
+
+/** One image or video in the app banner. */
+export interface BannerItem {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  /** Read aloud and shown in Settings. Usually the title of what it came from. */
+  title?: string | null;
+}
+
 export interface AppSettings {
   appName: string;
   tagline: string;
@@ -1090,6 +1116,20 @@ export interface AppSettings {
    * should not need a release when they do.
    */
   qaScholarName?: string;
+  /**
+   * The Mowlavis a student may address a question to.
+   *
+   * Replaces the single name above, which is kept so a centre that set one
+   * before the list existed still has it — see scholarsFrom().
+   */
+  qaScholars?: QaScholar[];
+  /**
+   * The logo's frame, everywhere it appears — including the browser tab and
+   * the installed app icon. Unset leaves every logo exactly as it was.
+   */
+  logoShape?: LogoShape;
+  /** The images and videos shown in the banner at the top of the home screens. */
+  bannerItems?: BannerItem[];
   /**
    * Whether a student must supply a class id to register.
    *

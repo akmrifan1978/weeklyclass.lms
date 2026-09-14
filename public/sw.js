@@ -82,10 +82,11 @@ self.addEventListener('activate', (event) => {
 function isImmutableAsset(url) {
   return (
     url.origin === self.location.origin &&
-    (url.pathname.startsWith('/_expo/') ||
-      url.pathname.startsWith('/assets/') ||
-      url.pathname === '/favicon.ico' ||
-      url.pathname === '/manifest.json')
+    // Only files whose NAME is their version. manifest.json and favicon.ico
+    // used to be cached here too, forever — but neither carries a hash, and
+    // the manifest changes whenever the logo does. Cached, an installed app
+    // would have gone on reading the old icons however often they changed.
+    (url.pathname.startsWith('/_expo/') || url.pathname.startsWith('/assets/'))
   );
 }
 

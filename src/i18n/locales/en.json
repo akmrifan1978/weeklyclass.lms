@@ -806,7 +806,33 @@
     "calendarApproximate": "On this device the Hijri date is worked out arithmetically and may be a day or two out.",
     "greeting": "Greeting",
     "greetingHint": "Leave empty to use \"Assalamu Alaikum\" in each person’s own language. Typing one here uses that wording for everybody.",
-    "logoHint": "Changes everywhere in the app and on the browser tab straight away. The icon on a phone home screen is copied when the app is installed, so it changes at the next release — and on iPhone only if the app is removed and added again."
+    "logoHint": "Changes everywhere in the app and on the browser tab straight away. Installed app icons on Android and desktop follow within a few minutes of saving, then update on the device, usually within a day. An iPhone that already has the app on its home screen keeps the old icon until the app is removed and added again.",
+    "logoShape": "Logo shape",
+    "logoShapeHint": "Used wherever the logo appears, including the browser tab and the installed app icon. Only the shape changes, never the colours.",
+    "shapeRound": "Round",
+    "shapeSquare": "Square",
+    "shapeOriginal": "Original",
+    "appBanner": "App banner",
+    "appBannerHint": "Shown at the top of the home screens. Pick images and videos already uploaded anywhere in the app, or upload a new image. They appear in this order.",
+    "bannerAddFromLibrary": "Add from uploaded media",
+    "bannerLibraryTitle": "Uploaded images and videos",
+    "bannerAll": "All",
+    "bannerImages": "Images",
+    "bannerVideos": "Videos",
+    "bannerAdded": "Added",
+    "bannerEmpty": "No banner items yet.",
+    "bannerLibraryEmpty": "Nothing of this kind has been uploaded yet.",
+    "bannerUploadNew": "Upload a new image",
+    "bannerMoveUp": "Move up",
+    "bannerMoveDown": "Move down",
+    "bannerRemove": "Remove",
+    "bannerImage": "Image",
+    "bannerVideo": "Video",
+    "scholarsHint": "Students choose which Mowlavi their question is for. The chosen name is shown with the question.",
+    "scholarsEmpty": "No Mowlavi names yet.",
+    "scholarPlaceholder": "Mowlavi name",
+    "scholarAdd": "Add",
+    "scholarRemove": "Remove"
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -1159,7 +1185,9 @@
     "updated": "Your question has been updated.",
     "removed": "Question deleted.",
     "deleteConfirm": "Delete this question? This cannot be undone from the app.",
-    "replaceRecording": "Record again to replace it"
+    "replaceRecording": "Record again to replace it",
+    "chooseScholar": "Who is this question for?",
+    "forScholar": "For {{name}}"
   },
   "hadith": {
     "authenticityNote": "Sahih al-Bukhari and Sahih Muslim are the two collections whose authenticity is least disputed. Within the other books individual narrations carry different gradings, which are not shown here — each one lists its book and number so you can check it.",
@@ -1682,5 +1710,20 @@
     "onlineClasses": "Joining an online class needs an account. The class schedule is on the Calendar page.",
     "profile": "You are browsing as a guest. Log in or register to have your own profile, results and notes.",
     "exit": "Stop browsing as a guest"
+  },
+  "banner": {
+    "previous": "Previous",
+    "next": "Next",
+    "slide": "Banner {{n}} of {{total}}"
+  },
+  "media": {
+    "fromRecordings": "Recordings",
+    "fromKhutbahs": "Khutbah & Bayan",
+    "fromFlyers": "Flyers",
+    "fromEvents": "Events",
+    "fromArticles": "Articles",
+    "fromLessons": "Lessons",
+    "fromMaterials": "Materials",
+    "fromSettings": "Branding"
   }
 }

@@ -329,6 +329,8 @@ export async function askQuestion(
     audioSeconds?: number | null;
     classId?: string | null;
     eventId?: string | null;
+    scholarId?: string | null;
+    scholarName?: string | null;
   },
   user: AppUser
 ): Promise<string> {
@@ -342,6 +344,8 @@ export async function askQuestion(
       askedByName: user.fullName,
       classId: input.classId ?? user.classId ?? null,
       eventId: input.eventId ?? null,
+      scholarId: input.scholarId ?? null,
+      scholarName: input.scholarName?.trim() || null,
       answer: null,
       answeredBy: null,
       answeredByName: null,
@@ -444,7 +448,13 @@ export function canChangeOwnQuestion(
  */
 export async function editQuestion(
   question: QaQuestion,
-  input: { question: string; audioUrl: string | null; audioSeconds: number | null },
+  input: {
+    question: string;
+    audioUrl: string | null;
+    audioSeconds: number | null;
+    scholarId?: string | null;
+    scholarName?: string | null;
+  },
   user: AppUser
 ): Promise<void> {
   if (!input.question.trim() && !input.audioUrl) {
@@ -454,6 +464,9 @@ export async function editQuestion(
     question: input.question.trim(),
     audioUrl: input.audioUrl,
     audioSeconds: input.audioSeconds,
+    ...(input.scholarId !== undefined
+      ? { scholarId: input.scholarId, scholarName: input.scholarName?.trim() || null }
+      : {}),
   });
   void audit.log({
     actor: user,

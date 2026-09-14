@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -10,7 +10,7 @@ import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constant
 import { friendlyMessage } from '@/utils/errors';
 import { relativeTime } from '@/utils/date';
 import * as support from '@/services/supportService';
-import { watchSettings } from '@/services/settingsService';
+import { useBranding } from '@/hooks/useBranding';
 import { AyahAudio } from '@/features/islamic/AyahAudio';
 import { VoiceRecorder } from './VoiceRecorder';
 import type { QaQuestion } from '@/types';
@@ -40,11 +40,21 @@ import {
  * would make it useless for the moment it exists to serve.
  */
 export function QaScreen({ eventId }: { eventId?: string | null }) {
-  const [scholar, setScholar] = useState('');
+  // The Mowlavis a question can be for, live from Settings.
+  const { scholars } = useBranding();
+  // Named beside the title only when there is exactly one to name.
+  const scholar = scholars.length === 1 ? scholars[0].name : '';
+  const [scholarId, setScholarId] = useState<string | null>(null);
 
+  // Starts on the first Mowlavi, so asking never stops to demand a choice.
+  // Re-chosen if the one selected is removed from the list.
   useEffect(() => {
-    return watchSettings((settings) => setScholar(settings.qaScholarName?.trim() ?? ''));
-  }, []);
+    if (!scholars.length) {
+      if (scholarId) setScholarId(null);
+      return;
+    }
+    if (!scholarId || !scholars.some((s) => s.id === scholarId)) setScholarId(scholars[0].id);
+  }, [scholars, scholarId]);
   const { t } = useTranslation();
   const toast = useToast();
   const { user, can } = useAuth();
@@ -64,6 +74,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   const [editing, setEditing] = useState<QaQuestion | null>(null);
   const [editText, setEditText] = useState('');
   const [editVoice, setEditVoice] = useState<{ url: string; seconds: number } | null>(null);
+  const [editScholarId, setEditScholarId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<QaQuestion | null>(null);
 
   /*
@@ -123,6 +134,8 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           audioUrl: voice?.url ?? null,
           audioSeconds: voice?.seconds ?? null,
           eventId: eventId ?? null,
+          scholarId: scholars.find((s) => s.id === scholarId)?.id ?? null,
+          scholarName: scholars.find((s) => s.id === scholarId)?.name ?? null,
         },
         user
       );
@@ -173,6 +186,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   const openEdit = (item: QaQuestion) => {
     setEditing(item);
     setEditText(item.question ?? '');
+    setEditScholarId(item.scholarId ?? null);
     setEditVoice(
       item.audioUrl ? { url: item.audioUrl, seconds: item.audioSeconds ?? 0 } : null
     );
@@ -199,6 +213,13 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           question: editText,
           audioUrl: editVoice?.url ?? null,
           audioSeconds: editVoice?.seconds ?? null,
+          // Only when a list exists to choose from; otherwise left as it was.
+          ...(scholars.length
+            ? {
+                scholarId: editScholarId,
+                scholarName: scholars.find((s) => s.id === editScholarId)?.name ?? editing.scholarName ?? null,
+              }
+            : {}),
         },
         user
       );
@@ -246,6 +267,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
         <Card style={styles.askCard}>
           <Text style={styles.askTitle}>{t('qa.askTitle')}</Text>
           <Text style={styles.askHint}>{t('qa.askHint')}</Text>
+          <ScholarChoice scholars={scholars} value={scholarId} onChange={setScholarId} />
           <TextField
             value={question}
             onChangeText={setQuestion}
@@ -300,6 +322,16 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                 <Text style={styles.asker}>{item.askedByName}</Text>
                 <Text style={styles.date}>{relativeTime(item.createdAt)}</Text>
               </View>
+              {/* Who it was asked of — the name it was asked with, kept on the
+                  question, so it stays right after the list changes. */}
+              {item.scholarName ? (
+                <View style={styles.scholarPill}>
+                  <Ionicons name="person-circle-outline" size={14} color={colors.primary} />
+                  <Text style={styles.scholarPillText} numberOfLines={1}>
+                    {t('qa.forScholar', { name: item.scholarName })}
+                  </Text>
+                </View>
+              ) : null}
               {item.question ? (
                 <Text style={styles.question}>{item.question}</Text>
               ) : (
@@ -458,6 +490,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
         onSubmit={saveEdit}
         submitting={busy}
       >
+        <ScholarChoice scholars={scholars} value={editScholarId} onChange={setEditScholarId} />
         {/* Text, recording, or both — the same freedom as asking. */}
         <TextField
           value={editText}
@@ -508,8 +541,85 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   );
 }
 
+/**
+ * Choosing the Mowlavi a question is for.
+ *
+ * Chips that wrap, so they suit a phone, a tablet and a desktop without a
+ * dropdown — every choice visible, one tap each. Hidden when there is nobody
+ * to choose between.
+ */
+function ScholarChoice({
+  scholars,
+  value,
+  onChange,
+}: {
+  scholars: { id: string; name: string }[];
+  value: string | null;
+  onChange: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  if (scholars.length === 0) return null;
+
+  return (
+    <View style={styles.scholarWrap}>
+      <Text style={styles.scholarLabel}>{t('qa.chooseScholar')}</Text>
+      <View style={styles.scholarChips}>
+        {scholars.map((scholar) => {
+          const on = scholar.id === value;
+          return (
+            <Pressable
+              key={scholar.id}
+              onPress={() => onChange(scholar.id)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={scholar.name}
+              style={[styles.scholarChip, on && styles.scholarChipOn]}
+            >
+              <Text style={[styles.scholarChipText, on && styles.scholarChipTextOn]} numberOfLines={1}>
+                {scholar.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   askCard: { marginBottom: spacing.lg },
+  scholarWrap: { marginBottom: spacing.md },
+  scholarLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.xs,
+  },
+  scholarChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  scholarChip: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  scholarChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  scholarChipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  scholarChipTextOn: { color: colors.textInverse },
+  scholarPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+  },
+  scholarPillText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   askTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text },
   askHint: {
     fontSize: fontSize.xs,

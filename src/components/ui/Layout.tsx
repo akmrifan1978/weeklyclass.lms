@@ -28,6 +28,8 @@ import { initials } from '@/utils/format';
 import { useResponsive } from '@/hooks/useResponsive';
 import { watchSettings } from '@/services/settingsService';
 import { FooterTicker } from '@/components/shared/FooterTicker';
+import { useBranding } from '@/hooks/useBranding';
+import { logoImageStyle } from '@/utils/branding';
 
 /** Page container: safe area, background, and a max width on large screens. */
 export function Screen({
@@ -156,17 +158,13 @@ export function AppHeader({
  * fetched would take the page title down with it.
  */
 function HeaderLogo() {
-  const [uri, setUri] = useState<string | null>(null);
-
-  useEffect(() => {
-    return watchSettings((settings) => setUri(settings.logoUrl ?? null));
-  }, []);
+  const { logoUrl: uri, logoShape } = useBranding();
 
   if (!uri) return null;
   return (
     <Image
       source={{ uri }}
-      style={styles.headerLogo}
+      style={[styles.headerLogo, logoImageStyle(logoShape, 30)]}
       resizeMode="contain"
       // Decorative: the title beside it already names the screen, and the app
       // name is not what somebody navigating by screen reader is looking for.

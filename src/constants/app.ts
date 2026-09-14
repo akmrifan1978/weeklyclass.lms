@@ -80,6 +80,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   tickerEnabled: false,
   tickerText: '',
   qaScholarName: '',
+  qaScholars: [],
+  bannerItems: [],
   // Off: an id the student has not been given yet is a wall in front of the
   // first screen they ever see.
   requireClassId: false,

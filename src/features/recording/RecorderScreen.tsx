@@ -81,7 +81,13 @@ export function RecorderScreen({ basePath }: { basePath: '/(admin)' | '/(teacher
       loadBrandingImage(settings.bannerUrl),
     ]).then(([logo, banner]) => {
       if (cancelled) return;
-      setBranding({ logo, banner, name: settings.appName, venue: settings.venue });
+      setBranding({
+        logo,
+        banner,
+        name: settings.appName,
+        venue: settings.venue,
+        logoShape: settings.logoShape ?? null,
+      });
     });
     return () => {
       cancelled = true;
