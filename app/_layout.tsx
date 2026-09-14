@@ -22,6 +22,8 @@ import { NoticePopup } from '@/components/shared/NoticePopup';
 import { brand } from '@/constants/theme';
 import { useCalendarSystem } from '@/hooks/useCalendarSystem';
 import { LoadingState } from '@/components/ui';
+import { adoptFromProfile, type ReadingPlan } from '@/services/quranPlanService';
+import { adoptBookmarkFromProfile } from '@/services/quranBookmarkService';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 import { useDocumentBranding } from '@/hooks/useDocumentBranding';
@@ -140,8 +142,32 @@ function RoleGate({ children }: { children: React.ReactNode }) {
  * mergeScopeLanguages.
  */
 function ScopeLanguageSync() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { adoptScopeLanguages, languageFor } = useLanguage();
+
+  /*
+   * The reading plan and the Qur'an bookmark follow the ACCOUNT, and are taken
+   * onto this device as soon as the profile arrives - not when somebody next
+   * happens to open the reading plan screen, which left a new phone's dashboard
+   * showing no progress until then. Keyed on the content, so a profile update
+   * that changes neither does nothing. A guest has no account to take them from.
+   */
+  const profilePlan = isGuest
+    ? undefined
+    : (user as { quranPlan?: ReadingPlan } | null)?.quranPlan ?? undefined;
+  const profileBookmark = isGuest ? undefined : user?.quranBookmark ?? undefined;
+  const planKey = profilePlan ? JSON.stringify(profilePlan) : '';
+  const bookmarkKey = profileBookmark ? JSON.stringify(profileBookmark) : '';
+
+  useEffect(() => {
+    if (profilePlan) void adoptFromProfile(profilePlan);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planKey]);
+
+  useEffect(() => {
+    if (profileBookmark) void adoptBookmarkFromProfile(profileBookmark);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookmarkKey]);
   const segments = useSegments();
   const stored = user?.dashboardLanguages;
 

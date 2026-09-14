@@ -331,7 +331,7 @@ service cloud.firestore {
                            // Qur'an reading plan. Both are the person's own
                            // settings: they grant nothing and are safe to let
                            // people write for themselves.
-                           'dashboardLanguages', 'quranPlan',
+                           'dashboardLanguages', 'quranPlan', 'quranBookmark',
                            'dateOfBirth', 'gender', 'qualification',
                            'pushTokens', 'lastLoginAt', 'searchTokens', 'updatedAt',
                            // Cleared by the app once a new password has been

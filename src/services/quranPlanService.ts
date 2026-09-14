@@ -108,11 +108,40 @@ async function mirrorToProfile(uid: string, plan: ReadingPlan): Promise<void> {
   }
 }
 
-/** Adopts a plan found on the profile when the device has none of its own. */
+/** The date of the most recent completed day, or '' for a plan never read. */
+function lastReadDate(plan: ReadingPlan): string {
+  return (plan.history ?? []).reduce((latest, entry) => (entry.date > latest ? entry.date : latest), '');
+}
+
+/**
+ * Whether the account's copy of the plan is ahead of this device's.
+ *
+ * The plan carries no "last changed" time, so ahead is judged from what it does
+ * carry, in order: a plan created later is a newer plan (started again on
+ * another device); for the same plan, more recent reading is ahead; and on the
+ * same day, the copy further through the pages is ahead.
+ */
+function profileIsAhead(profile: ReadingPlan, local: ReadingPlan): boolean {
+  if (profile.createdAt !== local.createdAt) return (profile.createdAt ?? '') > (local.createdAt ?? '');
+  const profileRead = lastReadDate(profile);
+  const localRead = lastReadDate(local);
+  if (profileRead !== localRead) return profileRead > localRead;
+  return (profile.currentPage ?? 0) > (local.currentPage ?? 0);
+}
+
+/**
+ * Takes the plan from the account onto this device when the account's copy is
+ * ahead — so reading done on one phone continues on another.
+ *
+ * It used to be taken only when the device had no plan at all, so a phone used
+ * last week kept showing last week's page even after days of reading on a
+ * tablet. A device that is ahead keeps its own; an account with no plan never
+ * deletes one here.
+ */
 export async function adoptFromProfile(plan: ReadingPlan | undefined): Promise<void> {
   if (!plan) return;
   const existing = await loadPlan();
-  if (existing) return;
+  if (existing && !profileIsAhead(plan, existing)) return;
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
   } catch {

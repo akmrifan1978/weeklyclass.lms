@@ -23,6 +23,15 @@ export interface BaseDoc {
 // Users
 // ---------------------------------------------------------------------------
 
+/** A bookmarked surah, as saved on the device and on the account. */
+export interface QuranBookmark {
+  surah: number;
+  name: string;
+  arabicName: string;
+  /** When it was made, in milliseconds. The newer of two copies wins. */
+  at: number;
+}
+
 export interface AppUser extends BaseDoc {
   uid: string;
   fullName: string;
@@ -52,6 +61,11 @@ export interface AppUser extends BaseDoc {
    * new phone. The device copy is the source of truth — see quranPlanService.
    */
   quranPlan?: unknown;
+  /**
+   * The surah they bookmarked, kept with the account so it follows them to
+   * another phone or computer. See quranBookmarkService.
+   */
+  quranBookmark?: QuranBookmark | null;
   profileImage?: string | null;
   organizationId?: string | null;
   branchId?: string | null;
