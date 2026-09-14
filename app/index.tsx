@@ -183,6 +183,17 @@ export default function SplashScreen() {
           icon="key-outline"
           onPress={() => router.push('/(auth)/forgot-password')}
         />
+        {/* Browse without an account. Here as well as on the login form,
+            because this is the page everybody lands on — somebody not yet
+            sure they want an account should not have to open a sign-in form
+            to discover they can look around first. A guest is signed out, so
+            event booking and weekly assignments stay closed to them by the
+            security rules, not by this screen. */}
+        <LinkButton
+          label={t('guest.enter')}
+          icon="eye-outline"
+          onPress={() => router.push('/(auth)/guest')}
+        />
       </View>
 
       {/* The rest of the website, on the page rather than only behind the menu.
