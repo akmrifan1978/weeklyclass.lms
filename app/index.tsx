@@ -27,6 +27,7 @@ import {
 import { tone } from '@/components/public/tone';
 import type { UserRole } from '@/types';
 import { AppBanner } from '@/components/shared/AppBanner';
+import { InstallSheet, useInstall } from '@/components/shared/InstallApp';
 
 /**
  * The front page.
@@ -101,6 +102,10 @@ function withVenueLabel(venue: string, label: string): string {
 export default function SplashScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  // Hidden once the app is open as an installed app: offering to install the
+  // app somebody is already using would be the one confusing button here.
+  const install = useInstall();
+  const [installOpen, setInstallOpen] = useState(false);
   const [classes, setClasses] = useState<calendarService.PublicClass[]>([]);
 
   // `settings/app` is world-readable precisely so this screen can show the
@@ -202,7 +207,15 @@ export default function SplashScreen() {
           icon="key-outline"
           onPress={() => router.push('/(auth)/forgot-password')}
         />
+        {install.web && !install.installed ? (
+          <LinkButton
+            label={t('install.open')}
+            icon="download-outline"
+            onPress={() => setInstallOpen(true)}
+          />
+        ) : null}
       </View>
+      <InstallSheet visible={installOpen} onClose={() => setInstallOpen(false)} />
 
       {/* The rest of the website, on the page rather than only behind the menu.
           A hamburger is where somebody looks for a destination they already

@@ -7,6 +7,9 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 
 import '@/i18n';
+// Imported for its side effect: it starts listening for the browser's one-tap
+// install offer, which fires once and early. See installService.
+import '@/services/installService';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
 import { OfflineBanner } from '@/components/shared/OfflineBanner';

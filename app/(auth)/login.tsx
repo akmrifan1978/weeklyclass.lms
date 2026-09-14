@@ -21,6 +21,7 @@ import { friendlyMessage } from '@/utils/errors';
 import { loginSchema, validate } from '@/utils/validation';
 import { Button, IconButton, PasswordField, TextField } from '@/components/ui';
 import type { UserRole } from '@/types';
+import { InstallSheet, useInstall } from '@/components/shared/InstallApp';
 
 const ROLE_COPY: Record<UserRole, { titleKey: string; icon: keyof typeof Ionicons.glyphMap }> = {
   student: { titleKey: 'auth.studentLogin', icon: 'school-outline' },
@@ -31,6 +32,8 @@ const ROLE_COPY: Record<UserRole, { titleKey: string; icon: keyof typeof Ionicon
 export default function LoginScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const install = useInstall();
+  const [installOpen, setInstallOpen] = useState(false);
   const toast = useToast();
   const { login, busy } = useAuth();
   const params = useLocalSearchParams<{ role?: string }>();
@@ -194,6 +197,21 @@ export default function LoginScreen() {
               {t('admin.permissionsAdminNote')}
             </Text>
           )}
+
+          {/* For every role, admin included, and hidden once installed. */}
+          {install.web && !install.installed ? (
+            <Pressable
+              onPress={() => setInstallOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('install.open')}
+              hitSlop={8}
+              style={({ pressed }) => [styles.installLink, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="download-outline" size={16} color={brand.sandLight} />
+              <Text style={styles.guestLinkText}>{t('install.open')}</Text>
+            </Pressable>
+          ) : null}
+          <InstallSheet visible={installOpen} onClose={() => setInstallOpen(false)} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -260,6 +278,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   footerText: { color: brand.sandLight, fontSize: fontSize.sm },
+  installLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
   guestLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
   guestLinkText: {
     color: brand.sandLight,
