@@ -151,6 +151,20 @@ export default function SplashScreen() {
       ))}
 
       <View style={styles.staffRow}>
+        {/* Guest first, then the staff doors. It opens the guest screen rather
+            than a login form: a guest is signed out, so event booking and
+            weekly assignments stay closed to them by the security rules. */}
+        <Pressable
+          onPress={() => router.push('/(auth)/guest')}
+          accessibilityRole="button"
+          accessibilityLabel={t('auth.guestLogin')}
+          style={({ pressed }) => [styles.staffButton, { opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Ionicons name="eye-outline" size={15} color={tone.body} />
+          <Text style={styles.staffLabel} numberOfLines={1}>
+            {t('auth.guestLogin')}
+          </Text>
+        </Pressable>
         {STAFF_ROLES.map((item) => (
           <Pressable
             key={item.role}
@@ -182,17 +196,6 @@ export default function SplashScreen() {
           label={t('auth.forgotPassword')}
           icon="key-outline"
           onPress={() => router.push('/(auth)/forgot-password')}
-        />
-        {/* Browse without an account. Here as well as on the login form,
-            because this is the page everybody lands on — somebody not yet
-            sure they want an account should not have to open a sign-in form
-            to discover they can look around first. A guest is signed out, so
-            event booking and weekly assignments stay closed to them by the
-            security rules, not by this screen. */}
-        <LinkButton
-          label={t('guest.enter')}
-          icon="eye-outline"
-          onPress={() => router.push('/(auth)/guest')}
         />
       </View>
 
