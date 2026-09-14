@@ -15,12 +15,18 @@ import * as storageService from '@/services/storageService';
  * Tamil or Arabic on a phone keyboard is slow, and a student who reads more
  * easily than they write should not be shut out of asking.
  *
- * The recording is capped and the cap is visible. An unbounded recorder produces
- * ten-minute files that fail to upload on a weak connection and that nobody
- * listens to; a limit that is stated up front produces questions.
+ * The recording is capped and the cap is visible, but the cap is now generous
+ * rather than tight. Two minutes was cutting people off mid-explanation — a
+ * teacher answering properly needs longer than a student asking — and being
+ * cut off is a worse failure than a large file.
+ *
+ * It is not removed altogether. The only thing standing between a recorder
+ * left running by accident and a file that cannot be uploaded at all on a
+ * weak connection is this number, so it stays; it is simply set where nobody
+ * speaking normally will ever meet it.
  */
 
-const MAX_SECONDS = 120;
+const MAX_SECONDS = 600;
 
 type RecorderState = 'idle' | 'recording' | 'uploading';
 

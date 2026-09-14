@@ -318,7 +318,23 @@ export async function nextSequentialId(prefix: 'STU' | 'TCH'): Promise<string> {
     const value = current + 1;
     tx.set(ref, { value, prefix, year, updatedAt: serverTimestamp() }, { merge: true });
     return value;
-   })
+   },
+   /*
+    * More attempts than the default five.
+    *
+    * Every registration in a year increments the SAME document, so this is the
+    * one place in the app where simultaneous users genuinely collide. Firestore
+    * resolves a collision by aborting one transaction and retrying it with
+    * backoff; five attempts was measured running out when thirty people
+    * registered in the same moment, which is exactly what an enrolment day
+    * looks like.
+    *
+    * Each retry backs off further, so extra attempts cost waiting only in the
+    * crush itself, never on an ordinary registration. And if even these run
+    * out, registration still completes — see the non-sequential fallback id in
+    * authService — so this buys a tidier number, not a working account.
+    */
+   { maxAttempts: 15 })
   );
 
   return `${prefix}-${year}-${String(next).padStart(4, '0')}`;

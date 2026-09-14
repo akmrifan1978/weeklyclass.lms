@@ -915,9 +915,24 @@ async function runRegistration(
     const prefix = role === 'student' ? 'STU' : 'TCH';
     let generatedId: string;
     try {
-      generatedId = await withTokenRetry('counter allocation', credential.user, () =>
-        nextSequentialId(prefix)
-      );
+      /*
+       * Capped at eight seconds.
+       *
+       * Under a crush of simultaneous registrations the counter retries with
+       * growing backoff, and measured against the live project the slowest of
+       * thirty waited nearly a minute for its number. Nobody should stare at a
+       * spinner that long for a serial number. Past the cap, the fallback id
+       * below is issued and registration carries straight on.
+       *
+       * Safe: if the abandoned attempt commits later, the counter simply skips
+       * a value. A gap in the numbering, never the same number twice.
+       */
+      generatedId = await Promise.race([
+        withTokenRetry('counter allocation', credential.user, () => nextSequentialId(prefix)),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('counter allocation took too long')), 8000)
+        ),
+      ]);
       step('3/6 id allocated', generatedId);
     } catch (error) {
       generatedId = `${prefix}-${new Date().getFullYear()}-${uid.slice(0, 6).toUpperCase()}`;

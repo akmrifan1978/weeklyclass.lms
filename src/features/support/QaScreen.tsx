@@ -18,6 +18,7 @@ import {
   AppHeader,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   ErrorState,
   FormSheet,
@@ -59,6 +60,26 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   );
   const [busy, setBusy] = useState(false);
 
+  // Correcting or withdrawing your own question.
+  const [editing, setEditing] = useState<QaQuestion | null>(null);
+  const [editText, setEditText] = useState('');
+  const [editVoice, setEditVoice] = useState<{ url: string; seconds: number } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<QaQuestion | null>(null);
+
+  /*
+   * A clock for the edit window.
+   *
+   * The ten minutes run out whether or not anything else changes on screen,
+   * so without this the Edit button would sit there after its window closed
+   * and fail when pressed. Half a minute is fine enough for a window measured
+   * in whole minutes.
+   */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(tick);
+  }, []);
+
   const load = useCallback(
     () =>
       support.listQuestions({
@@ -76,11 +97,22 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   });
 
   const ask = async () => {
-    // A short label is required even with a recording. A list of unlabelled
-    // play buttons cannot be scanned or searched, and the teacher working
-    // through it needs to see what each one is about.
-    if (!user || question.trim().length < 5) {
-      toast.error(t('qa.questionTooShort'));
+    /*
+     * Either a written question or a spoken one. Both, if you like.
+     *
+     * There was a five-character minimum on the text, and it applied even when
+     * a recording was attached — so somebody who could speak their question but
+     * not type it was refused. The reasoning was that a list of unlabelled play
+     * buttons cannot be scanned, which is true, and is now solved by LABELLING
+     * such a question in the list rather than by demanding the asker type
+     * something first.
+     *
+     * The only rule left is that a question has to contain something. "Ask" on
+     * an empty form with no recording is not a short question, it is a slip.
+     */
+    if (!user) return;
+    if (!question.trim() && !voice) {
+      toast.error(t('qa.sayOrWriteSomething'));
       return;
     }
     setBusy(true);
@@ -106,7 +138,20 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   };
 
   const answer = async () => {
-    if (!answering || !user || answerText.trim().length < 2) return;
+    /*
+     * The same freedom for whoever answers.
+     *
+     * A teacher could not reply with a recording alone either — the answer
+     * needed two characters of text before the button did anything, and it
+     * failed silently, which is the worst way for a form to refuse. A spoken
+     * answer is often the better one here: explaining tajweed by voice beats
+     * describing it in writing.
+     */
+    if (!answering || !user) return;
+    if (!answerText.trim() && !answerVoice) {
+      toast.error(t('qa.sayOrWriteSomething'));
+      return;
+    }
     setBusy(true);
     try {
       await support.answerQuestion(answering.id, answerText, answering, user, {
@@ -122,6 +167,59 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
       toast.error(friendlyMessage(err, t));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const openEdit = (item: QaQuestion) => {
+    setEditing(item);
+    setEditText(item.question ?? '');
+    setEditVoice(
+      item.audioUrl ? { url: item.audioUrl, seconds: item.audioSeconds ?? 0 } : null
+    );
+  };
+
+  const saveEdit = async () => {
+    if (!editing || !user) return;
+    // Checked again at the moment of saving, not only when the sheet opened.
+    // Somebody can open it in the ninth minute and press save in the twelfth.
+    if (!support.canChangeOwnQuestion(editing, user, Date.now())) {
+      toast.error(t('qa.editWindow', { minutes: 0 }));
+      setEditing(null);
+      return;
+    }
+    if (!editText.trim() && !editVoice) {
+      toast.error(t('qa.sayOrWriteSomething'));
+      return;
+    }
+    setBusy(true);
+    try {
+      await support.editQuestion(
+        editing,
+        {
+          question: editText,
+          audioUrl: editVoice?.url ?? null,
+          audioSeconds: editVoice?.seconds ?? null,
+        },
+        user
+      );
+      toast.success(t('qa.updated'));
+      setEditing(null);
+      void reload();
+    } catch (err) {
+      toast.error(friendlyMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeQuestion = async (item: QaQuestion) => {
+    if (!user) return;
+    try {
+      await support.deleteQuestion(item, user);
+      toast.success(t('qa.removed'));
+      void reload();
+    } catch (err) {
+      toast.error(friendlyMessage(err, t));
     }
   };
 
@@ -202,7 +300,15 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                 <Text style={styles.asker}>{item.askedByName}</Text>
                 <Text style={styles.date}>{relativeTime(item.createdAt)}</Text>
               </View>
-              <Text style={styles.question}>{item.question}</Text>
+              {item.question ? (
+                <Text style={styles.question}>{item.question}</Text>
+              ) : (
+                // Spoken only. Labelled rather than left blank, so the list is
+                // still scannable — this is what the old text minimum was for.
+                <Text style={[styles.question, styles.spokenOnly]}>
+                  {t('qa.spokenOnly')}
+                </Text>
+              )}
 
               {item.audioUrl ? (
                 <View style={styles.playRow}>
@@ -213,7 +319,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                 </View>
               ) : null}
 
-              {item.answer ? (
+              {item.answer || item.answerAudioUrl ? (
                 <View style={styles.answer}>
                   <View style={styles.answerHeader}>
                     <Ionicons name="checkmark-circle" size={15} color={colors.success} />
@@ -221,7 +327,13 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                       {item.answeredByName ?? t('support.team')}
                     </Text>
                   </View>
-                  <Text style={styles.answerText}>{item.answer}</Text>
+                  {item.answer ? (
+                    <Text style={styles.answerText}>{item.answer}</Text>
+                  ) : (
+                    <Text style={[styles.answerText, styles.spokenOnly]}>
+                      {t('qa.spokenAnswerOnly')}
+                    </Text>
+                  )}
                   {item.answerAudioUrl ? (
                     <View style={styles.playRow}>
                       <AyahAudio url={item.answerAudioUrl} size={30} />
@@ -235,10 +347,37 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                 <Text style={styles.pending}>{t('qa.awaitingAnswer')}</Text>
               )}
 
+              {/* The asker's own controls, for as long as the window is open and
+                  nobody has answered. They disappear by themselves when it
+                  closes — see the clock above. */}
+              {support.canChangeOwnQuestion(item, user, now) ? (
+                <View style={styles.ownerRow}>
+                  <Text style={styles.windowText}>
+                    {t('qa.editWindow', { minutes: support.editMinutesLeft(item, now) })}
+                  </Text>
+                  <View style={styles.actions}>
+                    <Button
+                      label={t('common.edit')}
+                      icon="create-outline"
+                      size="sm"
+                      variant="outline"
+                      onPress={() => openEdit(item)}
+                    />
+                    <Button
+                      label={t('common.delete')}
+                      icon="trash-outline"
+                      size="sm"
+                      variant="ghost"
+                      onPress={() => setConfirmDelete(item)}
+                    />
+                  </View>
+                </View>
+              ) : null}
+
               {isStaff ? (
                 <View style={styles.actions}>
                   <Button
-                    label={item.answer ? t('qa.editAnswer') : t('qa.answer')}
+                    label={item.answer || item.answerAudioUrl ? t('qa.editAnswer') : t('qa.answer')}
                     icon="create-outline"
                     size="sm"
                     onPress={() => {
@@ -253,6 +392,17 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                     color={colors.textMuted}
                     onPress={() => hide(item)}
                   />
+                  {/* Only an admin deletes somebody else's question. A teacher
+                      hides it, which keeps what the student wrote. */}
+                  {user?.role === 'admin' ? (
+                    <IconButton
+                      icon="trash-outline"
+                      label={t('common.delete')}
+                      size={32}
+                      color={colors.danger}
+                      onPress={() => setConfirmDelete(item)}
+                    />
+                  ) : null}
                 </View>
               ) : null}
             </Card>
@@ -269,12 +419,15 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
       >
         <Text style={styles.originalLabel}>{t('qa.theQuestion')}</Text>
         <Text style={styles.original}>{answering?.question}</Text>
+        {/* Not `required`: an answer may be spoken instead of written, and
+            marking it required puts an asterisk beside a field somebody is
+            entitled to leave empty. */}
         <TextField
           label={t('qa.yourAnswer')}
           value={answerText}
           onChangeText={setAnswerText}
           multiline
-          required
+          hint={t('qa.answerHint')}
         />
         <View style={styles.voiceRow}>
           {user ? (
@@ -297,6 +450,60 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           ) : null}
         </View>
       </FormSheet>
+
+      <FormSheet
+        visible={Boolean(editing)}
+        title={t('qa.editTitle')}
+        onClose={() => setEditing(null)}
+        onSubmit={saveEdit}
+        submitting={busy}
+      >
+        {/* Text, recording, or both — the same freedom as asking. */}
+        <TextField
+          value={editText}
+          onChangeText={setEditText}
+          placeholder={t('qa.placeholder')}
+          multiline
+        />
+        <View style={styles.voiceRow}>
+          {editVoice ? (
+            <View style={styles.attached}>
+              <AyahAudio url={editVoice.url} size={28} />
+              <Text style={styles.attachedText}>
+                {t('qa.voiceAttached', { seconds: editVoice.seconds })}
+              </Text>
+              <IconButton
+                icon="close"
+                label={t('common.clear')}
+                size={28}
+                color={colors.danger}
+                onPress={() => setEditVoice(null)}
+              />
+            </View>
+          ) : null}
+          {user ? (
+            <VoiceRecorder
+              ownerId={user.uid}
+              onRecorded={(url, seconds) => setEditVoice({ url, seconds })}
+            />
+          ) : null}
+        </View>
+        {editVoice ? <Text style={styles.windowText}>{t('qa.replaceRecording')}</Text> : null}
+      </FormSheet>
+
+      <ConfirmDialog
+        visible={Boolean(confirmDelete)}
+        title={t('common.delete')}
+        message={t('qa.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        destructive
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          const target = confirmDelete;
+          setConfirmDelete(null);
+          if (target) void removeQuestion(target);
+        }}
+      />
     </>
   );
 }
@@ -331,6 +538,7 @@ const styles = StyleSheet.create({
   answerBy: { fontSize: fontSize.xs, color: colors.success, fontWeight: fontWeight.bold },
   answerText: { fontSize: fontSize.sm, color: colors.text, lineHeight: 20, marginTop: 2 },
   pending: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.md },
+  spokenOnly: { fontStyle: 'italic', color: colors.textSecondary },
   voiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -348,6 +556,13 @@ const styles = StyleSheet.create({
   },
   playLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md },
+  ownerRow: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  windowText: { fontSize: fontSize.xs, color: colors.textMuted },
   originalLabel: {
     fontSize: fontSize.xs,
     color: colors.textMuted,

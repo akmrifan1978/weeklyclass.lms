@@ -1099,7 +1099,32 @@ service cloud.firestore {
                     && request.resource.data.answer == null
                     && request.resource.data.answeredBy == null;
 
-      allow update: if isStaff();
+      // Staff answer, hide and tidy, as before.
+      //
+      // The ASKER may also correct or withdraw their own question — but only
+      // while nobody has answered it, and only for a short while after asking.
+      // Otherwise a question could be rewritten after a teacher replied, and the
+      // answer would be left responding to words that are no longer there.
+      //
+      // The app offers ten minutes; this allows eleven. A correction started in
+      // the ninth minute and saved in the tenth should land, not be refused over
+      // the time it took to type it.
+      //
+      // Only the question itself may change. The asker cannot mark it answered,
+      // move it to another class, or put words in a teacher's mouth.
+      allow update: if isStaff()
+                    || (
+                      isSignedIn()
+                      && resource.data.askedBy == request.auth.uid
+                      && request.resource.data.askedBy == request.auth.uid
+                      && resource.data.get('status', 'open') == 'open'
+                      && resource.data.get('answeredBy', null) == null
+                      && request.time < resource.data.createdAt + duration.value(11, 'm')
+                      && onlyChanged([
+                           'question', 'audioUrl', 'audioSeconds', 'updatedAt',
+                           'deleted', 'deletedAt', 'deletedBy'
+                         ])
+                    );
       allow delete: if isAdmin();
     }
 

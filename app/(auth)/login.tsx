@@ -157,6 +157,22 @@ export default function LoginScreen() {
                 variant="outlineLight"
                 size="sm"
               />
+              {/*
+               * Look around without an account.
+               *
+               * A guest is signed OUT, not signed in as a lesser kind of user, and
+               * that is what keeps the limits honest: booking an event and taking a
+               * weekly assignment both need an account, and the security rules
+               * refuse both to anybody without one. There is no guest flag for a
+               * screen to forget to check.
+               */}
+              <Button
+                label={t('guest.enter')}
+                onPress={() => router.push('/(auth)/guest')}
+                variant="ghost"
+                size="sm"
+                icon="eye-outline"
+              />
             </View>
           ) : (
             <Text style={styles.adminNote}>
