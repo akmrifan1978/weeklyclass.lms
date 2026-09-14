@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { StatTile } from '@/components/shared/StatTile';
+import { GuestSignInCard } from '@/components/shared/GuestGate';
 import * as progressService from '@/services/progressService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -239,7 +240,14 @@ export default function StudentHome() {
         </View>
       </View>
 
-      {!user?.classId ? (
+      {/* A guest is told they are browsing as a guest, with the way to get an
+          account. "Not assigned to a class, contact your administrator" is
+          true of a student and wrong for somebody who has no account at all. */}
+      {isGuest ? (
+        <View style={{ marginBottom: spacing.md }}>
+          <GuestSignInCard message={t('guestMode.profile')} />
+        </View>
+      ) : !user?.classId ? (
         <Card style={styles.noticeCard}>
           <View style={styles.noticeRow}>
             <Ionicons name="information-circle-outline" size={20} color={colors.warning} />
@@ -251,7 +259,9 @@ export default function StudentHome() {
       {/* Their own figures, on the screen they land on. These were computed
           for the progress screen already and never shown here, which is where
           somebody actually wonders how they are doing. */}
-      {data?.progress ? (
+      {/* A guest has no attendance, submissions or class of their own, so
+          these would only ever read zero. */}
+      {data?.progress && !isGuest ? (
         <View style={styles.statRow}>
           <StatTile
             icon="calendar-outline"
