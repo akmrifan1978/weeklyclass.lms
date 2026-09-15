@@ -5,6 +5,7 @@ import { db } from '@/firebase/config';
 import { COLLECTIONS } from '@/constants/app';
 import { AppError, denialContext } from '@/utils/errors';
 import type { UserRole } from '@/types';
+import { legacyPhoneKey, phoneKey } from '@/utils/phone';
 
 /**
  * Username, mobile and email lookup.
@@ -45,14 +46,17 @@ export function normaliseUsername(username: string): string {
 }
 
 /**
- * Reduces a typed mobile number to a comparable key: digits only, with any
- * leading zeros or country code stripped to the last 9 digits. "+94 77 123 4567",
- * "0771234567" and "771234567" all collapse to the same key, so the same phone
- * cannot register twice just by being typed differently.
+ * Reduces a mobile number to its unique key: the country code and the number,
+ * digits only, without the trunk zero. "+966 56 756 0387", "0567560387" with
+ * +966 chosen, and "00966567560387" all become "966567560387", so the same
+ * phone cannot register twice just by being typed differently - and a Saudi
+ * 050 number and a UAE 050 number are no longer mistaken for each other.
+ *
+ * `dial` is the country code chosen beside the number. A number typed with
+ * its own code ("+94...") uses that instead. See utils/phone.
  */
-export function normaliseMobile(mobile: string): string {
-  const digits = mobile.replace(/[^0-9]/g, '');
-  return digits.length > 9 ? digits.slice(-9) : digits;
+export function normaliseMobile(mobile: string, dial?: string | null): string {
+  return phoneKey(mobile, dial);
 }
 
 export const MOBILES = 'mobiles';
@@ -74,8 +78,8 @@ const AUTH_EMAIL_DOMAIN =
  * resolved through the indexes above, so this address never has to be typed or
  * even seen.
  */
-export function authEmailForMobile(mobile: string): string {
-  return `${normaliseMobile(mobile)}@${AUTH_EMAIL_DOMAIN}`;
+export function authEmailForMobile(mobile: string, dial?: string | null): string {
+  return `${normaliseMobile(mobile, dial)}@${AUTH_EMAIL_DOMAIN}`;
 }
 
 /**
@@ -98,9 +102,9 @@ export function authEmailForMobile(mobile: string): string {
  * Random rather than counted, so it needs no read to work out which suffixes
  * are already taken.
  */
-export function altAuthEmailForMobile(mobile: string): string {
+export function altAuthEmailForMobile(mobile: string, dial?: string | null): string {
   const token = Math.random().toString(36).slice(2, 8);
-  return `${normaliseMobile(mobile)}.${token}@${AUTH_EMAIL_DOMAIN}`;
+  return `${normaliseMobile(mobile, dial)}.${token}@${AUTH_EMAIL_DOMAIN}`;
 }
 
 /** True when this is one of the synthetic addresses above, not a real inbox. */
@@ -109,8 +113,8 @@ export function isSyntheticAuthEmail(email: string | null | undefined): boolean 
 }
 
 /** True when no account has claimed this phone number yet. */
-export async function isMobileAvailable(mobile: string): Promise<boolean> {
-  const key = normaliseMobile(mobile);
+export async function isMobileAvailable(mobile: string, dial?: string | null): Promise<boolean> {
+  const key = normaliseMobile(mobile, dial);
   if (!key) return true;
   const snap = await getDoc(doc(db, MOBILES, key));
   return !snap.exists();
@@ -135,21 +139,40 @@ export async function emailForUsername(username: string): Promise<string | null>
  * path: the mobile number is the one identifier guaranteed to name exactly one
  * account, and it is what people here expect to sign in with.
  */
-export async function emailForMobile(mobile: string): Promise<string | null> {
-  const key = normaliseMobile(mobile);
-  if (!key) return null;
-  const snap = await getDoc(doc(db, MOBILES, key));
-  if (!snap.exists()) return null;
-  const data = snap.data();
-  return (data.authEmail as string) ?? (data.email as string) ?? null;
+export async function emailForMobile(
+  mobile: string,
+  dial?: string | null
+): Promise<string | null> {
+  const row = await mobileRow(mobile, dial);
+  return row ? ((row.authEmail as string) ?? (row.email as string) ?? null) : null;
 }
 
-/** Resolves a mobile number to its username — powers "forgot username". */
-export async function usernameForMobile(mobile: string): Promise<string | null> {
-  const key = normaliseMobile(mobile);
+/** Resolves a mobile number to its username - powers "forgot username". */
+export async function usernameForMobile(
+  mobile: string,
+  dial?: string | null
+): Promise<string | null> {
+  const row = await mobileRow(mobile, dial);
+  return row ? ((row.username as string) ?? null) : null;
+}
+
+/**
+ * The index row for a number: under its international key, or - while any
+ * are left - under the nine-digit key an out-of-date copy of the app may
+ * still write. The old key costs a read only when the new one is missing.
+ */
+async function mobileRow(
+  mobile: string,
+  dial?: string | null
+): Promise<Record<string, unknown> | null> {
+  const key = normaliseMobile(mobile, dial);
   if (!key) return null;
   const snap = await getDoc(doc(db, MOBILES, key));
-  return snap.exists() ? ((snap.data().username as string) ?? null) : null;
+  if (snap.exists()) return snap.data();
+  const legacy = legacyPhoneKey(mobile);
+  if (!legacy || legacy === key) return null;
+  const old = await getDoc(doc(db, MOBILES, legacy));
+  return old.exists() ? old.data() : null;
 }
 
 /** Resolves an email address to its username — powers "forgot username". */
@@ -179,6 +202,8 @@ export async function claimIdentity(params: {
   uid: string;
   role: UserRole;
   mobile?: string;
+  /** The code chosen beside the number, e.g. "+966". */
+  mobileCountryCode?: string | null;
   /**
    * Suppresses the "DENIED" console error on refusal.
    *
@@ -191,7 +216,7 @@ export async function claimIdentity(params: {
   const username = normaliseUsername(params.username);
   const email = params.email.trim().toLowerCase();
   const authEmail = (params.authEmail ?? email).trim().toLowerCase();
-  const mobileKey = params.mobile ? normaliseMobile(params.mobile) : '';
+  const mobileKey = params.mobile ? normaliseMobile(params.mobile, params.mobileCountryCode) : '';
 
   // Names only what is actually written. The label used to read "mobiles/" with
   // nothing after it for an account with no mobile number, which pointed at a
@@ -298,6 +323,89 @@ export async function releaseIdentity(username: string, email: string): Promise<
   await runTransaction(db, async (tx) => {
     tx.delete(doc(db, COLLECTIONS.usernames, normaliseUsername(username)));
     tx.delete(doc(db, EMAIL_LOOKUP, emailHash));
+  });
+}
+
+/**
+ * Moves an account's number in the index when the number changes.
+ *
+ * One transaction: the new number must be free or already this account's,
+ * the new row is written, and the old row goes if it was this account's.
+ * Without it, changing a number left the old one "already registered" to an
+ * account that no longer had it - a number nobody could use again, and that
+ * nothing in the dashboard showed.
+ *
+ * Done BEFORE the profile is saved, so a number that belongs to somebody else
+ * stops the edit with nothing half-saved.
+ */
+export async function moveMobileClaim(params: {
+  uid: string;
+  username: string;
+  authEmail: string;
+  from: { mobile?: string | null; dial?: string | null };
+  to: { mobile: string; dial?: string | null };
+}): Promise<void> {
+  const nextKey = normaliseMobile(params.to.mobile, params.to.dial);
+  const oldKey = params.from.mobile ? normaliseMobile(params.from.mobile, params.from.dial) : '';
+  if (!nextKey || nextKey === oldKey) return;
+  const legacyKey = params.from.mobile ? legacyPhoneKey(params.from.mobile) : '';
+  const oldKeys = [oldKey, legacyKey].filter(
+    (key, index, all) => key && key !== nextKey && all.indexOf(key) === index
+  );
+
+  await denialContext('move number', `mobiles/${oldKey || '-'} -> mobiles/${nextKey}`, () =>
+    runTransaction(db, async (tx) => {
+      const nextRef = doc(db, MOBILES, nextKey);
+      const oldRefs = oldKeys.map((key) => doc(db, MOBILES, key));
+      const [taken, ...olds] = await Promise.all([
+        tx.get(nextRef),
+        ...oldRefs.map((ref) => tx.get(ref)),
+      ]);
+
+      if (taken.exists() && taken.data().uid !== params.uid) {
+        throw new AppError('validation.mobileTaken', 'already-exists');
+      }
+
+      tx.set(nextRef, {
+        uid: params.uid,
+        username: normaliseUsername(params.username),
+        authEmail: params.authEmail,
+        createdAt: taken.exists() ? taken.data().createdAt : serverTimestamp(),
+      });
+      olds.forEach((snap, index) => {
+        if (snap.exists() && snap.data().uid === params.uid) tx.delete(oldRefs[index]);
+      });
+    })
+  );
+}
+
+/**
+ * Gives back what a removed account held in the sign-in indexes: its
+ * username, its number, and the email lookup pointing at it.
+ *
+ * Only rows that still name this account are touched. Without this, removing
+ * somebody left their number "already registered" to an account the dashboard
+ * no longer shows, and nobody could register with that number again.
+ */
+export async function releaseAccountIdentity(account: {
+  uid: string;
+  username?: string | null;
+  email?: string | null;
+  mobile?: string | null;
+  mobileCountryCode?: string | null;
+}): Promise<void> {
+  const refs = [
+    account.username ? doc(db, COLLECTIONS.usernames, normaliseUsername(account.username)) : null,
+    account.mobile ? doc(db, MOBILES, normaliseMobile(account.mobile, account.mobileCountryCode)) : null,
+    account.mobile ? doc(db, MOBILES, legacyPhoneKey(account.mobile)) : null,
+    account.email ? doc(db, EMAIL_LOOKUP, await hashEmail(account.email)) : null,
+  ].filter((ref): ref is NonNullable<typeof ref> => ref !== null);
+
+  await runTransaction(db, async (tx) => {
+    const snaps = await Promise.all(refs.map((ref) => tx.get(ref)));
+    snaps.forEach((snap, index) => {
+      if (snap.exists() && snap.data().uid === account.uid) tx.delete(refs[index]);
+    });
   });
 }
 

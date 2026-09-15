@@ -50,7 +50,7 @@ interface AuthContextValue {
   isAdmin: boolean;
   isTeacher: boolean;
   isStudent: boolean;
-  login: (identifier: string, password: string) => Promise<AppUser>;
+  login: (identifier: string, password: string, dial?: string | null) => Promise<AppUser>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   /** Asks for push permission and stores the token on the profile. */
@@ -257,10 +257,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const login = useCallback(
-    async (identifier: string, password: string) => {
+    async (identifier: string, password: string, dial?: string | null) => {
       setBusy(true);
       try {
-        const { user: profile } = await authService.login(identifier, password);
+        const { user: profile } = await authService.login(identifier, password, dial);
 
         // Show the dashboard from the profile the sign-in already fetched,
         // rather than holding the login screen open for a listener to re-read

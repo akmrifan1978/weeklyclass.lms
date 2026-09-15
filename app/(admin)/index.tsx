@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,7 @@ import { humanise } from '@/utils/format';
 import { loadDashboardStats } from '@/services/statsService';
 import { listLogs } from '@/services/auditService';
 import { listUsers } from '@/services/userService';
+import { watchAdminUnread } from '@/services/chatService';
 import { QuickAccessTile } from '@/components/shared/ContentCards';
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
@@ -40,6 +41,10 @@ export default function AdminDashboard() {
   const { language: dashboardLanguage, setLanguage: setDashboardLanguage } =
     useLanguageScope('admin');
   const router = useRouter();
+
+  // Live, so the tile shows a new message without pulling to refresh.
+  const [chatUnread, setChatUnread] = useState(0);
+  useEffect(() => watchAdminUnread((total) => setChatUnread(total)), []);
 
   const load = useCallback(async () => {
     const [stats, logs, pending] = await Promise.all([
@@ -215,6 +220,12 @@ export default function AdminDashboard() {
             label={t('nav.events')}
             tint={brand.orangeLight}
             onPress={() => router.push('/(admin)/events')}
+          />
+          <QuickAccessTile
+            icon="chatbubble-ellipses-outline"
+            label={chatUnread ? `${t('nav.liveChat')} (${chatUnread})` : t('nav.liveChat')}
+            tint={brand.navy}
+            onPress={() => router.push('/(admin)/chat')}
           />
           <QuickAccessTile
             icon="help-buoy"

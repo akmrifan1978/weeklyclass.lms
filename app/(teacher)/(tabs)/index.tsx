@@ -82,7 +82,7 @@ export default function TeacherHome() {
     enabled: !scopeLoading,
   });
 
-  const tiles: { permission: Permission; icon: React.ComponentProps<typeof QuickAccessTile>['icon']; labelKey: string; route: string; tint: string }[] = [
+  const tiles: { permission?: Permission; icon: React.ComponentProps<typeof QuickAccessTile>['icon']; labelKey: string; route: string; tint: string }[] = [
     { permission: 'VIEW_STUDENTS', icon: 'people-outline', labelKey: 'nav.myStudents', route: '/(teacher)/students', tint: brand.navy },
     { permission: 'VIEW_LESSONS', icon: 'book-outline', labelKey: 'nav.lessons', route: '/(teacher)/lessons', tint: brand.orange },
     { permission: 'UPLOAD_VIDEO', icon: 'radio-button-on', labelKey: 'record.title', route: '/(teacher)/record', tint: brand.red },
@@ -96,9 +96,11 @@ export default function TeacherHome() {
     { permission: 'MANAGE_CALENDAR', icon: 'ticket', labelKey: 'nav.events', route: '/(teacher)/events', tint: brand.orangeLight },
     { permission: 'VIEW_STUDENTS', icon: 'chatbubbles', labelKey: 'nav.qa', route: '/(teacher)/qa', tint: brand.navy },
     { permission: 'VIEW_STUDENTS', icon: 'help-buoy', labelKey: 'nav.support', route: '/(teacher)/support', tint: brand.sand },
+    // Every teacher can reach the admins, whatever else they have been granted.
+    { icon: 'chatbubble-ellipses-outline', labelKey: 'nav.liveChat', route: '/(teacher)/chat', tint: brand.navy },
   ];
 
-  const visibleTiles = tiles.filter((tile) => can(tile.permission));
+  const visibleTiles = tiles.filter((tile) => !tile.permission || can(tile.permission));
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['top', 'bottom']}>

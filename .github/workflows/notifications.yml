@@ -123,6 +123,13 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          # New-registration alerts go to every active admin's own address,
+          # plus these if set (comma-separated).
+          ADMIN_ALERT_EMAIL: ${{ secrets.ADMIN_ALERT_EMAIL }}
+          # Optional free WhatsApp alert to the admin's own phone through
+          # CallMeBot. Both must be set, or WhatsApp is simply skipped.
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
         run: |
           # pipefail, or the pipe into tee reports tee's success and a failed
           # delivery is recorded as a green run. The default shell here is

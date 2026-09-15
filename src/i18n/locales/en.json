@@ -176,7 +176,8 @@
     "passwordQueued": "Saved. The new password takes effect within a minute.",
     "setPasswordUnavailable": "This device cannot set a password securely. Use a desktop browser, or create a reset link instead.",
     "mobileHasUnfinishedAccount": "An unfinished account already exists for this mobile number. Use the same password you chose before, or sign in instead.",
-    "guestLogin": "Guest Login"
+    "guestLogin": "Guest Login",
+    "registrationInProgress": "Your registration is already being sent. Please wait a moment."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
@@ -285,7 +286,8 @@
     "ratings": "Ratings",
     "flyers": "Flyers",
     "workbooks": "Workbooks",
-    "staffTools": "Tools you can use"
+    "staffTools": "Tools you can use",
+    "liveChat": "Live Chat"
   },
   "dashboard": {
     "quickAccess": "Quick access",
@@ -832,7 +834,9 @@
     "scholarsEmpty": "No Mowlavi names yet.",
     "scholarPlaceholder": "Mowlavi name",
     "scholarAdd": "Add",
-    "scholarRemove": "Remove"
+    "scholarRemove": "Remove",
+    "autoApproveRegistrations": "Automatically Approve New Registrations",
+    "autoApproveHelp": "ON: new registrations are approved at once and can sign in straight away. OFF: they stay Pending until an admin approves them."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -1754,5 +1758,31 @@
     "fromLessons": "Lessons",
     "fromMaterials": "Materials",
     "fromSettings": "Branding"
+  },
+  "phone": {
+    "chooseCode": "Choose country code",
+    "searchCountry": "Search country or code",
+    "noMatch": "No country matches"
+  },
+  "chat": {
+    "title": "Live Chat",
+    "subtitle": "Message the admin team",
+    "open": "Live Chat with Admin",
+    "empty": "No messages yet. Write your question and the admin will reply here.",
+    "emptyAdmin": "No messages in this conversation yet.",
+    "placeholder": "Type a message…",
+    "send": "Send",
+    "you": "You",
+    "admin": "Admin",
+    "tooLong": "A message can be up to 2,000 characters.",
+    "inboxEmpty": "No conversations yet. When a student or teacher writes, it appears here.",
+    "pickThread": "Choose a conversation to read and reply.",
+    "newMessage": "New chat message from {{name}}",
+    "search": "Search by name",
+    "loadFailed": "Messages could not be loaded. Check your connection and try again."
+  },
+  "alerts": {
+    "newRegistrationTitle": "New registration",
+    "newRegistration": "{{name}} registered and is waiting for approval."
   }
 }

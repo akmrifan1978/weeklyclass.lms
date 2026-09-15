@@ -20,6 +20,7 @@ import {
 } from '@/constants/theme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { NotificationBell } from '@/components/shared/NotificationBell';
+import { AdminLiveAlerts } from '@/components/shared/AdminLiveAlerts';
 import { Avatar, ConfirmDialog } from '@/components/ui';
 import type { Permission } from '@/types';
 
@@ -68,6 +69,7 @@ export const ADMIN_NAV: NavItem[] = [
   { labelKey: 'nav.results', route: '/(admin)/results', icon: 'trophy-outline', permission: 'VIEW_RESULTS', group: 'academic' },
   { labelKey: 'nav.reports', route: '/(admin)/reports', icon: 'stats-chart-outline', permission: 'VIEW_RESULTS', group: 'academic' },
 
+  { labelKey: 'nav.liveChat', route: '/(admin)/chat', icon: 'chatbubble-ellipses-outline', group: 'comms' },
   { labelKey: 'nav.notifications', route: '/(admin)/notifications', icon: 'notifications-outline', permission: 'SEND_NOTIFICATIONS', group: 'comms' },
   { labelKey: 'nav.announcements', route: '/(admin)/announcements', icon: 'megaphone-outline', permission: 'MANAGE_ANNOUNCEMENTS', group: 'comms' },
 
@@ -228,6 +230,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </View>
 
         <View style={styles.content}>{children}</View>
+        <AdminLiveAlerts />
 
         <ConfirmDialog
           visible={confirmLogout}
@@ -277,6 +280,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </View>
 
       <View style={styles.content}>{children}</View>
+        <AdminLiveAlerts />
 
       <Modal
         visible={menuOpen}

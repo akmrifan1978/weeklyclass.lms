@@ -9,7 +9,8 @@ import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/
 import { friendlyMessage } from '@/utils/errors';
 import { recoverySchema, validate } from '@/utils/validation';
 import { usernameForEmail, usernameForMobile } from '@/services/identityService';
-import { Button, IconButton, TextField } from '@/components/ui';
+import { Button, IconButton, TextField, useDialPicker } from '@/components/ui';
+import { DEFAULT_DIAL, looksLikePhone, splitInternational } from '@/utils/phone';
 
 /**
  * Username recovery, by mobile number or email address.
@@ -30,6 +31,9 @@ export default function ForgotUsernameScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ username: string | null } | null>(null);
+  const [dial, setDial] = useState(DEFAULT_DIAL);
+  const dialPicker = useDialPicker({ dial, onDialChange: setDial });
+  const isPhone = looksLikePhone(identifier);
 
   const handleSubmit = async () => {
     const parsed = validate(recoverySchema, identifier);
@@ -45,7 +49,7 @@ export default function ForgotUsernameScreen() {
       // first — it is the one that names exactly one account — and fall back to
       // the email index for anything else.
       const username = /^[+0-9\s()-]+$/.test(typed)
-        ? await usernameForMobile(typed)
+        ? await usernameForMobile(typed, dial)
         : await usernameForEmail(typed);
       setResult({ username });
     } catch (err) {
@@ -84,12 +88,15 @@ export default function ForgotUsernameScreen() {
 
             <TextField
               label={t('auth.mobileOrEmail')}
-              icon="person-outline"
+              icon={isPhone ? undefined : 'person-outline'}
+              leading={isPhone ? dialPicker.chip : undefined}
               autoCapitalize="none"
               autoCorrect={false}
               value={identifier}
               onChangeText={(value) => {
-                setIdentifier(value);
+                const intl = splitInternational(value);
+                if (intl) setDial(intl.dial);
+                setIdentifier(intl ? intl.national : value);
                 setError(null);
                 setResult(null);
               }}
@@ -99,6 +106,7 @@ export default function ForgotUsernameScreen() {
               containerStyle={{ marginTop: spacing.xl, width: '100%' }}
               required
             />
+            {isPhone ? dialPicker.panel : null}
 
             <Button
               label={t('auth.recoverUsername')}

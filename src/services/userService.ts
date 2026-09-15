@@ -9,7 +9,8 @@ import { doc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firest
 
 import { db, firebaseConfig } from '@/firebase/config';
 import { COLLECTIONS, DEFAULT_LANGUAGE, PAGE_SIZE } from '@/constants/app';
-import { searchTokens } from '@/utils/format';
+import { accountSearchTokens } from '@/utils/format';
+import { cleanDial, phoneSearchTerm, toE164 } from '@/utils/phone';
 import { AppError } from '@/utils/errors';
 import { usernameSchema } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS, allPermissions } from '@/types/permissions';
@@ -34,10 +35,17 @@ import {
   type Page,
 } from './firestore';
 import {
+  altAuthEmailForMobile,
   authEmailForMobile,
   claimIdentity,
+  isMobileAvailable,
+  isUsernameAvailable,
+  MOBILES,
+  moveMobileClaim,
   nextSequentialId,
+  normaliseMobile,
   normaliseUsername,
+  releaseAccountIdentity,
 } from './identityService';
 import * as audit from './auditService';
 import { syncPublicTeacher } from './publicSiteService';
@@ -61,7 +69,10 @@ export interface UserQuery {
 }
 
 export function listUsers(options: UserQuery = {}): Promise<Page<AppUser>> {
-  const term = options.search?.trim().toLowerCase();
+  // A number is searched in the digits the index holds, so "+966 56 756 0387",
+  // "0567560387" and "00966567560387" all find the same person.
+  const typed = options.search?.trim().toLowerCase();
+  const term = typed ? (phoneSearchTerm(typed) ?? typed) : typed;
   return listPage<AppUser>(COLLECTIONS.users, {
     filters: [
       options.role ? ['role', '==', options.role] : null,
@@ -129,13 +140,34 @@ export async function updateUser(
     payload.assignedTeacherNames = group?.teacherNames ?? [];
   }
 
-  if (changes.fullName || changes.username || changes.email) {
-    payload.searchTokens = searchTokens(
-      changes.fullName ?? before.fullName,
-      changes.username ?? before.username,
-      changes.email ?? before.email,
-      before.studentId ?? before.teacherId
-    );
+  /*
+   * A changed number moves its sign-in row FIRST, in its own transaction.
+   *
+   * First, because the move is also the uniqueness check: a number that
+   * already belongs to somebody else fails here, before anything about the
+   * profile is saved. Saving the profile first is how an account used to end
+   * up showing a number that signed in to somebody else - and why the old
+   * number stayed "already registered" to nobody visible.
+   */
+  const numberTouched = changes.mobile !== undefined || changes.mobileCountryCode !== undefined;
+  if (numberTouched) {
+    const nextMobile = (changes.mobile ?? before.mobile ?? '').trim();
+    const nextDial = changes.mobileCountryCode ?? before.mobileCountryCode;
+    if (nextMobile) {
+      await moveMobileClaim({
+        uid,
+        username: before.username,
+        authEmail: before.authEmail ?? before.email,
+        from: { mobile: before.mobile, dial: before.mobileCountryCode },
+        to: { mobile: nextMobile, dial: nextDial },
+      });
+      payload.mobileCountryCode = cleanDial(nextDial);
+      payload.mobileE164 = toE164(nextMobile, nextDial);
+    }
+  }
+
+  if (changes.fullName || changes.username || changes.email || numberTouched) {
+    payload.searchTokens = accountSearchTokens({ ...before, ...payload });
   }
 
   await updateDocById<AppUser>(COLLECTIONS.users, uid, payload);
@@ -183,8 +215,17 @@ export async function changeUsername(
   const before = await getUser(uid);
   if (!before) throw new AppError('errors.notFound', 'not-found');
 
+  /*
+   * Who may rename whom.
+   *
+   * Yourself, always. An admin, anybody who is not an admin - every student
+   * and teacher, as the centre asked. Another ADMIN's username stays
+   * super-admin work: that check exists so one admin cannot quietly change
+   * how another signs in, and it is kept. firestore.rules says the same.
+   */
   const isSelf = actor.uid === uid;
-  if (!isSelf && actor.superAdmin !== true) {
+  const adminRenamingMember = actor.role === 'admin' && before.role !== 'admin';
+  if (!isSelf && !adminRenamingMember && actor.superAdmin !== true) {
     throw new AppError('admin.usernameNotYours', 'permission-denied');
   }
 
@@ -211,6 +252,13 @@ export async function changeUsername(
 
     const old = current ? await tx.get(currentRef) : null;
 
+    // The number's row carries the username too - it is what "forgot
+    // username" answers with - so it moves in the same transaction.
+    const numberRef = before.mobile
+      ? doc(db, MOBILES, normaliseMobile(before.mobile, before.mobileCountryCode))
+      : null;
+    const numberRow = numberRef ? await tx.get(numberRef) : null;
+
     tx.set(nextRef, {
       uid,
       email: before.email ?? '',
@@ -225,14 +273,13 @@ export async function changeUsername(
     // somebody else would hand them a broken login.
     if (old?.exists() && old.data().uid === uid) tx.delete(currentRef);
 
+    if (numberRef && numberRow?.exists() && numberRow.data().uid === uid) {
+      tx.update(numberRef, { username: next });
+    }
+
     tx.update(userRef, {
       username: next,
-      searchTokens: searchTokens(
-        before.fullName,
-        next,
-        before.email,
-        before.studentId ?? before.teacherId
-      ),
+      searchTokens: accountSearchTokens({ ...before, username: next }),
       updatedAt: serverTimestamp(),
     });
   });
@@ -320,6 +367,14 @@ export async function removeUser(uid: string, actor: AppUser): Promise<void> {
   await softDelete(COLLECTIONS.users, uid, actor.uid);
   await updateDoc(doc(db, COLLECTIONS.users, uid), { status: 'inactive' });
   await syncPublicTeacher(uid, { ...before, publicProfile: false });
+  // The number and username go back to the pool. The dashboard no longer
+  // shows this account, so nothing should still be holding them for it - this
+  // is the "already registered, but nowhere in the dashboard" people hit.
+  if (before) {
+    await releaseAccountIdentity(before).catch((error) =>
+      console.warn('[WeeklyClass] could not release the removed account\'s number and username', error)
+    );
+  }
   await audit.log({
     actor,
     action: 'DELETE',
@@ -341,6 +396,8 @@ export interface AdminCreateUserInput {
   email: string;
   password: string;
   mobile: string;
+  /** "+966". */
+  mobileCountryCode?: string | null;
   country: string;
   language?: LanguageCode;
   branchId?: string | null;
@@ -373,18 +430,36 @@ export async function createUserAsAdmin(
   try {
     const email = input.email.trim().toLowerCase();
     const username = normaliseUsername(input.username);
+    const dial = cleanDial(input.mobileCountryCode);
+
+    /*
+     * Checked BEFORE anything is created.
+     *
+     * The profile used to be saved first and the number checked afterwards, so
+     * a number already in use failed only once the new account already stood
+     * in the dashboard - a half-made teacher whose number signed in to somebody
+     * else, and a retry that added a second. Now a taken number or username
+     * stops here, and there is nothing to clean up.
+     *
+     * The transaction in claimIdentity is still the real guard, for the moment
+     * between this check and that write.
+     */
+    const [mobileFree, usernameFree] = await Promise.all([
+      isMobileAvailable(input.mobile, dial).catch(() => true),
+      isUsernameAvailable(username).catch(() => true),
+    ]);
+    if (!mobileFree) throw new AppError('validation.mobileTaken', 'already-exists');
+    if (!usernameFree) throw new AppError('validation.usernameTaken', 'already-exists');
 
     // Same rule as self-registration: the mobile number is the unique identity,
     // an email address may be shared. Where Firebase Auth refuses a second
     // account on an address it already holds, the account signs in under one
     // derived from its mobile number instead. See identityService.
     //
-    // And where there is no address at all — which is now allowed, because
-    // plenty of teachers do not have one — the same derived address is used
-    // from the start. Without this, an admin adding a teacher with the email
-    // blank got `auth/missing-email`, which reached them as "something went
-    // wrong" and named nothing.
-    const signInAddress = email || authEmailForMobile(input.mobile);
+    // And where there is no address at all - which is allowed, because plenty
+    // of teachers do not have one - the same derived address is used from the
+    // start.
+    const signInAddress = email || authEmailForMobile(input.mobile, dial);
     let authEmail = signInAddress;
     let credential;
     try {
@@ -395,60 +470,111 @@ export async function createUserAsAdmin(
       );
     } catch (error) {
       if ((error as { code?: string })?.code !== 'auth/email-already-in-use') throw error;
-      authEmail = authEmailForMobile(input.mobile);
-      credential = await createUserWithEmailAndPassword(
-        secondaryAuth,
-        authEmail,
-        input.password
-      );
+      authEmail = authEmailForMobile(input.mobile, dial);
+      try {
+        credential = await createUserWithEmailAndPassword(secondaryAuth, authEmail, input.password);
+      } catch (second) {
+        if ((second as { code?: string })?.code !== 'auth/email-already-in-use') throw second;
+        // The number's own address is held by an old sign-in with no account
+        // behind it: a removed account, or an attempt that never finished. The
+        // number was checked as free a moment ago, so a fresh address is used.
+        authEmail = altAuthEmailForMobile(input.mobile, dial);
+        credential = await createUserWithEmailAndPassword(secondaryAuth, authEmail, input.password);
+      }
     }
     const uid = credential.user.uid;
-    const generatedId = await nextSequentialId(input.role === 'student' ? 'STU' : 'TCH');
 
-    const profile: Record<string, unknown> = {
-      uid,
-      fullName: input.fullName.trim(),
-      username,
-      email,
-      authEmail,
-      mobile: input.mobile.trim(),
-      role: input.role,
-      status: input.status ?? 'active',
-      country: input.country,
-      language: input.language ?? DEFAULT_LANGUAGE,
-      profileImage: null,
-      branchId: input.branchId ?? null,
-      classId: input.role === 'student' ? (input.classId ?? null) : null,
-      classIds: input.role === 'teacher' ? [] : [],
-      permissions:
-        input.permissions ??
-        (input.role === 'teacher' ? { ...DEFAULT_TEACHER_PERMISSIONS } : {}),
-      deleted: false,
-      searchTokens: searchTokens(input.fullName, username, email, generatedId),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      createdBy: actor.uid,
-      ...(input.role === 'student'
-        ? {
-            studentId: generatedId,
-            dateOfBirth: input.dateOfBirth ?? null,
-            gender: input.gender ?? null,
-          }
-        : { teacherId: generatedId, qualification: input.qualification ?? '' }),
-    };
+    /*
+     * The username and number are claimed before the profile exists. If either
+     * was taken in the moment since the check, this fails and the new sign-in -
+     * which nobody has ever used - is deleted again, so no half-made account is
+     * left behind in the dashboard.
+     */
+    try {
+      await claimIdentity({
+        username,
+        email,
+        authEmail,
+        uid,
+        role: input.role,
+        mobile: input.mobile,
+        mobileCountryCode: dial,
+      });
+    } catch (error) {
+      await credential.user.delete().catch(() => undefined);
+      throw error;
+    }
 
-    // Written by the admin's own session, so admin rules apply.
-    await import('./firestore').then((fs) =>
-      fs.setDocById(COLLECTIONS.users, uid, profile, { actorId: actor.uid })
-    );
-    await claimIdentity({
-      username,
-      email,
-      authEmail,
-      uid,
-      role: input.role,
-      mobile: input.mobile,
-    });
+    let generatedId: string;
+    try {
+      generatedId = await nextSequentialId(input.role === 'student' ? 'STU' : 'TCH');
+
+      // A student's teachers come with their class, exactly as when a student
+      // registers themselves.
+      const group =
+        input.role === 'student' && input.classId
+          ? await getById<ClassRoom>(COLLECTIONS.classes, input.classId).catch(() => null)
+          : null;
+
+      const profile: Record<string, unknown> = {
+        uid,
+        fullName: input.fullName.trim(),
+        username,
+        email,
+        authEmail,
+        mobile: input.mobile.trim(),
+        mobileCountryCode: dial,
+        mobileE164: toE164(input.mobile, dial),
+        role: input.role,
+        status: input.status ?? 'active',
+        country: input.country,
+        language: input.language ?? DEFAULT_LANGUAGE,
+        profileImage: null,
+        branchId: input.branchId ?? null,
+        classId: input.role === 'student' ? (input.classId ?? null) : null,
+        classIds: input.role === 'teacher' ? [] : [],
+        permissions:
+          input.permissions ??
+          (input.role === 'teacher' ? { ...DEFAULT_TEACHER_PERMISSIONS } : {}),
+        deleted: false,
+        searchTokens: accountSearchTokens({
+          fullName: input.fullName,
+          username,
+          email,
+          studentId: generatedId,
+          mobile: input.mobile,
+          mobileCountryCode: dial,
+        }),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdBy: actor.uid,
+        ...(input.role === 'student'
+          ? {
+              studentId: generatedId,
+              dateOfBirth: input.dateOfBirth ?? null,
+              gender: input.gender ?? null,
+              assignedTeacherIds: group?.teacherIds ?? [],
+              assignedTeacherNames: group?.teacherNames ?? [],
+            }
+          : { teacherId: generatedId, qualification: input.qualification ?? '' }),
+      };
+
+      // Written by the admin's own session, so admin rules apply.
+      await import('./firestore').then((fs) =>
+        fs.setDocById(COLLECTIONS.users, uid, profile, { actorId: actor.uid })
+      );
+    } catch (error) {
+      // Undone in reverse, so a retry starts from nothing.
+      await releaseAccountIdentity({
+        uid,
+        username,
+        email,
+        mobile: input.mobile,
+        mobileCountryCode: dial,
+      }).catch(() => undefined);
+      await credential.user.delete().catch(() => undefined);
+      throw error;
+    }
 
     await audit.log({
       actor,

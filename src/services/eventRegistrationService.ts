@@ -15,6 +15,7 @@ import type {
 import { listPage, updateDocById, type Page } from './firestore';
 import { getSettings } from './settingsService';
 import * as audit from './auditService';
+import { formatPhone } from '@/utils/phone';
 
 /**
  * Booking a place at an event.
@@ -212,7 +213,7 @@ export async function book(
       eventTitle: event.title,
       userId: user.uid,
       userName: user.fullName,
-      userMobile: user.mobile ?? null,
+      userMobile: user.mobile ? formatPhone(user.mobile, user.mobileCountryCode) : null,
       userEmail: user.email ?? null,
       participants,
       seats,

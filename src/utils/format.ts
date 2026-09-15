@@ -1,4 +1,5 @@
 import { GRADE_BANDS } from '@/constants/app';
+import { phoneSearchForms } from './phone';
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -61,6 +62,29 @@ export function searchTokens(...values: (string | undefined | null)[]): string[]
   }
   // Firestore array fields are capped at 1 MiB per document; keep it bounded.
   return Array.from(tokens).slice(0, 200);
+}
+
+/**
+ * The search tokens for an account: name, username, email, generated id - and
+ * the phone number in every form an admin might type it, so searching
+ * "0567560387" finds the person whose number it is. It used to find nobody.
+ */
+export function accountSearchTokens(account: {
+  fullName?: string | null;
+  username?: string | null;
+  email?: string | null;
+  studentId?: string | null;
+  teacherId?: string | null;
+  mobile?: string | null;
+  mobileCountryCode?: string | null;
+}): string[] {
+  return searchTokens(
+    account.fullName,
+    account.username,
+    account.email,
+    account.studentId ?? account.teacherId,
+    ...phoneSearchForms(account.mobile, account.mobileCountryCode)
+  );
 }
 
 export function pluralise(count: number, singular: string, plural?: string): string {

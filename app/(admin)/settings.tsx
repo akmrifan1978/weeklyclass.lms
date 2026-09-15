@@ -311,11 +311,15 @@ function SettingsScreen() {
             onValueChange={(v) => set('registrationEnabled', v)}
           />
           <Divider />
+          {/* Asked the way the centre thinks about it - "approve automatically?"
+              - while the stored setting keeps its meaning, so everything that
+              already reads `requireApproval`, the security rules included,
+              is unchanged. ON here is requireApproval false. */}
           <ToggleRow
-            label={t('settings.requireApproval')}
-            description={t('auth.registrationPendingApproval')}
-            value={form.requireApproval}
-            onValueChange={(v) => set('requireApproval', v)}
+            label={t('settings.autoApproveRegistrations')}
+            description={t('settings.autoApproveHelp')}
+            value={!form.requireApproval}
+            onValueChange={(v) => set('requireApproval', !v)}
           />
           <Divider />
           <ToggleRow

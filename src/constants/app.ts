@@ -30,6 +30,7 @@ export const COLLECTIONS = {
   calendarEvents: 'calendarEvents',
   notifications: 'notifications',
   supportRequests: 'supportRequests',
+  chats: 'chats',
   qaQuestions: 'qaQuestions',
   eventRegistrations: 'eventRegistrations',
   announcements: 'announcements',

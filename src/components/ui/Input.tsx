@@ -25,6 +25,8 @@ import {
 
 interface FieldProps extends Omit<TextInputProps, 'style' | 'onChangeText' | 'value'> {
   label?: string;
+  /** Drawn inside the box before the icon, e.g. a country code chip. */
+  leading?: React.ReactNode;
   value: string;
   onChangeText: (value: string) => void;
   /** i18n key or literal message. Rendered in red under the field. */
@@ -58,6 +60,7 @@ export function TextField({
   required,
   multiline,
   containerStyle,
+  leading,
   ...rest
 }: FieldProps) {
   const [focused, setFocused] = useState(false);
@@ -81,6 +84,7 @@ export function TextField({
           errorText ? styles.inputWrapError : null,
         ]}
       >
+        {leading}
         {icon ? (
           <Ionicons
             name={icon}

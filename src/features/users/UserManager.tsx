@@ -10,6 +10,7 @@ import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme
 import { useAsync, useDebounced, usePaginated } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
 import { humanise } from '@/utils/format';
+import { DEFAULT_DIAL, formatPhone } from '@/utils/phone';
 import { validate, studentRegistrationSchema, teacherRegistrationSchema } from '@/utils/validation';
 import {
   approveUser,
@@ -33,6 +34,7 @@ import {
 import { canSetPassword, setPassword } from '@/services/passwordChangeService';
 import type { AppUser, Branch, ClassRoom, Country, LanguageCode, UserRole, UserStatus } from '@/types';
 import {
+  PhoneField,
   AsyncBoundary,
   Avatar,
   Badge,
@@ -332,7 +334,11 @@ export function UserManager({
             <Card>
               <DetailRow label={t('auth.email')} value={selected.email} icon="mail-outline" />
               <Divider />
-              <DetailRow label={t('auth.mobile')} value={selected.mobile} icon="call-outline" />
+              <DetailRow
+                label={t('auth.mobile')}
+                value={formatPhone(selected.mobile, selected.mobileCountryCode)}
+                icon="call-outline"
+              />
               <Divider />
               <DetailRow label={t('auth.country')} value={selected.country} icon="globe-outline" />
               <Divider />
@@ -487,13 +493,13 @@ export function UserManager({
                 />
               ) : null}
 
-              {/* Renaming somebody else is super-admin work.
-                  The rule in firestore.rules is what enforces it — this button
-                  only decides whether to offer something that would otherwise
-                  fail with a permission error nobody could interpret. An admin
-                  renames THEMSELVES from Account Settings, which needs no such
-                  privilege. */}
-              {actor?.superAdmin === true && actor.uid !== selected.uid ? (
+              {/* An admin renames any student or teacher. Another admin's
+                  username stays super-admin work, which firestore.rules also
+                  enforces - this only decides whether to offer the button. An
+                  admin renames THEMSELVES from Account Settings. */}
+              {actor?.role === 'admin' &&
+              actor.uid !== selected.uid &&
+              (selected.role !== 'admin' || actor.superAdmin === true) ? (
                 <Button
                   label={t('profile.changeUsername')}
                   icon="person-outline"
@@ -584,7 +590,7 @@ export function UserManager({
         ) : null}
       </FormSheet>
 
-      {/* --- Rename, super admin only --- */}
+      {/* --- Rename --- */}
       <FormSheet
         visible={Boolean(renaming)}
         title={t('profile.changeUsername')}
@@ -757,6 +763,7 @@ function UserForm({
     username: '',
     email: '',
     mobile: '',
+    mobileCountryCode: DEFAULT_DIAL,
     country: '',
     password: '',
     confirmPassword: '',
@@ -803,6 +810,7 @@ function UserForm({
         username: existing.username,
         email: existing.email,
         mobile: existing.mobile,
+        mobileCountryCode: existing.mobileCountryCode ?? DEFAULT_DIAL,
         country: existing.country,
         password: '',
         confirmPassword: '',
@@ -822,6 +830,7 @@ function UserForm({
         username: '',
         email: '',
         mobile: '',
+        mobileCountryCode: DEFAULT_DIAL,
         country: '',
         password: '',
         confirmPassword: '',
@@ -900,11 +909,24 @@ function UserForm({
 
       setBusy(true);
       try {
+        // A changed username goes first, through the rename that moves its
+        // sign-in row - so a name that is taken is reported on the field and
+        // nothing else has been saved yet.
+        const nextUsername = form.username.trim().toLowerCase();
+        if (actor.role === 'admin' && nextUsername && nextUsername !== existing.username) {
+          try {
+            await changeUsername(existing.uid, nextUsername, actor);
+          } catch (error) {
+            setErrors({ username: friendlyMessage(error, t) });
+            return;
+          }
+        }
         await updateUser(
           existing.uid,
           {
             fullName: form.fullName.trim(),
             mobile: form.mobile.trim(),
+            mobileCountryCode: form.mobileCountryCode,
             country: form.country,
             branchId: form.branchId || null,
             classId: effectiveRole === 'student' ? form.classId || null : null,
@@ -970,6 +992,7 @@ function UserForm({
           email: form.email,
           password: form.password,
           mobile: form.mobile,
+          mobileCountryCode: form.mobileCountryCode,
           country: form.country,
           language: form.language,
           branchId: form.branchId || null,
@@ -1020,8 +1043,9 @@ function UserForm({
         error={errors.username}
         icon="at-outline"
         autoCapitalize="none"
-        editable={!isEdit}
-        hint={isEdit ? t('common.required') : undefined}
+        // An admin can always change it; it stays unique, checked on save.
+        editable={!isEdit || actor?.role === 'admin'}
+        hint={isEdit ? t('profile.changeUsernameHint') : undefined}
         required
       />
       <EmailField
@@ -1032,13 +1056,13 @@ function UserForm({
         editable={!isEdit}
         hint={!isEdit ? t('auth.emailOptionalHint') : undefined}
       />
-      <TextField
+      <PhoneField
         label={t('auth.mobile')}
+        dial={form.mobileCountryCode}
+        onDialChange={(dial) => set('mobileCountryCode', dial)}
         value={form.mobile}
         onChangeText={(v) => set('mobile', v)}
         error={errors.mobile}
-        icon="call-outline"
-        keyboardType="phone-pad"
         required
       />
       <Select
