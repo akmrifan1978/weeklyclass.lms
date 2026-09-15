@@ -11,6 +11,7 @@ import { APP_NAME } from '@/constants/app';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { friendlyMessage } from '@/utils/errors';
 import { humanise } from '@/utils/format';
+import { DEFAULT_DIAL, formatPhone } from '@/utils/phone';
 import { passwordSchema, validate } from '@/utils/validation';
 import { useAsync } from '@/hooks/useAsync';
 import { changePassword, changeSignInEmail } from '@/services/authService';
@@ -21,6 +22,7 @@ import { getBranch, getClass } from '@/services/orgService';
 import * as storageService from '@/services/storageService';
 import type { LanguageCode } from '@/types';
 import {
+  PhoneField,
   AppHeader,
   Avatar,
   Button,
@@ -59,7 +61,12 @@ export function ProfileScreen() {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const [form, setForm] = useState({ fullName: '', mobile: '', qualification: '' });
+  const [form, setForm] = useState({
+    fullName: '',
+    mobile: '',
+    mobileCountryCode: DEFAULT_DIAL,
+    qualification: '',
+  });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [emailForm, setEmailForm] = useState({ address: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -81,6 +88,7 @@ export function ProfileScreen() {
     setForm({
       fullName: user.fullName,
       mobile: user.mobile,
+      mobileCountryCode: user.mobileCountryCode ?? DEFAULT_DIAL,
       qualification: user.qualification ?? '',
     });
     setErrors({});
@@ -99,6 +107,7 @@ export function ProfileScreen() {
         {
           fullName: form.fullName.trim(),
           mobile: form.mobile.trim(),
+          mobileCountryCode: form.mobileCountryCode,
           ...(user.role === 'teacher' ? { qualification: form.qualification.trim() } : {}),
         },
         user
@@ -254,7 +263,11 @@ export function ProfileScreen() {
         <Card>
           <DetailRow label={t('auth.email')} value={user.email} icon="mail-outline" />
           <Divider />
-          <DetailRow label={t('auth.mobile')} value={user.mobile} icon="call-outline" />
+          <DetailRow
+            label={t('auth.mobile')}
+            value={formatPhone(user.mobile, user.mobileCountryCode)}
+            icon="call-outline"
+          />
           <Divider />
           <DetailRow label={t('auth.country')} value={user.country} icon="globe-outline" />
           {isStudent ? (
@@ -459,12 +472,12 @@ export function ProfileScreen() {
           icon="person-outline"
           required
         />
-        <TextField
+        <PhoneField
           label={t('auth.mobile')}
+          dial={form.mobileCountryCode}
+          onDialChange={(dial) => setForm((p) => ({ ...p, mobileCountryCode: dial }))}
           value={form.mobile}
           onChangeText={(v) => setForm((p) => ({ ...p, mobile: v }))}
-          icon="call-outline"
-          keyboardType="phone-pad"
         />
         {isTeacher ? (
           <TextField

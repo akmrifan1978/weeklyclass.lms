@@ -25,7 +25,8 @@ import {
 import { auth, db } from '@/firebase/config';
 import { COLLECTIONS, DEFAULT_LANGUAGE } from '@/constants/app';
 import { AppError, denialContext } from '@/utils/errors';
-import { searchTokens } from '@/utils/format';
+import { accountSearchTokens, searchTokens } from '@/utils/format';
+import { cleanDial, toE164 } from '@/utils/phone';
 import { isEmail } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS } from '@/types/permissions';
 import type { AppUser, ClassRoom, LanguageCode, UserRole, UserStatus } from '@/types';
@@ -35,6 +36,8 @@ import {
   authEmailForMobile,
   claimIdentity,
   emailForMobile,
+  MOBILES,
+  normaliseMobile,
   emailForUsername,
   isMobileAvailable,
   isSyntheticAuthEmail,
@@ -362,7 +365,10 @@ async function promoteToFirstAdmin(profile: AppUser): Promise<AppUser | null> {
  * Returns null when nothing matches, which the caller reports as bad
  * credentials — saying "no such user" would let anyone enumerate the platform.
  */
-async function resolveSignInEmail(identifier: string): Promise<string | null> {
+async function resolveSignInEmail(
+  identifier: string,
+  dial?: string | null
+): Promise<string | null> {
   const trimmed = identifier.trim();
 
   if (isEmail(trimmed)) return trimmed.toLowerCase();
@@ -371,7 +377,7 @@ async function resolveSignInEmail(identifier: string): Promise<string | null> {
   // username index because the mobile number is the identifier that is
   // guaranteed to name exactly one account.
   if (/^[+0-9\s()-]+$/.test(trimmed)) {
-    const byMobile = await emailForMobile(trimmed).catch(() => null);
+    const byMobile = await emailForMobile(trimmed, dial).catch(() => null);
     if (byMobile) return byMobile;
   }
 
@@ -414,10 +420,15 @@ function phaseTimer() {
   };
 }
 
-export async function login(identifier: string, password: string): Promise<LoginResult> {
+export async function login(
+  identifier: string,
+  password: string,
+  /** The country code beside the box, when what was typed is a number. */
+  dial?: string | null
+): Promise<LoginResult> {
   const timing = phaseTimer();
   const trimmed = identifier.trim();
-  let email = await resolveSignInEmail(trimmed);
+  let email = await resolveSignInEmail(trimmed, dial);
   timing.mark('resolve address');
 
   if (!email) {
@@ -587,16 +598,29 @@ async function repairIdentityIndex(
 ): Promise<void> {
   const authEmail = signInEmail ?? profile.authEmail ?? profile.email;
 
-  const existing = await getDoc(
-    doc(db, COLLECTIONS.usernames, normaliseUsername(profile.username))
-  ).catch(() => null);
+  const mobileKey = profile.mobile
+    ? normaliseMobile(profile.mobile, profile.mobileCountryCode)
+    : '';
+  const [existing, existingMobile] = await Promise.all([
+    getDoc(doc(db, COLLECTIONS.usernames, normaliseUsername(profile.username))).catch(() => null),
+    mobileKey ? getDoc(doc(db, MOBILES, mobileKey)).catch(() => null) : Promise.resolve(null),
+  ]);
 
   const row = existing?.exists() ? existing.data() : null;
-  const correct =
+  const numberRow = existingMobile?.exists() ? existingMobile.data() : null;
+  const usernameCorrect =
     row?.uid === profile.uid &&
     ((row?.authEmail as string) ?? (row?.email as string)) === authEmail;
+  // The number's row carries the username too, which "forgot username" reads.
+  const numberCorrect =
+    !mobileKey ||
+    (numberRow?.uid === profile.uid &&
+      numberRow?.username === normaliseUsername(profile.username));
+  // A number held by a DIFFERENT account is not this repair's to take. The
+  // username is still put right; the clash is for an admin to settle.
+  const numberHeldElsewhere = Boolean(numberRow && numberRow.uid !== profile.uid);
 
-  if (correct) return;
+  if (usernameCorrect && (numberCorrect || numberHeldElsewhere)) return;
 
   await claimIdentity({
     username: profile.username,
@@ -604,7 +628,8 @@ async function repairIdentityIndex(
     authEmail,
     uid: profile.uid,
     role: profile.role,
-    mobile: profile.mobile,
+    mobile: numberHeldElsewhere ? undefined : profile.mobile,
+    mobileCountryCode: profile.mobileCountryCode,
     quiet: true,
   });
 }
@@ -644,6 +669,8 @@ export interface RegistrationInput {
   username: string;
   email: string;
   mobile: string;
+  /** "+966". Chosen beside the number; the number keeps its leading zero. */
+  mobileCountryCode?: string | null;
   country: string;
   language: LanguageCode;
   password: string;
@@ -685,6 +712,13 @@ export async function register(
   role: Extract<UserRole, 'student' | 'teacher'>,
   input: RegistrationInput
 ): Promise<RegistrationResult> {
+  // One at a time. A second tap on Register while the first was still working
+  // started a second registration for the same person in parallel - both on
+  // the same new sign-in, each writing its own username row, which is one way
+  // a profile can end up with a username that sign-in does not know.
+  if (registrationsInFlight > 0) {
+    throw new AppError('auth.registrationInProgress', 'failed-precondition');
+  }
   registrationsInFlight += 1;
   try {
     return await runRegistration(role, input);
@@ -717,7 +751,9 @@ async function runRegistration(
   // is still the real guard against a race; this exists to fail early with a
   // message that says what is wrong, rather than after an auth account has
   // already been made.
-  const mobileFreePromise = isMobileAvailable(input.mobile).catch(() => true);
+  const mobileFreePromise = isMobileAvailable(input.mobile, input.mobileCountryCode).catch(
+    () => true
+  );
   // And the username, in the same breath. The transaction in claimIdentity is
   // still what actually enforces it; this only means somebody is told which
   // field is wrong BEFORE an account is created, rather than after.
@@ -766,7 +802,7 @@ async function runRegistration(
   // The cost is stated rather than hidden: an account with no real inbox cannot
   // be sent a password reset, which is what the recovery flow and the profile's
   // sign-in section are for.
-  const signInAddress = email || authEmailForMobile(input.mobile);
+  const signInAddress = email || authEmailForMobile(input.mobile, input.mobileCountryCode);
 
   // The mobile number is the unique identity, so check it before anything is
   // created. The transaction in claimIdentity is still the real guard against a
@@ -802,7 +838,7 @@ async function runRegistration(
     // A household shares one inbox, so the address may already belong to a
     // sibling. This account signs in under an address derived from its own
     // (unique) mobile number instead.
-    authEmail = authEmailForMobile(input.mobile);
+    authEmail = authEmailForMobile(input.mobile, input.mobileCountryCode);
     step('2/6 address already in use — signing in by mobile instead', authEmail);
 
     try {
@@ -833,7 +869,22 @@ async function runRegistration(
        */
       step('2/6 an unfinished account exists for this number — trying to resume it');
       try {
-        credential = await signInWithEmailAndPassword(auth, authEmail, input.password);
+        const resumed = await signInWithEmailAndPassword(auth, authEmail, input.password);
+        /*
+         * Only an account with NO profile is unfinished. One that has a profile -
+         * a removed account whose number was given back, say - is finished
+         * business: writing over it is refused by the rules, and would not be
+         * right if it were not. That case starts again under a new address.
+         */
+        await waitForAuthToken(resumed.user);
+        const existingProfile = await getDoc(doc(db, COLLECTIONS.users, resumed.user.uid)).catch(
+          () => null
+        );
+        if (existingProfile?.exists()) {
+          await fbSignOut(auth).catch(() => undefined);
+          throw new Error('the sign-in for this number already belongs to an account');
+        }
+        credential = resumed;
         step('2/6 resumed the unfinished account');
       } catch {
         /*
@@ -867,7 +918,7 @@ async function runRegistration(
         // Tried a few times regardless, because the cost of being wrong here
         // is somebody being turned away again.
         for (let attempt = 0; attempt < 3 && !made; attempt += 1) {
-          const fresh = altAuthEmailForMobile(input.mobile);
+          const fresh = altAuthEmailForMobile(input.mobile, input.mobileCountryCode);
           try {
             made = await createUserWithEmailAndPassword(auth, fresh, input.password);
             authEmail = fresh;
@@ -967,6 +1018,8 @@ async function runRegistration(
       // actually signs in as.
       authEmail,
       mobile: input.mobile.trim(),
+      mobileCountryCode: cleanDial(input.mobileCountryCode),
+      mobileE164: toE164(input.mobile, input.mobileCountryCode),
       role,
       status,
       country: input.country,
@@ -1013,7 +1066,7 @@ async function runRegistration(
       denialContext('create', `${COLLECTIONS.users}/${uid}`, () =>
         setDoc(doc(db, COLLECTIONS.users, uid), {
           ...profile,
-          searchTokens: searchTokens(profile.fullName, username, email, generatedId),
+          searchTokens: accountSearchTokens(profile),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           createdBy: uid,
@@ -1039,7 +1092,15 @@ async function runRegistration(
     });
 
     const claim = withTokenRetry('identity claim', credential.user, () =>
-      claimIdentity({ username, email, authEmail, uid, role, mobile: input.mobile })
+      claimIdentity({
+        username,
+        email,
+        authEmail,
+        uid,
+        role,
+        mobile: input.mobile,
+        mobileCountryCode: input.mobileCountryCode,
+      })
     );
 
     await Promise.all([writeProfile, claim]);
@@ -1096,8 +1157,12 @@ async function runRegistration(
  * quietly reporting success, which would leave someone waiting for a message
  * that is never coming. Their administrator can set a new password for them.
  */
-export async function requestPasswordReset(identifier: string): Promise<void> {
-  const resolved = await resolveSignInEmail(identifier);
+export async function requestPasswordReset(
+  identifier: string,
+  /** The country code beside the box, when what was typed is a number. */
+  dial?: string | null
+): Promise<void> {
+  const resolved = await resolveSignInEmail(identifier, dial);
 
   // Nothing matched. Report success anyway — the caller shows the same message
   // either way, so confirming which accounts exist is not possible.

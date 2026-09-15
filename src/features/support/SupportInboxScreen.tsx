@@ -28,6 +28,7 @@ import {
   SkeletonList,
   TextField,
 } from '@/components/ui';
+import { toE164 } from '@/utils/phone';
 
 /**
  * The admin's inbox for feedback, complaints and questions.
@@ -261,7 +262,7 @@ export function SupportInboxScreen() {
                     label={t('support.callUs')}
                     size={30}
                     color={colors.primary}
-                    onPress={() => Linking.openURL(`tel:${request.userMobile}`)}
+                    onPress={() => Linking.openURL(`tel:${toE164(request.userMobile) || request.userMobile}`)}
                   />
                 ) : null}
               </View>

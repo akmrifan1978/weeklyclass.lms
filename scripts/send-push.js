@@ -25,6 +25,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { sendRegistrationAlerts } = require('./lib/registration-alerts');
 
 /** Older than this and it is history, not news. */
 /**
@@ -703,6 +704,14 @@ async function run() {
     await sendConfirmationEmails(db).catch((error) =>
       console.warn('  ! email pass failed:', error.message)
     );
+    // New registrations waiting for approval: email, the admins' devices, and
+    // WhatsApp where it has been switched on. Once each. See the lib file.
+    await sendRegistrationAlerts({
+      db,
+      webpush,
+      transport: mailer(),
+      from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    }).catch((error) => console.warn('  ! registration alert pass failed:', error.message));
     return pushed;
   };
 

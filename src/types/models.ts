@@ -45,8 +45,15 @@ export interface AppUser extends BaseDoc {
    * mobile number instead. Absent on accounts created before this existed.
    */
   authEmail?: string;
-  /** The unique identity. One mobile number, one account. */
+  /**
+   * The number as the person typed it, leading zero kept: "0567560387".
+   * Unique together with the country code - one number, one account.
+   */
   mobile: string;
+  /** "+966". Absent on accounts saved before country codes; those are Saudi numbers. */
+  mobileCountryCode?: string;
+  /** "+966567560387", for calling and WhatsApp links. */
+  mobileE164?: string;
   role: UserRole;
   status: UserStatus;
   country: string;

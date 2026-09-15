@@ -89,6 +89,7 @@ export function studentNavSections(
         { icon: 'ticket', labelKey: 'nav.events', route: '/(student)/events' },
         { icon: 'sparkles', labelKey: 'video.newReleases', route: '/(student)/new-releases' },
         { icon: 'chatbubbles', labelKey: 'nav.qa', route: '/(student)/qa' },
+        { icon: 'chatbubble-ellipses-outline', labelKey: 'nav.liveChat', route: '/(student)/chat' },
         { icon: 'help-buoy', labelKey: 'nav.support', route: '/(student)/support' },
       ],
     },

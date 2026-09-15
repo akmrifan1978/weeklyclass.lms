@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -25,10 +25,12 @@ import {
 } from '@/utils/validation';
 import { register } from '@/services/authService';
 import { isMobileAvailable, isUsernameAvailable } from '@/services/identityService';
+import { DEFAULT_DIAL } from '@/utils/phone';
 import { getSettings } from '@/services/settingsService';
 import { listBranches, listClasses, listCountries } from '@/services/orgService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import {
+  PhoneField,
   Button,
   ChipGroup,
   DateField,
@@ -48,6 +50,7 @@ interface FormState {
   username: string;
   email: string;
   mobile: string;
+  mobileCountryCode: string;
   country: string;
   language: LanguageCode;
   password: string;
@@ -75,6 +78,7 @@ const EMPTY: FormState = {
   username: '',
   email: '',
   mobile: '',
+  mobileCountryCode: DEFAULT_DIAL,
   country: '',
   language: 'en',
   password: '',
@@ -100,6 +104,7 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [done, setDone] = useState<{ id: string; pending: boolean } | null>(null);
   // Until someone edits the username themselves, it mirrors their mobile
   // number — that is what most people here expect to sign in with.
@@ -281,6 +286,10 @@ export default function RegisterScreen() {
   );
 
   const handleSubmit = async () => {
+    // A second tap while the first is still working is ignored before anything
+    // is checked or sent. The button shows a spinner, but a quick double tap
+    // lands both taps before the spinner has drawn.
+    if (submittingRef.current) return;
     setFormError(null);
 
     if (!declarationAccepted) {
@@ -326,6 +335,7 @@ export default function RegisterScreen() {
     }
 
     setErrors({});
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       // Both checked here so the message lands on the field that is actually
@@ -343,7 +353,7 @@ export default function RegisterScreen() {
       // registration would be the worst of both worlds — it stops nothing and
       // refuses someone who has done nothing wrong.
       const [mobileFree, usernameFree] = await Promise.all([
-        isMobileAvailable(result.data.mobile).catch(() => true),
+        isMobileAvailable(result.data.mobile, form.mobileCountryCode).catch(() => true),
         isUsernameAvailable(result.data.username).catch(() => true),
       ]);
       if (!mobileFree) {
@@ -360,6 +370,7 @@ export default function RegisterScreen() {
         username: result.data.username,
         email: result.data.email,
         mobile: result.data.mobile,
+        mobileCountryCode: form.mobileCountryCode,
         country: result.data.country,
         language: result.data.language as LanguageCode,
         password: result.data.password,
@@ -376,6 +387,7 @@ export default function RegisterScreen() {
       setFormError(friendlyMessage(error, t));
       toast.error(friendlyMessage(error, t));
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -514,17 +526,19 @@ export default function RegisterScreen() {
               hint={t('auth.sharedEmailNote')}
             />
 
-            <TextField
+            {/* Saudi Arabia by default, because the centre is in Jeddah and most
+                families here have a Saudi number whatever their nationality. */}
+            <PhoneField
               label={t('auth.mobile')}
+              dial={form.mobileCountryCode}
+              onDialChange={(dial) => set('mobileCountryCode', dial)}
               value={form.mobile}
               onChangeText={(v) => {
                 set('mobile', v);
                 if (!usernameEdited) set('username', usernameFromMobile(v));
               }}
               error={errors.mobile}
-              icon="call-outline"
-              keyboardType="phone-pad"
-              autoComplete="tel"
+              autoComplete="tel-national"
               required
             />
 

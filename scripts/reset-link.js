@@ -38,9 +38,21 @@ function parseArgs(argv) {
   return args;
 }
 
-/** Same normalisation the app uses, so a number typed either way still matches. */
-function normaliseMobile(value) {
-  return String(value).replace(/[^0-9]/g, '').replace(/^0+/, '');
+/**
+ * The keys a typed number could be stored under: the international key the
+ * app now uses (code + number without its leading zero, e.g. 966534802476),
+ * and the old nine-digit key. A number typed without a code is taken as
+ * Saudi, which every account from before country codes was.
+ */
+function mobileKeys(value) {
+  const raw = String(value).trim();
+  const digits = raw.replace(/[^0-9]/g, '');
+  if (!digits) return [];
+  const international = /^(\+|00)/.test(raw)
+    ? digits.replace(/^00/, '')
+    : `966${digits.replace(/^0+/, '')}`;
+  const legacy = digits.length > 9 ? digits.slice(-9) : digits;
+  return [...new Set([international, legacy])];
 }
 
 function isEmail(value) {
@@ -104,12 +116,12 @@ async function main() {
   }
 
   if (!authEmail) {
-    const key = normaliseMobile(input);
-    if (key) {
+    for (const key of mobileKeys(input)) {
       const snap = await db.collection('mobiles').doc(key).get();
       if (snap.exists) {
         authEmail = snap.data().authEmail || null;
         via = `mobiles/${key}`;
+        break;
       }
     }
   }

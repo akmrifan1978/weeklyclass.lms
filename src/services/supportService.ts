@@ -22,6 +22,7 @@ import {
 import { announce } from './announceService';
 import * as notifications from './notificationService';
 import * as audit from './auditService';
+import { formatPhone } from '@/utils/phone';
 
 /**
  * Support requests and open Q&A.
@@ -91,7 +92,7 @@ export async function submitRequest(
       userRole: user.role,
       // Carried so an admin can call someone back about a complaint without
       // opening a second screen to find their number.
-      userMobile: user.mobile ?? null,
+      userMobile: user.mobile ? formatPhone(user.mobile, user.mobileCountryCode) : null,
       classId: user.classId ?? null,
       branchId: user.branchId ?? null,
       status: 'open' as SupportStatus,

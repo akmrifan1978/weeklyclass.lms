@@ -281,6 +281,43 @@ The stamp is written *after* the send returns, so a service killed mid-pass
 resends at worst. A duplicate confirmation is a far better failure than a
 silent absence.
 
+## New registration alerts
+
+When somebody registers and is waiting for approval, the admins are told. It
+only happens while **Automatically Approve New Registrations** is OFF in
+Admin → Settings: with it ON nobody waits, so there is nothing to approve.
+
+| Where | When | Needs |
+| --- | --- | --- |
+| A message at the top of the admin panel | the moment it happens, while the panel is open | nothing |
+| The admins' phones and computers (push) | the next delivery run, within about five minutes | notifications switched on in the admin's profile |
+| Email to every active admin | the next delivery run | the `SMTP_*` secrets below, as for booking emails |
+| WhatsApp to the admin's own phone | the next delivery run | `CALLMEBOT_PHONE` and `CALLMEBOT_APIKEY` |
+
+Each registration is announced **once per channel**. What was sent is kept in
+`registrationAlerts/{uid}`, and each channel is claimed before it is sent, so a
+retry or two copies of the job running together never repeat one. A send that
+fails outright (a wrong email password, say) is tried again on the next run, up
+to five times. Registrations older than seven days are not announced; they are
+on the dashboard already.
+
+### WhatsApp, for free
+
+The official WhatsApp Business API is a paid service and is **not** used. The
+alert uses CallMeBot, a free service that sends WhatsApp messages to **your own
+number only**:
+
+1. On the admin's phone, save the contact number shown on
+   https://www.callmebot.com/blog/free-api-whatsapp-messages/ and send it the
+   message given on that page.
+2. It replies with an API key.
+3. Add two repository secrets: `CALLMEBOT_PHONE` (the admin's number with its
+   country code, e.g. `+9665XXXXXXXX`) and `CALLMEBOT_APIKEY` (the key).
+
+Leave them out and WhatsApp is simply skipped; email and push carry on. CallMeBot
+is run by a third party with no service guarantee, so treat it as a convenience,
+not the only alert.
+
 ## Running it without a laptop
 
 The service polls Firestore and sends what it finds. Nothing about it needs to
@@ -317,6 +354,8 @@ confirmation emails, admin-minted reset links and admin-set passwords.
    | `VAPID_SUBJECT` | from `.env` |
    | `PASSWORD_PRIVATE_KEY` | from `.env`, if admin-set passwords are in use |
    | `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `MAIL_FROM` | only if confirmation email is wanted |
+   | `ADMIN_ALERT_EMAIL` | optional: extra addresses for new-registration alerts, comma-separated |
+   | `CALLMEBOT_PHONE` `CALLMEBOT_APIKEY` | optional: free WhatsApp alert to the admin's own phone |
 
 3. Open the **Actions** tab, choose **Notifications**, and press **Run
    workflow**. It should finish in well under a minute and print either

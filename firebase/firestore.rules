@@ -121,6 +121,34 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // A student or teacher, or an account that is removed or never got a
+    // profile. Never a live admin.
+    function memberOrGone(uid) {
+      return !exists(/databases/$(database)/documents/users/$(uid))
+        || get(/databases/$(database)/documents/users/$(uid)).data.get('deleted', false) == true
+        || get(/databases/$(database)/documents/users/$(uid)).data.get('role', '') in ['student', 'teacher'];
+    }
+
+    // A teacher holding the edit permission for this person's role - the same
+    // test the users rule applies to editing their profile.
+    function staffMayEditPerson(uid) {
+      return isTeacher()
+        && exists(/databases/$(database)/documents/users/$(uid))
+        && (
+          (can('EDIT_STUDENTS')
+            && get(/databases/$(database)/documents/users/$(uid)).data.get('role', '') == 'student')
+          || (can('EDIT_TEACHERS')
+            && get(/databases/$(database)/documents/users/$(uid)).data.get('role', '') == 'teacher')
+        );
+    }
+
+    // Admin -> Settings -> "Automatically Approve New Registrations" is OFF,
+    // or has never been set: a registration waits for an admin.
+    function approvalRequired() {
+      return !exists(/databases/$(database)/documents/settings/app)
+        || get(/databases/$(database)/documents/settings/app).data.get('requireApproval', true) != false;
+    }
+
     // --- Class scoping ------------------------------------------------------
 
     function classDoc(classId) {
@@ -204,7 +232,11 @@ service cloud.firestore {
       // this is the rule that decides who may rename whom. Your own row, or a
       // super admin's to give.
       allow delete: if isSuperAdmin()
-                    || (isAdmin() && resource.data.uid == request.auth.uid);
+                    || (isAdmin() && resource.data.uid == request.auth.uid)
+                    // An admin renames any student or teacher, and gives back the
+                    // name of an account that has been removed or never got a
+                    // profile. Another admin's name stays super-admin work, above.
+                    || (isAdmin() && memberOrGone(resource.data.uid));
     }
 
     match /emailLookup/{emailHash} {
@@ -246,8 +278,14 @@ service cloud.firestore {
     match /mobiles/{mobileKey} {
       allow get: if true;
       allow list: if isAdmin();
+
+      // Claimed by the account it names, by an admin, or by a teacher allowed to
+      // edit that person - the people who may change the number on the profile,
+      // so the index can move with it.
       allow create: if isSignedIn()
-                    && (request.resource.data.uid == request.auth.uid || isAdmin());
+                    && (request.resource.data.uid == request.auth.uid
+                        || isAdmin()
+                        || staffMayEditPerson(request.resource.data.uid));
 
       // An account may rewrite its OWN row, which `usernames` has always
       // allowed and this did not.
@@ -255,7 +293,7 @@ service cloud.firestore {
       // The asymmetry broke finishing a half-made registration. A first attempt
       // that got as far as claiming the number leaves the row in place; the
       // retry then writes the same row again, which is an UPDATE, and update
-      // was admin-only — so the claim was refused with "Refused: claim
+      // was admin-only - so the claim was refused with "Refused: claim
       // usernames/... + mobiles/...". It also made the repair-on-sign-in path
       // impossible for a number, though it works for a username.
       //
@@ -264,9 +302,16 @@ service cloud.firestore {
       allow update: if isAdmin()
                     || (isSignedIn()
                         && resource.data.uid == request.auth.uid
-                        && request.resource.data.uid == request.auth.uid);
+                        && request.resource.data.uid == request.auth.uid)
+                    || (staffMayEditPerson(resource.data.uid)
+                        && request.resource.data.uid == resource.data.uid);
 
-      allow delete: if isAdmin();
+      // Given back when a number changes or an account is removed: by an admin,
+      // by the account itself for its own old number, or by a teacher allowed
+      // to edit that person. Only ever a row that names them.
+      allow delete: if isAdmin()
+                    || (isSignedIn() && resource.data.uid == request.auth.uid)
+                    || staffMayEditPerson(resource.data.uid);
     }
 
     // Sequential id counters (STU-2026-0001), incremented in a transaction while
@@ -305,6 +350,10 @@ service cloud.firestore {
                     && request.resource.data.uid == uid
                     && request.resource.data.role in ['student', 'teacher']
                     && request.resource.data.status in ['pending', 'active']
+                    // Active straight away only when Admin -> Settings says new
+                    // registrations are approved automatically. Otherwise it is
+                    // Pending, whatever the device sends.
+                    && (request.resource.data.status == 'pending' || !approvalRequired())
                     && request.resource.data.get('permissions', {}).keys().size() <= 40
                     // Never let a self-registration hand itself admin powers.
                     && !request.resource.data.get('permissions', {}).keys().hasAny([
@@ -1108,6 +1157,80 @@ service cloud.firestore {
       // which keeps a complaint from being rewritten after it was acted on.
       allow update: if isStaff();
       allow delete: if isAdmin();
+    }
+
+    // Live chat: one thread per member, with the admin team.
+    //
+    // chats/{uid} is that member's thread. Only the member and admins read it,
+    // and only admins list threads. There is no path under which one student
+    // reads or writes another's - which is the point: students cannot privately
+    // contact each other through this.
+    match /chats/{uid} {
+      // What a member's own send may set: their name and role as the profile
+      // has them, a short preview, and the admins' unread count. Checked on the
+      // whole document after the write, so a merge cannot slip anything past.
+      function sentByMember() {
+        return request.resource.data.uid == uid
+          && request.resource.data.lastFromAdmin == false
+          && request.resource.data.unreadForUser == 0
+          && request.resource.data.lastAt == request.time
+          && request.resource.data.lastMessage is string
+          && request.resource.data.lastMessage.size() <= 120
+          && request.resource.data.userName is string
+          && request.resource.data.userName.size() <= 120
+          && request.resource.data.userRole == userDoc().get('role', '');
+      }
+
+      allow get: if isAdmin() || isSelf(uid);
+      allow list: if isAdmin();
+
+      allow create: if isAdmin()
+                    || (isSelf(uid) && isActive() && !isAdmin()
+                        && request.resource.data.keys().hasOnly([
+                             'uid', 'userName', 'userRole', 'lastMessage', 'lastFromAdmin',
+                             'lastAt', 'unreadForAdmin', 'unreadForUser'
+                           ])
+                        && sentByMember()
+                        && request.resource.data.unreadForAdmin == 1);
+
+      allow update: if isAdmin()
+                    || (isSelf(uid) && isActive()
+                        && onlyChanged([
+                             'userName', 'userRole', 'lastMessage', 'lastFromAdmin',
+                             'lastAt', 'unreadForAdmin', 'unreadForUser'
+                           ])
+                        && sentByMember()
+                        && request.resource.data.unreadForAdmin
+                             == resource.data.get('unreadForAdmin', 0) + 1)
+                    // Opening the conversation clears the member's own count.
+                    || (isSelf(uid)
+                        && onlyChanged(['unreadForUser'])
+                        && request.resource.data.unreadForUser == 0);
+
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || (isSelf(uid) && isActive());
+
+        // Written as yourself, never edited. An admin writes as the admin
+        // team; a member only into their own thread.
+        allow create: if isSignedIn()
+                      && request.resource.data.keys().hasOnly(['from', 'fromName', 'fromAdmin', 'text', 'at'])
+                      && request.resource.data.from == request.auth.uid
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 2000
+                      && request.resource.data.fromName is string
+                      && request.resource.data.fromName.size() <= 120
+                      && request.resource.data.at == request.time
+                      && (
+                        (isAdmin() && request.resource.data.fromAdmin == true)
+                        || (isSelf(uid) && isActive() && !isAdmin()
+                            && request.resource.data.fromAdmin == false)
+                      );
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
     }
 
     // Q&A is the opposite: asked in the open so the whole class learns from the
