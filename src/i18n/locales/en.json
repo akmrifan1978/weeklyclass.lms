@@ -105,7 +105,7 @@
     "emailOrUsername": "Mobile number, username or email",
     "email": "Email",
     "username": "Username",
-    "usernameFromMobileHint": "Your mobile number is used unless you type a different username.",
+    "usernameFromMobileHint": "10 digits, no country code — for example 0544170199. Your mobile number is used unless you type a different one.",
     "password": "Password",
     "confirmPassword": "Confirm password",
     "fullName": "Full name",
@@ -177,7 +177,8 @@
     "setPasswordUnavailable": "This device cannot set a password securely. Use a desktop browser, or create a reset link instead.",
     "mobileHasUnfinishedAccount": "An unfinished account already exists for this mobile number. Use the same password you chose before, or sign in instead.",
     "guestLogin": "Guest Login",
-    "registrationInProgress": "Your registration is already being sent. Please wait a moment."
+    "registrationInProgress": "Your registration is already being sent. Please wait a moment.",
+    "usernameRule": "10 digits, no country code — for example 0544170199."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
@@ -208,7 +209,8 @@
     "declarationRequired": "Please accept the declaration to continue.",
     "mobileTaken": "An account already uses this mobile number.",
     "countryCodeLength": "Use exactly two letters, e.g. LK.",
-    "classRequired": "Please choose your class"
+    "classRequired": "Please choose your class",
+    "usernameTenDigits": "Username must be a 10-digit number with no country code, for example 0544170199."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

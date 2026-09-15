@@ -11,7 +11,7 @@ import { APP_NAME } from '@/constants/app';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { friendlyMessage } from '@/utils/errors';
 import { humanise } from '@/utils/format';
-import { DEFAULT_DIAL, formatPhone } from '@/utils/phone';
+import { DEFAULT_DIAL, formatPhone, localTenDigits } from '@/utils/phone';
 import { passwordSchema, validate } from '@/utils/validation';
 import { useAsync } from '@/hooks/useAsync';
 import { changePassword, changeSignInEmail } from '@/services/authService';
@@ -376,7 +376,11 @@ export function ProfileScreen() {
                 variant="outline"
                 fullWidth
                 onPress={() => {
-                  setNextUsername(user.username ?? '');
+                  setNextUsername(
+                    /^[0-9]{10}$/.test(user.username ?? '')
+                      ? user.username
+                      : localTenDigits(user.mobile)
+                  );
                   setErrors({});
                   setChangingUsername(true);
                 }}
@@ -595,10 +599,13 @@ export function ProfileScreen() {
         <TextField
           label={t('auth.username')}
           value={nextUsername}
-          onChangeText={setNextUsername}
+          onChangeText={(v) => setNextUsername(v.replace(/[^0-9]/g, '').slice(0, 10))}
           error={errors.username}
           autoCapitalize="none"
+          keyboardType="number-pad"
+          maxLength={10}
           icon="person-outline"
+          hint={t('auth.usernameRule')}
         />
       </FormSheet>
 

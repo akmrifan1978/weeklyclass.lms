@@ -25,7 +25,7 @@ import {
 } from '@/utils/validation';
 import { register } from '@/services/authService';
 import { isMobileAvailable, isUsernameAvailable } from '@/services/identityService';
-import { DEFAULT_DIAL } from '@/utils/phone';
+import { DEFAULT_DIAL, localTenDigits } from '@/utils/phone';
 import { getSettings } from '@/services/settingsService';
 import { listBranches, listClasses, listCountries } from '@/services/orgService';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
@@ -63,14 +63,16 @@ interface FormState {
 }
 
 /**
- * Turns a typed mobile number into a legal username: usernames allow only
- * [a-z0-9._-], so "+94 77 123 4567" becomes "94771234567". Returns '' when the
- * result would be too short to be valid, so the field simply stays empty rather
- * than showing a "too short" error while someone is still typing.
+ * The username a mobile number suggests: its 10-digit local form, leading 0
+ * included and no country code - "567560387" with +966 becomes "0567560387".
+ * While the number is still being typed it mirrors the digits so far, and
+ * stays empty for the first few so no error shows mid-word.
  */
 function usernameFromMobile(mobile: string): string {
+  const whole = localTenDigits(mobile);
+  if (whole) return whole;
   const digits = mobile.replace(/[^0-9]/g, '');
-  return digits.length >= 4 ? digits.slice(0, 24) : '';
+  return digits.length >= 4 ? digits.slice(0, 10) : '';
 }
 
 const EMPTY: FormState = {
@@ -501,13 +503,16 @@ export default function RegisterScreen() {
               value={form.username}
               onChangeText={(v) => {
                 setUsernameEdited(true);
-                set('username', v.toLowerCase().replace(/\s/g, ''));
+                // Digits only, ten at most: 0544170199.
+                set('username', v.replace(/[^0-9]/g, '').slice(0, 10));
               }}
               error={errors.username}
-              hint={usernameEdited ? undefined : t('auth.usernameFromMobileHint')}
+              hint={usernameEdited ? t('auth.usernameRule') : t('auth.usernameFromMobileHint')}
               icon="at-outline"
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="number-pad"
+              maxLength={10}
               required
             />
 

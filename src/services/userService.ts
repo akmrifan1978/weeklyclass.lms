@@ -430,6 +430,9 @@ export async function createUserAsAdmin(
   try {
     const email = input.email.trim().toLowerCase();
     const username = normaliseUsername(input.username);
+    if (!usernameSchema.safeParse(username).success) {
+      throw new AppError('validation.usernameTenDigits', 'invalid-argument');
+    }
     const dial = cleanDial(input.mobileCountryCode);
 
     /*

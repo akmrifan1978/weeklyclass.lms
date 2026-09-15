@@ -27,7 +27,7 @@ import { COLLECTIONS, DEFAULT_LANGUAGE } from '@/constants/app';
 import { AppError, denialContext } from '@/utils/errors';
 import { accountSearchTokens, searchTokens } from '@/utils/format';
 import { cleanDial, toE164 } from '@/utils/phone';
-import { isEmail } from '@/utils/validation';
+import { isEmail, usernameSchema } from '@/utils/validation';
 import { DEFAULT_TEACHER_PERMISSIONS } from '@/types/permissions';
 import type { AppUser, ClassRoom, LanguageCode, UserRole, UserStatus } from '@/types';
 
@@ -758,6 +758,11 @@ async function runRegistration(
   // still what actually enforces it; this only means somebody is told which
   // field is wrong BEFORE an account is created, rather than after.
   const username = normaliseUsername(input.username);
+  // The form checks this; checked again so no other caller can register a
+  // username outside the centre's rule.
+  if (!usernameSchema.safeParse(username).success) {
+    throw new AppError('validation.usernameTenDigits', 'invalid-argument');
+  }
   const usernameFreePromise = isUsernameAvailable(username).catch(() => true);
 
   /*
