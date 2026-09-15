@@ -3,13 +3,18 @@ import { LANGUAGES } from '@/constants/app';
 
 const languageCodes = LANGUAGES.map((l) => l.code) as [string, ...string[]];
 
+/**
+ * A username is a 10-digit number with no country code, e.g. 0544170199 - the
+ * centre's rule, and what families here expect to sign in with. A leading 0
+ * is allowed, which is why it is checked as text and never as a number.
+ *
+ * Held to on every new or changed username. An account whose username was
+ * set before the rule keeps signing in with it until it is changed.
+ */
 export const usernameSchema = z
   .string()
   .trim()
-  .toLowerCase()
-  .min(4, 'validation.usernameTooShort')
-  .max(24, 'validation.usernameTooLong')
-  .regex(/^[a-z0-9._-]+$/, 'validation.usernameFormat');
+  .regex(/^[0-9]{10}$/, 'validation.usernameTenDigits');
 
 export const emailSchema = z
   .string()

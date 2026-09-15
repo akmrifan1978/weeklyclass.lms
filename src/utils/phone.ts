@@ -142,6 +142,19 @@ export function legacyPhoneKey(mobile?: string | null): string {
   return digits.length > 9 ? digits.slice(-9) : digits;
 }
 
+/**
+ * A number's 10-digit local form, which is what a username is: a Saudi or
+ * Sri Lankan mobile gets its leading 0 (0544170199), a ten-digit number is
+ * used as it is. Empty when the number is neither, e.g. still being typed.
+ */
+export function localTenDigits(mobile?: string | null): string {
+  const intl = splitInternational(mobile);
+  const significant = digitsOf(intl ? intl.national : mobile).replace(/^0+/, '');
+  if (significant.length === 9) return `0${significant}`;
+  if (significant.length === 10) return significant;
+  return '';
+}
+
 /** How a number is shown: "+966 0567560387", the number exactly as given. */
 export function formatPhone(mobile?: string | null, dial?: string | null): string {
   const raw = String(mobile ?? '').trim();

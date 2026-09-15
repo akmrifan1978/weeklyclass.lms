@@ -10,7 +10,7 @@ import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme
 import { useAsync, useDebounced, usePaginated } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
 import { humanise } from '@/utils/format';
-import { DEFAULT_DIAL, formatPhone } from '@/utils/phone';
+import { DEFAULT_DIAL, formatPhone, localTenDigits } from '@/utils/phone';
 import { validate, studentRegistrationSchema, teacherRegistrationSchema } from '@/utils/validation';
 import {
   approveUser,
@@ -507,7 +507,13 @@ export function UserManager({
                   fullWidth
                   onPress={() => {
                     setRenaming(selected);
-                    setNextUsername(selected.username ?? '');
+                    // A username from before the 10-digit rule is offered its
+                    // replacement: the account's own number, in that form.
+                    setNextUsername(
+                      /^[0-9]{10}$/.test(selected.username ?? '')
+                        ? selected.username
+                        : localTenDigits(selected.mobile)
+                    );
                     setSelected(null);
                   }}
                 />
@@ -615,11 +621,13 @@ export function UserManager({
         <TextField
           label={t('auth.username')}
           value={nextUsername}
-          onChangeText={setNextUsername}
+          onChangeText={(v) => setNextUsername(v.replace(/[^0-9]/g, '').slice(0, 10))}
           error={renameError}
           autoCapitalize="none"
+          keyboardType="number-pad"
+          maxLength={10}
           icon="person-outline"
-          hint={t('profile.changeUsernameHint')}
+          hint={`${t('auth.usernameRule')} ${t('profile.changeUsernameHint')}`}
         />
       </FormSheet>
 
@@ -1039,13 +1047,15 @@ function UserForm({
       <TextField
         label={t('auth.username')}
         value={form.username}
-        onChangeText={(v) => set('username', v.toLowerCase().replace(/\s/g, ''))}
+        onChangeText={(v) => set('username', v.replace(/[^0-9]/g, '').slice(0, 10))}
         error={errors.username}
         icon="at-outline"
         autoCapitalize="none"
+        keyboardType="number-pad"
+        maxLength={10}
         // An admin can always change it; it stays unique, checked on save.
         editable={!isEdit || actor?.role === 'admin'}
-        hint={isEdit ? t('profile.changeUsernameHint') : undefined}
+        hint={t('auth.usernameRule')}
         required
       />
       <EmailField
