@@ -373,9 +373,15 @@ async function resolveSignInEmail(
 
   if (isEmail(trimmed)) return trimmed.toLowerCase();
 
-  // Digits only: a phone number, however it was typed. Checked before the
-  // username index because the mobile number is the identifier that is
-  // guaranteed to name exactly one account.
+  // Exactly ten digits is how a username is written - the phone number with no
+  // country code, e.g. 0544170199 - so that is looked up as a username first.
+  if (/^[0-9]{10}$/.test(trimmed)) {
+    const byUsername = await emailForUsername(trimmed).catch(() => null);
+    if (byUsername) return byUsername;
+  }
+
+  // Any other run of digits is a phone number, however it was typed: local
+  // numbers are taken as Saudi, and one typed with its code (+94...) uses that.
   if (/^[+0-9\s()-]+$/.test(trimmed)) {
     const byMobile = await emailForMobile(trimmed, dial).catch(() => null);
     if (byMobile) return byMobile;

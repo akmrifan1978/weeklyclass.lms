@@ -10,8 +10,7 @@ import { AppError, friendlyMessage } from '@/utils/errors';
 import { recoverySchema, validate } from '@/utils/validation';
 import { requestPasswordReset } from '@/services/authService';
 import { requestPasswordHelp } from '@/services/supportService';
-import { Button, IconButton, TextField, useDialPicker } from '@/components/ui';
-import { DEFAULT_DIAL, formatPhone, looksLikePhone, splitInternational } from '@/utils/phone';
+import { Button, IconButton, TextField } from '@/components/ui';
 
 /**
  * Three outcomes, not two.
@@ -34,11 +33,7 @@ export default function ForgotPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<Stage>('ask');
-  const [dial, setDial] = useState(DEFAULT_DIAL);
-  const dialPicker = useDialPicker({ dial, onDialChange: setDial });
-  const isPhone = looksLikePhone(identifier);
-  // What an admin reads on the help request: the number with its code.
-  const typedIdentifier = isPhone ? formatPhone(identifier.trim(), dial) : identifier.trim();
+  const typedIdentifier = identifier.trim();
 
   const handleSubmit = async () => {
     const result = validate(recoverySchema, identifier);
@@ -49,7 +44,7 @@ export default function ForgotPasswordScreen() {
     setError(null);
     setBusy(true);
     try {
-      await requestPasswordReset(result.data, isPhone ? dial : null);
+      await requestPasswordReset(result.data);
       // Always report success: confirming which addresses exist would let
       // anyone enumerate the platform's users.
       setStage('sent');
@@ -161,14 +156,11 @@ export default function ForgotPasswordScreen() {
                   label={t('auth.mobileOrEmail')}
                   value={identifier}
                   onChangeText={(value) => {
-                    const intl = splitInternational(value);
-                    if (intl) setDial(intl.dial);
-                    setIdentifier(intl ? intl.national : value);
+                    setIdentifier(value);
                     setError(null);
                   }}
                   error={error}
-                  leading={isPhone ? dialPicker.chip : undefined}
-                  icon={isPhone ? undefined : 'person-outline'}
+                  icon="person-outline"
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="send"
@@ -176,9 +168,7 @@ export default function ForgotPasswordScreen() {
                   containerStyle={{ marginTop: spacing.xl, width: '100%' }}
                   required
                 />
-                {isPhone && dialPicker.panel ? (
-                  <View style={{ width: '100%' }}>{dialPicker.panel}</View>
-                ) : null}
+
                 <Button
                   label={t('auth.resetPassword')}
                   onPress={handleSubmit}

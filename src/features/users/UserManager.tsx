@@ -787,6 +787,9 @@ function UserForm({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // Set once somebody types a username themselves; until then it follows the
+  // phone number.
+  const [usernameTouched, setUsernameTouched] = useState(false);
 
   const loadOrg = useCallback(async () => {
     const [countries, branches] = await Promise.all([
@@ -812,6 +815,7 @@ function UserForm({
   useEffect(() => {
     if (!visible) return;
     setErrors({});
+    setUsernameTouched(false);
     if (existing) {
       setForm({
         fullName: existing.fullName,
@@ -1047,7 +1051,10 @@ function UserForm({
       <TextField
         label={t('auth.username')}
         value={form.username}
-        onChangeText={(v) => set('username', v.replace(/[^0-9]/g, '').slice(0, 10))}
+        onChangeText={(v) => {
+          setUsernameTouched(true);
+          set('username', v.replace(/[^0-9]/g, '').slice(0, 10));
+        }}
         error={errors.username}
         icon="at-outline"
         autoCapitalize="none"
@@ -1071,7 +1078,20 @@ function UserForm({
         dial={form.mobileCountryCode}
         onDialChange={(dial) => set('mobileCountryCode', dial)}
         value={form.mobile}
-        onChangeText={(v) => set('mobile', v)}
+        onChangeText={(v) => {
+          set('mobile', v);
+          // The username is the phone number without its country code, and
+          // follows the number until a username is typed by hand. When
+          // editing, only where the username was the old number (or was not
+          // a number at all), so a deliberately different one is left alone.
+          const follows =
+            !usernameTouched &&
+            (!isEdit ||
+              !/^[0-9]{10}$/.test(existing?.username ?? '') ||
+              existing?.username === localTenDigits(existing?.mobile));
+          const next = localTenDigits(v);
+          if (follows && next) set('username', next);
+        }}
         error={errors.mobile}
         required
       />

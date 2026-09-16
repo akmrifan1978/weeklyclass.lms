@@ -19,8 +19,7 @@ import { APP_NAME } from '@/constants/app';
 import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
 import { friendlyMessage } from '@/utils/errors';
 import { loginSchema, validate } from '@/utils/validation';
-import { Button, IconButton, PasswordField, TextField, useDialPicker } from '@/components/ui';
-import { DEFAULT_DIAL, looksLikePhone, splitInternational } from '@/utils/phone';
+import { Button, IconButton, PasswordField, TextField } from '@/components/ui';
 import type { UserRole } from '@/types';
 import { InstallSheet, useInstall } from '@/components/shared/InstallApp';
 
@@ -44,11 +43,6 @@ export default function LoginScreen() {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  // The code chip appears only once what is typed is a number; a username or
-  // an email needs no country.
-  const [dial, setDial] = useState(DEFAULT_DIAL);
-  const dialPicker = useDialPicker({ dial, onDialChange: setDial });
-  const isPhone = looksLikePhone(identifier);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -62,7 +56,9 @@ export default function LoginScreen() {
     setErrors({});
 
     try {
-      const profile = await login(result.data.identifier, result.data.password, isPhone ? dial : null);
+      // The username is the phone number with no country code, so nothing
+      // here asks for one. A number typed with its code (+94...) still works.
+      const profile = await login(result.data.identifier, result.data.password);
       // The role buttons on the splash screen are a convenience, not a
       // restriction — an admin who taps "Student Login" still lands correctly.
       if (profile.role !== role) {
@@ -109,26 +105,15 @@ export default function LoginScreen() {
             <TextField
               label={t('auth.emailOrUsername')}
               value={identifier}
-              onChangeText={(value) => {
-                // "+966 56..." pasted whole: the code goes to the chip.
-                const intl = splitInternational(value);
-                if (intl) {
-                  setDial(intl.dial);
-                  setIdentifier(intl.national);
-                } else {
-                  setIdentifier(value);
-                }
-              }}
+              onChangeText={setIdentifier}
               error={errors.identifier}
-              leading={isPhone ? dialPicker.chip : undefined}
-              icon={isPhone ? undefined : 'person-outline'}
+              icon="person-outline"
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="username"
               returnKeyType="next"
               required
             />
-            {isPhone ? dialPicker.panel : null}
 
             <PasswordField
               label={t('auth.password')}
