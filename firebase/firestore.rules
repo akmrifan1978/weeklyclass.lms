@@ -957,8 +957,34 @@ service cloud.firestore {
                       && request.resource.data.category in [
                         'class_reminder', 'new_lesson', 'new_video',
                         'quiz_available', 'quiz_closing', 'new_article',
-                        'event_reminder', 'attendance_reminder', 'support_reply'
+                        'event_reminder', 'attendance_reminder', 'support_reply',
+                        'qa_question', 'qa_answer'
                       ]
+                    )
+                    // A member telling the Mowlavi that their question is waiting.
+                    // Held tight: only about a question they asked themselves, only
+                    // to the staff account that question was addressed to, and once
+                    // - the id names the question and the recipient, and writing it
+                    // again would be an update, which a member may not make.
+                    || (
+                      isActive()
+                      && request.resource.data.category == 'qa_question'
+                      && request.resource.data.targetRole == 'user'
+                      && request.resource.data.status == 'sent'
+                      && request.resource.data.questionId is string
+                      && request.resource.data.userId is string
+                      && notificationId == 'qa-' + request.resource.data.questionId
+                                           + '-to-' + request.resource.data.userId
+                      && get(/databases/$(database)/documents/qaQuestions/$(request.resource.data.questionId)).data.askedBy
+                           == request.auth.uid
+                      && get(/databases/$(database)/documents/qaQuestions/$(request.resource.data.questionId)).data.get('scholarUserId', null)
+                           == request.resource.data.userId
+                      && get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.get('role', '')
+                           in ['teacher', 'admin']
+                      && request.resource.data.title is string
+                      && request.resource.data.title.size() <= 200
+                      && request.resource.data.message is string
+                      && request.resource.data.message.size() <= 1000
                     );
 
       // Anyone signed in may mark a notification read — but only by adding
@@ -1275,7 +1301,7 @@ service cloud.firestore {
                            'question', 'audioUrl', 'audioSeconds', 'updatedAt',
                            'deleted', 'deletedAt', 'deletedBy',
                            // Which Mowlavi it is for, which the asker chose.
-                           'scholarId', 'scholarName'
+                           'scholarId', 'scholarName', 'scholarUserId'
                          ])
                     );
       allow delete: if isAdmin();

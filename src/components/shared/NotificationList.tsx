@@ -32,6 +32,8 @@ const CATEGORY_ICON: Record<NotificationCategory, keyof typeof Ionicons.glyphMap
   event_reminder: 'calendar-outline',
   attendance_reminder: 'checkbox-outline',
   support_reply: 'chatbubble-ellipses-outline',
+  qa_question: 'help-circle-outline',
+  qa_answer: 'checkmark-circle-outline',
   announcement: 'megaphone-outline',
 };
 

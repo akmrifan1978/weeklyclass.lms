@@ -3,6 +3,7 @@ import { COLLECTIONS } from '@/constants/app';
 import { toDate } from '@/utils/date';
 import { AppError } from '@/utils/errors';
 import type {
+  AppNotification,
   AppUser,
   LanguageCode,
   QaQuestion,
@@ -13,7 +14,9 @@ import type {
 
 import {
   createDoc,
+  getById,
   listPage,
+  setDocById,
   softDelete,
   updateDocById,
   type Cursor,
@@ -323,6 +326,87 @@ export async function listQuestions(options: QaQuery = {}): Promise<QaQuestion[]
   return page.items.filter((q) => q.hidden !== true);
 }
 
+/**
+ * A notification to exactly one person about one question, sent once.
+ *
+ * The id names the question and what happened to it, so a retry or a second
+ * tap finds the notification already there and sends nothing. For a student
+ * the rules make the same promise: a second write would be an update, which
+ * they refuse.
+ */
+async function notifyOnce(
+  id: string,
+  input: {
+    title: string;
+    message: string;
+    category: 'qa_question' | 'qa_answer';
+    userId: string;
+    route: string;
+    questionId: string;
+  },
+  actor: AppUser
+): Promise<void> {
+  const already = await getById<AppNotification>(COLLECTIONS.notifications, id).catch(() => null);
+  if (already) return;
+  await setDocById(
+    COLLECTIONS.notifications,
+    id,
+    {
+      title: input.title.slice(0, 200),
+      message: input.message.slice(0, 1000),
+      image: null,
+      category: input.category,
+      kind: 'immediate',
+      targetRole: 'user',
+      targetClassId: null,
+      targetBranchId: null,
+      userId: input.userId,
+      route: input.route,
+      scheduledAt: null,
+      sentAt: new Date(),
+      status: 'sent',
+      readBy: [],
+      questionId: input.questionId,
+    },
+    { actorId: actor.uid },
+    false
+  );
+}
+
+/**
+ * Tells the Mowlavi a question has been asked of them - the student's name in
+ * the title, the question itself as the message. Nobody else is told.
+ *
+ * Sent, not waited for: the question is saved either way, and a Mowlavi with
+ * no linked account simply is not notified.
+ */
+function notifyScholar(
+  questionId: string,
+  question: {
+    question: string;
+    scholarUserId?: string | null;
+    scholarUserRole?: 'teacher' | 'admin' | null;
+  },
+  asker: AppUser
+): void {
+  const to = question.scholarUserId;
+  if (!to || to === asker.uid) return;
+  notifyOnce(
+    `qa-${questionId}-to-${to}`,
+    {
+      title: i18n.t('qa.questionNotificationTitle', { name: asker.fullName }),
+      message: question.question.trim() || i18n.t('qa.spokenOnly'),
+      category: 'qa_question',
+      userId: to,
+      route: question.scholarUserRole === 'admin' ? '/(admin)/qa' : '/(teacher)/qa',
+      questionId,
+    },
+    asker
+  ).catch((error) =>
+    console.warn('[WeeklyClass] question saved, but the Mowlavi could not be notified:', error)
+  );
+}
+
 export async function askQuestion(
   input: {
     question: string;
@@ -332,10 +416,13 @@ export async function askQuestion(
     eventId?: string | null;
     scholarId?: string | null;
     scholarName?: string | null;
+    /** The account of the chosen Mowlavi, which is who gets notified. */
+    scholarUserId?: string | null;
+    scholarUserRole?: 'teacher' | 'admin' | null;
   },
   user: AppUser
 ): Promise<string> {
-  return createDoc(
+  const id = await createDoc(
     COLLECTIONS.qaQuestions,
     {
       question: input.question.trim(),
@@ -347,6 +434,7 @@ export async function askQuestion(
       eventId: input.eventId ?? null,
       scholarId: input.scholarId ?? null,
       scholarName: input.scholarName?.trim() || null,
+      scholarUserId: input.scholarUserId ?? null,
       answer: null,
       answeredBy: null,
       answeredByName: null,
@@ -356,13 +444,17 @@ export async function askQuestion(
     },
     { actorId: user.uid }
   );
+  notifyScholar(id, input, user);
+  return id;
 }
 
 /**
- * Answers a question for the whole class to read.
+ * Answers a question.
  *
- * The class is notified, not just the asker — the answer is the teaching, and
- * the reason to ask in the open is that everyone else gets it too.
+ * The answer is there in Live Q&A for the class to read, as before, but only
+ * the student who asked is NOTIFIED. Other students are told about somebody
+ * else's question only when an admin makes the answer public - see
+ * makeAnswerPublic.
  */
 export async function answerQuestion(
   questionId: string,
@@ -389,7 +481,47 @@ export async function answerQuestion(
     summary: `Answered a question from ${question.askedByName}`,
   });
 
-  void announce(
+  // The Mowlavi's name in the title, the answer itself as the message. Once:
+  // correcting an answer later does not notify the student a second time.
+  if (question.askedBy && question.askedBy !== actor.uid) {
+    notifyOnce(
+      `qa-${questionId}-answered`,
+      {
+        title: i18n.t('qa.answerNotificationTitle', { name: actor.fullName }),
+        message: answer.trim() || i18n.t('qa.spokenAnswerOnly'),
+        category: 'qa_answer',
+        userId: question.askedBy,
+        route: '/(student)/qa',
+        questionId,
+      },
+      actor
+    ).catch((error) =>
+      console.warn('[WeeklyClass] answer saved, but the student could not be notified:', error)
+    );
+  }
+}
+
+/**
+ * Shares an answer with the students: marks it public, then notifies the class
+ * the question was asked in - or every student, when it belongs to no class.
+ *
+ * An admin's decision, and made once: the flag is what stops a second tap
+ * telling everybody again.
+ */
+export async function makeAnswerPublic(question: QaQuestion, actor: AppUser): Promise<void> {
+  if (question.answerPublic) return;
+  await updateDocById<QaQuestion>(COLLECTIONS.qaQuestions, question.id, {
+    answerPublic: true,
+    answerPublicAt: new Date(),
+  });
+  void audit.log({
+    actor,
+    action: 'UPDATE',
+    collection: COLLECTIONS.qaQuestions,
+    documentId: question.id,
+    summary: `Made the answer to ${question.askedByName}'s question public`,
+  });
+  await announce(
     {
       kind: 'article',
       // A spoken question carries no text to quote, and a notification with an
@@ -455,6 +587,8 @@ export async function editQuestion(
     audioSeconds: number | null;
     scholarId?: string | null;
     scholarName?: string | null;
+    scholarUserId?: string | null;
+    scholarUserRole?: 'teacher' | 'admin' | null;
   },
   user: AppUser
 ): Promise<void> {
@@ -466,9 +600,18 @@ export async function editQuestion(
     audioUrl: input.audioUrl,
     audioSeconds: input.audioSeconds,
     ...(input.scholarId !== undefined
-      ? { scholarId: input.scholarId, scholarName: input.scholarName?.trim() || null }
+      ? {
+          scholarId: input.scholarId,
+          scholarName: input.scholarName?.trim() || null,
+          scholarUserId: input.scholarUserId ?? null,
+        }
       : {}),
   });
+  // Moved to a different Mowlavi: that one is told. The first was told already
+  // and is not told again - each notification is once per question and person.
+  if (input.scholarUserId && input.scholarUserId !== question.scholarUserId) {
+    notifyScholar(question.id, input, user);
+  }
   void audit.log({
     actor: user,
     action: 'UPDATE',

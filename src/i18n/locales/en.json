@@ -838,7 +838,10 @@
     "scholarAdd": "Add",
     "scholarRemove": "Remove",
     "autoApproveRegistrations": "Automatically Approve New Registrations",
-    "autoApproveHelp": "ON: new registrations are approved at once and can sign in straight away. OFF: they stay Pending until an admin approves them."
+    "autoApproveHelp": "ON: new registrations are approved at once and can sign in straight away. OFF: they stay Pending until an admin approves them.",
+    "scholarAccount": "Account to notify",
+    "scholarAccountPick": "Choose a teacher or admin",
+    "scholarNotLinked": "Not linked to an account yet — nobody is notified about questions for this Mowlavi."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
@@ -1193,7 +1196,14 @@
     "deleteConfirm": "Delete this question? This cannot be undone from the app.",
     "replaceRecording": "Record again to replace it",
     "chooseScholar": "Who is this question for?",
-    "forScholar": "For {{name}}"
+    "forScholar": "For {{name}}",
+    "questionNotificationTitle": "New question from {{name}}",
+    "answerNotificationTitle": "{{name}} answered your question",
+    "makePublic": "Make answer public",
+    "makePublicTitle": "Make this answer public?",
+    "makePublicConfirm": "Students will get a notification about this question and its answer: the class it was asked in, or every student if it has no class.",
+    "madePublic": "The answer is now public. Students have been notified.",
+    "publicAnswer": "Answer made public"
   },
   "hadith": {
     "authenticityNote": "Sahih al-Bukhari and Sahih Muslim are the two collections whose authenticity is least disputed. Within the other books individual narrations carry different gradings, which are not shown here — each one lists its book and number so you can check it.",
