@@ -33,7 +33,9 @@ import {
  *
  * Not the same thing as a support request, which is private between one person
  * and the admin. The point of asking here is that the answer teaches everyone
- * who reads it, so answers are public and the class is notified when one lands.
+ * who reads it, so answers stay readable by the class. Only the student who
+ * asked is notified of an answer - the class is told only when an admin makes
+ * that answer public.
  *
  * Unanswered questions sort to the top. During a live session that is the list
  * the teacher is working from, and burying them under yesterday's answered ones
@@ -76,6 +78,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   const [editVoice, setEditVoice] = useState<{ url: string; seconds: number } | null>(null);
   const [editScholarId, setEditScholarId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<QaQuestion | null>(null);
+  const [confirmPublic, setConfirmPublic] = useState<QaQuestion | null>(null);
 
   /*
    * A clock for the edit window.
@@ -136,6 +139,9 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           eventId: eventId ?? null,
           scholarId: scholars.find((s) => s.id === scholarId)?.id ?? null,
           scholarName: scholars.find((s) => s.id === scholarId)?.name ?? null,
+          // Who gets the notification.
+          scholarUserId: scholars.find((s) => s.id === scholarId)?.userId ?? null,
+          scholarUserRole: scholars.find((s) => s.id === scholarId)?.userRole ?? null,
         },
         user
       );
@@ -218,6 +224,8 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
             ? {
                 scholarId: editScholarId,
                 scholarName: scholars.find((s) => s.id === editScholarId)?.name ?? editing.scholarName ?? null,
+                scholarUserId: scholars.find((s) => s.id === editScholarId)?.userId ?? null,
+                scholarUserRole: scholars.find((s) => s.id === editScholarId)?.userRole ?? null,
               }
             : {}),
         },
@@ -238,6 +246,17 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
     try {
       await support.deleteQuestion(item, user);
       toast.success(t('qa.removed'));
+      void reload();
+    } catch (err) {
+      toast.error(friendlyMessage(err, t));
+    }
+  };
+
+  const shareAnswer = async (item: QaQuestion) => {
+    if (!user) return;
+    try {
+      await support.makeAnswerPublic(item, user);
+      toast.success(t('qa.madePublic'));
       void reload();
     } catch (err) {
       toast.error(friendlyMessage(err, t));
@@ -359,6 +378,12 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                       {item.answeredByName ?? t('support.team')}
                     </Text>
                   </View>
+                  {item.answerPublic ? (
+                    <View style={styles.scholarPill}>
+                      <Ionicons name="megaphone-outline" size={14} color={colors.primary} />
+                      <Text style={styles.scholarPillText}>{t('qa.publicAnswer')}</Text>
+                    </View>
+                  ) : null}
                   {item.answer ? (
                     <Text style={styles.answerText}>{item.answer}</Text>
                   ) : (
@@ -417,6 +442,19 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                       setAnswerText(item.answer ?? '');
                     }}
                   />
+                  {/* Only an admin shares an answer with everybody. Until then
+                      the student who asked is the only one notified. */}
+                  {user?.role === 'admin' &&
+                  (item.answer || item.answerAudioUrl) &&
+                  !item.answerPublic ? (
+                    <Button
+                      label={t('qa.makePublic')}
+                      icon="megaphone-outline"
+                      size="sm"
+                      variant="outline"
+                      onPress={() => setConfirmPublic(item)}
+                    />
+                  ) : null}
                   <IconButton
                     icon="eye-off-outline"
                     label={t('qa.hide')}
@@ -535,6 +573,19 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           const target = confirmDelete;
           setConfirmDelete(null);
           if (target) void removeQuestion(target);
+        }}
+      />
+
+      <ConfirmDialog
+        visible={Boolean(confirmPublic)}
+        title={t('qa.makePublicTitle')}
+        message={t('qa.makePublicConfirm')}
+        confirmLabel={t('qa.makePublic')}
+        onCancel={() => setConfirmPublic(null)}
+        onConfirm={() => {
+          const target = confirmPublic;
+          setConfirmPublic(null);
+          if (target) void shareAnswer(target);
         }}
       />
     </>

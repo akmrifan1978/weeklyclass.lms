@@ -85,7 +85,14 @@ export function scholarsFrom(
   settings: Pick<AppSettings, 'qaScholars' | 'qaScholarName'> | null | undefined
 ): QaScholar[] {
   const list = (settings?.qaScholars ?? []).filter((s) => s && s.name && s.name.trim());
-  if (list.length) return list.map((s) => ({ id: s.id, name: s.name.trim() }));
+  if (list.length) {
+    return list.map((s) => ({
+      id: s.id,
+      name: s.name.trim(),
+      userId: s.userId ?? null,
+      userRole: s.userRole ?? null,
+    }));
+  }
   const legacy = settings?.qaScholarName?.trim();
   return legacy ? [{ id: 'default', name: legacy }] : [];
 }

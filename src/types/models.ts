@@ -729,6 +729,14 @@ export interface QaQuestion extends BaseDoc {
    */
   scholarId?: string | null;
   scholarName?: string | null;
+  /** The account that Mowlavi signs in with, copied when the question is asked. */
+  scholarUserId?: string | null;
+  /**
+   * Set when an admin makes the answer public. Until then only the student
+   * who asked is notified about the answer; from then on the class is told.
+   */
+  answerPublic?: boolean;
+  answerPublicAt?: FireDate | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -866,6 +874,10 @@ export type NotificationCategory =
    * already allowed to take.
    */
   | 'support_reply'
+  /** A Live Q&A question, sent only to the Mowlavi it was asked of. */
+  | 'qa_question'
+  /** The Mowlavi's answer, sent only to the student who asked. */
+  | 'qa_answer'
   | 'announcement';
 
 export interface AppNotification extends BaseDoc {
@@ -1053,6 +1065,13 @@ export type LogoShape = 'round' | 'square' | 'original';
 export interface QaScholar {
   id: string;
   name: string;
+  /**
+   * The account told when a question is asked of this Mowlavi. Without one
+   * the question still appears in Live Q&A, but nobody is notified.
+   */
+  userId?: string | null;
+  /** Which screen the notification opens: the teacher's or the admin's. */
+  userRole?: 'teacher' | 'admin' | null;
 }
 
 /** One image or video in the app banner. */
