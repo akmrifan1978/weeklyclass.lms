@@ -22,6 +22,7 @@ import { addNotificationResponseListener } from '@/services/pushService';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { PasswordChangeGate } from '@/components/shared/PasswordChangeGate';
 import { NoticePopup } from '@/components/shared/NoticePopup';
+import { NotificationTapHandler } from '@/components/shared/NotificationTapHandler';
 import { brand } from '@/constants/theme';
 import { useCalendarSystem } from '@/hooks/useCalendarSystem';
 import { LoadingState } from '@/components/ui';
@@ -213,6 +214,7 @@ function RootNavigator() {
   return (
     <RoleGate>
       <ScopeLanguageSync />
+      <NotificationTapHandler />
       {/* Above the navigator so it cannot be present on one screen and missing
           on the next. */}
       <OfflineBanner />

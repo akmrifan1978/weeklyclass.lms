@@ -1,7 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +20,7 @@ import {
   Screen,
   SkeletonList,
 } from '@/components/ui';
+import { NotificationDetail } from './NotificationDetail';
 
 const CATEGORY_ICON: Record<NotificationCategory, keyof typeof Ionicons.glyphMap> = {
   general: 'notifications-outline',
@@ -43,49 +44,16 @@ const CATEGORY_ICON: Record<NotificationCategory, keyof typeof Ionicons.glyphMap
  */
 export function NotificationList() {
   const { t } = useTranslation();
-  const { user, enablePush } = useAuth();
-  const { language } = useLanguage();
+  const { user } = useAuth();
   const toast = useToast();
-  const router = useRouter();
-  const [enablingPush, setEnablingPush] = useState(false);
-
-  /**
-   * Live, not fetched.
-   *
-   * A notification an admin deletes has to leave this list at the moment it is
-   * deleted — not the next time somebody happens to pull down to refresh. A
-   * notice about a cancelled class that goes on standing is worse than no
-   * notice at all.
-   */
-  const { items, loading, error, reload } = useNotifications();
+  const { items } = useNotifications();
 
   const unread = items.filter((item) => !(item.readBy ?? []).includes(user?.uid ?? ''));
-
-  const handleOpen = async (item: AppNotification) => {
-    // No local echo of the read state: the listener carries the write back,
-    // and setting it here as well made the row flicker between the two.
-    if (user && !(item.readBy ?? []).includes(user.uid)) {
-      await markRead(item.id, user.uid);
-    }
-    if (item.route) router.push(item.route as never);
-  };
 
   const handleMarkAll = async () => {
     if (!user) return;
     await markAllRead(items, user.uid);
     toast.success(t('common.success'));
-  };
-
-  const handleEnablePush = async () => {
-    setEnablingPush(true);
-    try {
-      const registration = await enablePush();
-      if (registration.granted) toast.success(t('notification.pushEnabled'));
-      else if (registration.reason === 'denied') toast.error(t('notification.pushDenied'));
-      else toast.show(t('notification.scheduledNote'));
-    } finally {
-      setEnablingPush(false);
-    }
   };
 
   return (
@@ -108,76 +76,147 @@ export function NotificationList() {
       />
 
       <Screen>
-        <Button
-          label={t('notification.enablePush')}
-          icon="notifications-outline"
-          variant="outline"
-          size="sm"
-          loading={enablingPush}
-          onPress={handleEnablePush}
-          style={{ marginBottom: spacing.lg }}
-        />
-
-        <AsyncBoundary
-          loading={loading}
-          error={error}
-          empty={items.length === 0}
-          onRetry={reload}
-          skeleton={<SkeletonList count={5} />}
-          emptyProps={{
-            icon: 'notifications-off-outline',
-            title: t('notification.noNotifications'),
-          }}
-        >
-          <View style={{ gap: spacing.md }}>
-            {items.map((item) => {
-              const isUnread = !(item.readBy ?? []).includes(user?.uid ?? '');
-              return (
-                <Card
-                  key={item.id}
-                  onPress={() => handleOpen(item)}
-                  accessibilityLabel={item.title}
-                  style={isUnread ? styles.unreadCard : undefined}
-                >
-                  <View style={styles.row}>
-                    <View style={[styles.icon, isUnread ? styles.iconUnread : null]}>
-                      <Ionicons
-                        name={CATEGORY_ICON[item.category] ?? 'notifications-outline'}
-                        size={19}
-                        color={isUnread ? colors.accent : colors.slate}
-                      />
-                    </View>
-                    <View style={styles.body}>
-                      <View style={styles.titleRow}>
-                        <Text
-                          style={[styles.title, isUnread ? styles.titleUnread : null]}
-                          numberOfLines={2}
-                        >
-                          {item.title}
-                        </Text>
-                        {isUnread ? <View style={styles.dot} /> : null}
-                      </View>
-                      <Text style={styles.message} numberOfLines={3}>
-                        {item.message}
-                      </Text>
-                      <Text style={styles.time}>
-                        {relativeTime(item.sentAt ?? item.scheduledAt ?? item.createdAt, language)}
-                      </Text>
-                    </View>
-                  </View>
-                </Card>
-              );
-            })}
-          </View>
-        </AsyncBoundary>
+        <NotificationInbox />
       </Screen>
     </View>
   );
 }
 
+/**
+ * The list itself, without the page around it — so the admin's "For me" tab
+ * shows exactly what students and teachers see.
+ *
+ * Tapping a notification opens it in full (see NotificationDetail) and marks it
+ * read. It used to go straight to the notification's page, and did nothing at
+ * all when there was no page — which is most notices from the admin.
+ */
+export function NotificationInbox() {
+  const { t } = useTranslation();
+  const { user, enablePush } = useAuth();
+  const { language } = useLanguage();
+  const toast = useToast();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ open?: string }>();
+  const [enablingPush, setEnablingPush] = useState(false);
+  const [opened, setOpened] = useState<AppNotification | null>(null);
+
+  /**
+   * Live, not fetched.
+   *
+   * A notification an admin deletes has to leave this list at the moment it is
+   * deleted — not the next time somebody happens to pull down to refresh. A
+   * notice about a cancelled class that goes on standing is worse than no
+   * notice at all.
+   */
+  const { items, loading, error, reload } = useNotifications();
+
+  const open = useCallback(
+    async (item: AppNotification) => {
+      setOpened(item);
+      // No local echo of the read state: the listener carries the write back,
+      // and setting it here as well made the row flicker between the two.
+      if (user && !(item.readBy ?? []).includes(user.uid)) {
+        await markRead(item.id, user.uid).catch(() => undefined);
+      }
+    },
+    [user]
+  );
+
+  // Arrived from a tapped phone notification that had no page of its own:
+  // open that one as soon as the list has it.
+  useEffect(() => {
+    if (!params.open || loading) return;
+    const item = items.find((candidate) => candidate.id === params.open);
+    if (item) void open(item);
+    router.setParams({ open: undefined });
+  }, [params.open, loading, items, open, router]);
+
+  const handleEnablePush = async () => {
+    setEnablingPush(true);
+    try {
+      const registration = await enablePush();
+      if (registration.granted) toast.success(t('notification.pushEnabled'));
+      else if (registration.reason === 'denied') toast.error(t('notification.pushDenied'));
+      else toast.show(t('notification.scheduledNote'));
+    } finally {
+      setEnablingPush(false);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        label={t('notification.enablePush')}
+        icon="notifications-outline"
+        variant="outline"
+        size="sm"
+        loading={enablingPush}
+        onPress={handleEnablePush}
+        style={{ marginBottom: spacing.lg }}
+      />
+
+      <AsyncBoundary
+        loading={loading}
+        error={error}
+        empty={items.length === 0}
+        onRetry={reload}
+        skeleton={<SkeletonList count={5} />}
+        emptyProps={{
+          icon: 'notifications-off-outline',
+          title: t('notification.noNotifications'),
+        }}
+      >
+        <View style={{ gap: spacing.md }}>
+          {items.map((item) => {
+            const isUnread = !(item.readBy ?? []).includes(user?.uid ?? '');
+            return (
+              <Card
+                key={item.id}
+                onPress={() => void open(item)}
+                accessibilityLabel={item.title}
+                style={isUnread ? styles.unreadCard : undefined}
+              >
+                <View style={styles.row}>
+                  <View style={[styles.icon, isUnread ? styles.iconUnread : null]}>
+                    <Ionicons
+                      name={CATEGORY_ICON[item.category] ?? 'notifications-outline'}
+                      size={19}
+                      color={isUnread ? colors.accent : colors.slate}
+                    />
+                  </View>
+                  <View style={styles.body}>
+                    <View style={styles.titleRow}>
+                      <Text
+                        style={[styles.title, isUnread ? styles.titleUnread : null]}
+                        numberOfLines={2}
+                      >
+                        {item.title}
+                      </Text>
+                      {isUnread ? <View style={styles.dot} /> : null}
+                    </View>
+                    <Text style={styles.message} numberOfLines={3}>
+                      {item.message}
+                    </Text>
+                    <Text style={styles.time}>
+                      {relativeTime(item.sentAt ?? item.scheduledAt ?? item.createdAt, language)}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </View>
+              </Card>
+            );
+          })}
+        </View>
+      </AsyncBoundary>
+
+      <NotificationDetail notification={opened} onClose={() => setOpened(null)} />
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   unreadCard: { borderColor: colors.accent, borderWidth: 1.5 },
-  row: { flexDirection: 'row', gap: spacing.md },
+  row: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
   icon: {
     width: 40,
     height: 40,
@@ -185,6 +224,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-start',
   },
   iconUnread: { backgroundColor: colors.accentSoft },
   body: { flex: 1 },

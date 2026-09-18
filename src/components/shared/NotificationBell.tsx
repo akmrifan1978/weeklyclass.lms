@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
+import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { brand, colors, fontWeight, radius } from '@/constants/theme';
 
@@ -35,6 +36,7 @@ export function NotificationBell({
   const { t } = useTranslation();
   const router = useRouter();
   const { unread } = useNotifications();
+  const { user } = useAuth();
 
   const label =
     unread > 0
@@ -43,7 +45,12 @@ export function NotificationBell({
 
   return (
     <Pressable
-      onPress={() => router.push('/notifications' as never)}
+      // An admin's inbox is the "For me" tab of their notifications page.
+      onPress={() =>
+        user?.role === 'admin'
+          ? router.push({ pathname: '/(admin)/notifications', params: { tab: 'inbox' } })
+          : router.push('/notifications' as never)
+      }
       hitSlop={10}
       accessibilityRole="button"
       accessibilityLabel={label}

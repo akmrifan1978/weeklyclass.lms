@@ -89,7 +89,7 @@ async function raise(item: AppNotification): Promise<void> {
     // the phone showing one thing twice — and a tag per notification is what
     // makes withdrawing a single one possible.
     tag: `note:${item.id}`,
-    data: { route: item.route ?? '/', id: item.id },
+    data: { route: item.route ?? `/notifications?open=${item.id}`, id: item.id },
   };
 
   if (registration) {

@@ -616,7 +616,14 @@
     "deleteTitle": "حذف هذه الإشعارات؟",
     "deleteMessage": "ستُزال {{count}} من السجل المعروض. وتبقى في السجل، فلا يضيع ما أُرسل.",
     "deletedCount": "حُذفت {{count}}",
-    "deletedPartly": "حُذفت {{removed}}، وتعذّر حذف {{failed}}"
+    "deletedPartly": "حُذفت {{removed}}، وتعذّر حذف {{failed}}",
+    "one": "إشعار",
+    "open": "فتح",
+    "seenBy": "شاهده {{count}}",
+    "seenByOf": "شاهده {{count}} من {{total}}",
+    "noViewers": "لم يفتحه أحد بعد.",
+    "inbox": "الواردة إليّ",
+    "sentTab": "المرسلة"
   },
   "announcement": {
     "title": "الإعلانات",

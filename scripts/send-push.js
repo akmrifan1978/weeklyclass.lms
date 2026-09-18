@@ -153,7 +153,9 @@ async function sendOne(webpush, db, doc) {
     title: notification.title || 'WeeklyClass LMS',
     body: notification.message || '',
     image: notification.image || undefined,
-    route: notification.route || '/',
+    // No page of its own: open the inbox at this notification, so the tap
+    // shows the whole message instead of landing on the home screen.
+    route: notification.route || `/notifications?open=${doc.id}`,
     id: doc.id,
     /*
      * The notification's own id, and it MUST match the tag the app uses when it
