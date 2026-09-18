@@ -20,6 +20,7 @@ import {
 } from '@/services/notificationService';
 import { listBranches, listClasses } from '@/services/orgService';
 import { listUsers } from '@/services/userService';
+import { NotificationDetail } from '@/components/shared/NotificationDetail';
 import { logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import type {
   AppNotification,
@@ -94,6 +95,8 @@ export function NotificationComposer() {
   const [busy, setBusy] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<AppNotification | null>(null);
   const [lastOutcome, setLastOutcome] = useState<string | null>(null);
+  // The sent notification being looked at, with who has seen it.
+  const [viewing, setViewing] = useState<AppNotification | null>(null);
 
   const loadRefs = useCallback(async () => {
     const [branches, classPage, people] = await Promise.all([
@@ -362,7 +365,11 @@ export function NotificationComposer() {
       >
         <View style={{ gap: spacing.md }}>
           {(history ?? []).map((item) => (
-            <Card key={item.id}>
+            <Card
+              key={item.id}
+              onPress={selecting ? undefined : () => setViewing(item)}
+              accessibilityLabel={item.title}
+            >
               {selecting ? (
                 <Pressable
                   onPress={() => toggleSelected(item.id)}
@@ -400,6 +407,13 @@ export function NotificationComposer() {
                   ? `${t('notification.scheduleFor')} ${formatDateTime(item.scheduledAt, language)}`
                   : relativeTime(item.sentAt ?? item.createdAt, language)}
               </Text>
+              {/* How many have opened it. Tap the card to see who. */}
+              <View style={styles.seenRow}>
+                <Ionicons name="eye-outline" size={14} color={colors.primary} />
+                <Text style={styles.seenText}>
+                  {t('notification.seenBy', { count: (item.readBy ?? []).length })}
+                </Text>
+              </View>
               {item.deliveryNote ? (
                 <Text style={styles.historyNote}>{item.deliveryNote}</Text>
               ) : null}
@@ -419,6 +433,8 @@ export function NotificationComposer() {
       </AsyncBoundary>
 
       <Spacer size={spacing.xxxl} />
+
+      <NotificationDetail notification={viewing} onClose={() => setViewing(null)} showViewers />
 
       <FormSheet
         visible={composing}
@@ -568,6 +584,8 @@ export function NotificationComposer() {
 }
 
 const styles = StyleSheet.create({
+  seenRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
+  seenText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',

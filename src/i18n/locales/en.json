@@ -616,7 +616,14 @@
     "deleteTitle": "Delete these notifications?",
     "deleteMessage": "{{count}} will be removed from the history. They stay in the record, so what went out is never lost.",
     "deletedCount": "{{count}} deleted",
-    "deletedPartly": "{{removed}} deleted, {{failed}} could not be removed"
+    "deletedPartly": "{{removed}} deleted, {{failed}} could not be removed",
+    "one": "Notification",
+    "open": "Open",
+    "seenBy": "Seen by {{count}}",
+    "seenByOf": "Seen by {{count}} of {{total}}",
+    "noViewers": "Nobody has opened it yet.",
+    "inbox": "For me",
+    "sentTab": "Sent"
   },
   "announcement": {
     "title": "Announcements",

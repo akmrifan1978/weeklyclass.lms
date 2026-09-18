@@ -616,7 +616,14 @@
     "deleteTitle": "මෙම දැනුම්දීම් මකන්නද?",
     "deleteMessage": "{{count}}ක් ඉතිහාසයෙන් ඉවත් වේ. ඒවා වාර්තාවේ රැඳේ, එබැවින් යවන ලද දෙය කිසිවිටෙක නැති නොවේ.",
     "deletedCount": "{{count}}ක් මකා දැමිණි",
-    "deletedPartly": "{{removed}}ක් මකා දැමිණි, {{failed}}ක් ඉවත් කළ නොහැකි විය"
+    "deletedPartly": "{{removed}}ක් මකා දැමිණි, {{failed}}ක් ඉවත් කළ නොහැකි විය",
+    "one": "දැනුම්දීම",
+    "open": "විවෘත කරන්න",
+    "seenBy": "{{count}} දෙනෙක් දැක ඇත",
+    "seenByOf": "{{total}} දෙනාගෙන් {{count}} දෙනෙක් දැක ඇත",
+    "noViewers": "තවම කිසිවෙකු විවෘත කර නැත.",
+    "inbox": "මට ලැබුණු",
+    "sentTab": "යැවූ"
   },
   "announcement": {
     "title": "නිවේදන",
