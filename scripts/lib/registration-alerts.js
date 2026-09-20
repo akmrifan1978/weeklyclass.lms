@@ -1,5 +1,6 @@
 /**
- * New registrations waiting for approval, told to the admins.
+ * When somebody registers, the admins are told: a student who was approved
+ * automatically, and anybody left waiting for approval.
  *
  * Runs inside the delivery job, which GitHub starts every five minutes, so it
  * needs nobody's laptop to be switched on. (While the admin panel is open, the
@@ -30,6 +31,11 @@
 const ALERTS = 'registrationAlerts';
 /** An older registration is on the dashboard already; announcing it now is noise. */
 const MAX_AGE_DAYS = 7;
+/**
+ * An approved registration is not waiting for anybody, so it is only news
+ * while it is fresh. Yesterday's is on the dashboard and in the student list.
+ */
+const APPROVED_AGE_HOURS = 24;
 const MAX_ATTEMPTS = 5;
 const SYNTHETIC_DOMAIN = '@mobile.weeklyclass.app';
 
@@ -59,7 +65,7 @@ function registeredAt(user) {
   return `${when} (Saudi time)`;
 }
 
-function alertMessage(user, className, appUrl) {
+function alertMessage(user, className, appUrl, waiting = true) {
   const name = user.fullName || 'Somebody';
   const email = String(user.email || '');
   const rows = [
@@ -72,25 +78,31 @@ function alertMessage(user, className, appUrl) {
   ].filter(([, value]) => value);
   const link = `${String(appUrl).replace(/\/$/, '')}/users`;
 
+  const what = waiting
+    ? 'has registered and is waiting for approval'
+    : 'has registered and was approved automatically';
+
   return {
-    subject: `New registration waiting for approval: ${name}`,
-    short: `WeeklyClass: ${name} registered and is waiting for approval. ${link}`,
+    subject: waiting
+      ? `New registration waiting for approval: ${name}`
+      : `New registration: ${name}`,
+    short: `WeeklyClass: ${name} ${what}. ${link}`,
     text: [
-      `${name} has registered and is waiting for approval.`,
+      `${name} ${what}.`,
       '',
       ...rows.map(([label, value]) => `${label}: ${value}`),
       '',
-      `Approve or decline: ${link}`,
+      `${waiting ? 'Approve or decline' : 'Open the admin panel'}: ${link}`,
     ].join('\n'),
     html:
-      `<p><strong>${escapeHtml(name)}</strong> has registered and is waiting for approval.</p>` +
+      `<p><strong>${escapeHtml(name)}</strong> ${escapeHtml(what)}.</p>` +
       `<table cellpadding="4" style="border-collapse:collapse">${rows
         .map(
           ([label, value]) =>
             `<tr><td style="color:#667">${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`
         )
         .join('')}</table>` +
-      `<p><a href="${escapeHtml(link)}">Open the admin panel to approve or decline</a></p>`,
+      `<p><a href="${escapeHtml(link)}">Open the admin panel</a></p>`,
   };
 }
 
@@ -139,7 +151,7 @@ async function release(ref, channel, error) {
 async function pushToAdmins(webpush, subscriptions, uid, message) {
   const payload = JSON.stringify({
     title: 'New registration',
-    body: message.subject.replace('New registration waiting for approval: ', '') + ' is waiting for approval',
+    body: message.short.replace('WeeklyClass: ', '').split('. http')[0],
     route: '/users',
     id: `registration-${uid}`,
     tag: `registration:${uid}`,
@@ -188,14 +200,27 @@ async function sendRegistrationAlerts({
   env = process.env,
   appUrl = env.APP_URL || 'https://weeklyclass-lms.web.app',
 }) {
-  const snap = await db.collection('users').where('status', '==', 'pending').limit(50).get();
-  const cutoff = Date.now() - MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
-  const pending = snap.docs.filter((doc) => {
-    const user = doc.data();
-    if (user.deleted === true) return false;
-    const created = user.createdAt && user.createdAt.toDate ? user.createdAt.toDate().getTime() : Date.now();
-    return created >= cutoff;
-  });
+  const when = (doc) => {
+    const created = doc.data().createdAt;
+    return created && created.toDate ? created.toDate().getTime() : Date.now();
+  };
+  const alive = (doc) => doc.data().deleted !== true;
+
+  const waitingCutoff = Date.now() - MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  const waiting = (await db.collection('users').where('status', '==', 'pending').limit(50).get()).docs
+    .filter((doc) => alive(doc) && when(doc) >= waitingCutoff);
+
+  /*
+   * Students the app approved by itself are announced too - otherwise, with
+   * automatic approval on, nobody would ever be told that somebody joined.
+   * Only their own registrations: an account an admin created is not news to
+   * the admin who created it.
+   */
+  const approvedCutoff = Date.now() - APPROVED_AGE_HOURS * 60 * 60 * 1000;
+  const approved = (await db.collection('users').where('status', '==', 'active').limit(100).get()).docs
+    .filter((doc) => alive(doc) && when(doc) >= approvedCutoff && doc.data().createdBy === doc.id);
+
+  const pending = [...waiting, ...approved];
   if (pending.length === 0) return 0;
 
   const adminSnap = await db.collection('users').where('role', '==', 'admin').get();
@@ -251,7 +276,7 @@ async function sendRegistrationAlerts({
           .then((snapshot) => (snapshot.exists ? snapshot.data().name || '' : ''))
           .catch(() => '')
       : '';
-    const message = alertMessage(user, className, appUrl);
+    const message = alertMessage(user, className, appUrl, user.status !== 'active');
 
     for (const channel of channels) {
       try {

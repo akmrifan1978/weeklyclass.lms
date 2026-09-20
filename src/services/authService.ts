@@ -952,7 +952,15 @@ async function runRegistration(
   step('2/6 auth token ready');
 
   try {
-    const status: UserStatus = requireApproval ? 'pending' : 'active';
+    /*
+     * A student who filled the form in correctly is in.
+     *
+     * A TEACHER still waits for an admin, whatever the setting says. A
+     * teacher account carries permissions over other people's records -
+     * attendance, results, a student's profile - and self-service
+     * registration must not hand those to whoever fills in a form.
+     */
+    const status: UserStatus = role === 'student' && !requireApproval ? 'active' : 'pending';
     step('3/6 allocating sequential id');
 
     /*
