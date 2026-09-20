@@ -350,10 +350,13 @@ service cloud.firestore {
                     && request.resource.data.uid == uid
                     && request.resource.data.role in ['student', 'teacher']
                     && request.resource.data.status in ['pending', 'active']
-                    // Active straight away only when Admin -> Settings says new
-                    // registrations are approved automatically. Otherwise it is
-                    // Pending, whatever the device sends.
-                    && (request.resource.data.status == 'pending' || !approvalRequired())
+                    // Active straight away only for a STUDENT, and only while
+                    // Admin -> Settings approves new registrations automatically.
+                    // A teacher always waits for an admin: that account can act on
+                    // other people's records. Pending otherwise, whatever the
+                    // device sends.
+                    && (request.resource.data.status == 'pending'
+                        || (request.resource.data.role == 'student' && !approvalRequired()))
                     && request.resource.data.get('permissions', {}).keys().size() <= 40
                     // Never let a self-registration hand itself admin powers.
                     && !request.resource.data.get('permissions', {}).keys().hasAny([
