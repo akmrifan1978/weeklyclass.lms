@@ -28,7 +28,6 @@ const STUDENT_TOOLS: {
   { permissions: ['UPLOAD_VIDEO'], icon: 'mic-outline', labelKey: 'nav.recordings', route: '/(student)/manage/recordings' },
   { permissions: ['UPLOAD_MATERIAL'], icon: 'cloud-upload-outline', labelKey: 'nav.materials', route: '/(student)/manage/materials' },
   { permissions: ['MANAGE_ARTICLES'], icon: 'newspaper-outline', labelKey: 'nav.articles', route: '/(student)/manage/articles' },
-  { permissions: ['CREATE_WORKBOOK'], icon: 'book', labelKey: 'nav.workbooks', route: '/(student)/manage/workbooks' },
 ];
 
 /**

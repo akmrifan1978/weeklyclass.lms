@@ -63,7 +63,12 @@ export function WorkbookEditor({
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  // Everybody writes; not everybody hands their pages to other people. For
+  // somebody without the permission there is no audience to choose and no
+  // publish button - the rules would refuse it, and offering a button that
+  // cannot work is worse than not offering it.
+  const mayPublish = can('PUBLISH_WORKBOOK');
   const toast = useToast();
 
   const [title, setTitle] = useState(workbook.title);
@@ -362,30 +367,32 @@ export function WorkbookEditor({
           multiline
         />
 
-        <Card style={styles.audienceCard}>
-          <Pressable
-            onPress={() => setShowAudience((v) => !v)}
-            accessibilityRole="button"
-            style={styles.audienceHead}
-          >
-            <Ionicons name="people-outline" size={18} color={colors.primary} />
-            <Text style={styles.audienceTitle}>{t('audience.label')}</Text>
-            <Ionicons
-              name={showAudience ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={colors.textMuted}
-            />
-          </Pressable>
-          {showAudience ? (
-            <AudiencePicker
-              value={audience}
-              onChange={(a) => {
-                setAudience(a);
-                setDirty(true);
-              }}
-            />
-          ) : null}
-        </Card>
+        {mayPublish ? (
+          <Card style={styles.audienceCard}>
+            <Pressable
+              onPress={() => setShowAudience((v) => !v)}
+              accessibilityRole="button"
+              style={styles.audienceHead}
+            >
+              <Ionicons name="people-outline" size={18} color={colors.primary} />
+              <Text style={styles.audienceTitle}>{t('audience.label')}</Text>
+              <Ionicons
+                name={showAudience ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={colors.textMuted}
+              />
+            </Pressable>
+            {showAudience ? (
+              <AudiencePicker
+                value={audience}
+                onChange={(a) => {
+                  setAudience(a);
+                  setDirty(true);
+                }}
+              />
+            ) : null}
+          </Card>
+        ) : null}
       </ScrollView>
 
       <View style={styles.actions}>
@@ -397,7 +404,7 @@ export function WorkbookEditor({
           onPress={() => void saveAll()}
           style={{ flex: 1 }}
         />
-        {workbook.status === 'published' ? (
+        {!mayPublish ? null : workbook.status === 'published' ? (
           <Button
             label={t('workbook.unpublish')}
             icon="eye-off-outline"

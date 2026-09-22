@@ -1750,7 +1750,11 @@
     "unsavedHelp": "Save this workbook before leaving?",
     "discard": "Leave without saving",
     "deleteConfirm": "Delete this workbook and all its pages?",
-    "pageTooBig": "Page {{page}} has too much on it to save. Move some of it to a new page."
+    "pageTooBig": "Page {{page}} has too much on it to save. Move some of it to a new page.",
+    "mine": "My workbooks",
+    "shared": "Shared with me",
+    "mineEmpty": "No workbooks of your own yet",
+    "mineEmptyHelp": "Write or draw by hand: work through an exercise, copy out an ayah, practise letters. Only you can see what you write here."
   },
   "guestMode": {
     "title": "Guest",
