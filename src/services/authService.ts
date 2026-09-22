@@ -66,6 +66,7 @@ export interface LoginResult {
 const LOGIN_BLOCKED: Record<Exclude<UserStatus, 'active'>, string> = {
   pending: 'auth.accountPending',
   suspended: 'auth.accountSuspended',
+  blocked: 'auth.accountBlocked',
   inactive: 'auth.accountInactive',
 };
 
@@ -1062,6 +1063,12 @@ async function runRegistration(
             qualification: input.qualification ?? '',
           }),
       deleted: false,
+      /*
+       * Registering signs you in, so this IS a sign-in. Without it the admin's
+       * user list said "never signed in" about somebody who was using the app
+       * at that moment, because only the sign-in SCREEN recorded it.
+       */
+      lastLoginAt: new Date(),
       // Recorded so there is proof of what was agreed, and when.
       declarationAcceptedAt: new Date(),
     };

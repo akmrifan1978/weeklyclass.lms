@@ -6,7 +6,12 @@ import type { PermissionMap } from './permissions';
 export type FireDate = Timestamp | Date | null;
 
 export type UserRole = 'admin' | 'teacher' | 'student';
-export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending';
+/**
+ * `suspended` and `blocked` both stop somebody signing in, and are kept apart
+ * because they are said for different reasons: suspended is a pause, blocked
+ * is a decision. `inactive` is what a removed account is left as.
+ */
+export type UserStatus = 'active' | 'inactive' | 'suspended' | 'blocked' | 'pending';
 export type ContentStatus = 'draft' | 'published' | 'archived';
 export type LanguageCode = 'en' | 'ta' | 'si' | 'ar';
 

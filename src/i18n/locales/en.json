@@ -77,7 +77,8 @@
     "publish": "Publish",
     "unpublish": "Unpublish",
     "publishedToast": "Published. Everyone can see it now.",
-    "unpublishedToast": "Moved back to draft. Hidden from everyone."
+    "unpublishedToast": "Moved back to draft. Hidden from everyone.",
+    "blocked": "Blocked"
   },
   "auth": {
     "studentLogin": "Student Login",
@@ -178,7 +179,8 @@
     "mobileHasUnfinishedAccount": "An unfinished account already exists for this mobile number. Use the same password you chose before, or sign in instead.",
     "guestLogin": "Guest Login",
     "registrationInProgress": "Your registration is already being sent. Please wait a moment.",
-    "usernameRule": "10 digits, no country code — for example 0544170199."
+    "usernameRule": "10 digits, no country code — for example 0544170199.",
+    "accountBlocked": "Your account has been blocked. Please contact your administrator."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
@@ -725,7 +727,14 @@
     "isoCode": "ISO code",
     "studentPermissionsNote": "Whatever you grant a student appears in their menu under ‘Tools you can use’. Attendance, announcements, the calendar, videos, recordings, materials, articles and workbooks all work for a student. Editing lessons and quizzes also needs a teacher account, so granting those to a student has no effect.",
     "allocatedTeachers": "Teachers",
-    "allocatedTeachersNone": "None allocated yet"
+    "allocatedTeachersNone": "None allocated yet",
+    "authentication": "Authentication",
+    "authenticated": "Authenticated",
+    "notAuthenticated": "Not authenticated",
+    "lastLogin": "Last login",
+    "neverSignedIn": "Never signed in",
+    "createdDate": "Created",
+    "passwordManaged": "Never shown. Reset it with the buttons below."
   },
   "settings": {
     "title": "Settings",
