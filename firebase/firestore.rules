@@ -1076,7 +1076,10 @@ service cloud.firestore {
       // request for somebody's drafts is refused.
       allow list: if isAdmin() || workbookIsMine() || workbookPublishedToMe();
 
-      allow create: if can('CREATE_WORKBOOK')
+      // Anybody with an account keeps workbooks of their own: writing by hand
+      // is ordinary study, not staff work. Their OWN only - handing one to
+      // other people is publishing, which still needs PUBLISH_WORKBOOK below.
+      allow create: if isActive()
                     && request.resource.data.authorId == request.auth.uid
                     // Draft on creation, always. Publishing is its own step and
                     // its own permission.
@@ -1121,7 +1124,7 @@ service cloud.firestore {
         // page still holds its place in the order, and a gap in a book somebody
         // is reading page by page is worse than losing the page they removed.
         allow write: if isAdmin()
-                     || (can('CREATE_WORKBOOK') && parent().get('authorId', '') == request.auth.uid);
+                     || (isActive() && parent().get('authorId', '') == request.auth.uid);
       }
     }
 
