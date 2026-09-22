@@ -265,6 +265,10 @@ export function ChipGroup<T extends string>({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      // Without this the row grows to fill whatever height is going, and the
+      // chips stretch with it - which is what it did on the admin
+      // notifications page, where it sits above a full-height screen.
+      style={styles.chipScroll}
       contentContainerStyle={[styles.chipRow, style]}
     >
       {options.map((option) => {
@@ -372,6 +376,7 @@ const styles = StyleSheet.create({
   optionLabelSelected: { fontWeight: fontWeight.semibold, color: colors.accentDark },
   optionDescription: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   empty: { textAlign: 'center', color: colors.textMuted, padding: spacing.xl },
+  chipScroll: { flexGrow: 0, flexShrink: 0 },
   chipRow: { gap: spacing.sm, paddingVertical: spacing.xs },
   chip: {
     paddingHorizontal: spacing.lg,
