@@ -285,6 +285,14 @@ export function UserManager({
                   <Text style={styles.rowMeta} numberOfLines={1}>
                     {item.email}
                   </Text>
+                  {/* On the row itself, not only inside the card: "has this
+                      person ever actually used the account?" is the question
+                      an admin scans the list for. */}
+                  <Text style={styles.rowMeta} numberOfLines={1}>
+                    {item.lastLoginAt
+                      ? `${t('admin.lastLogin')}: ${formatDateTime(item.lastLoginAt, language)}`
+                      : t('admin.neverSignedIn')}
+                  </Text>
                 </View>
                 <View style={styles.rowEnd}>
                   <StatusBadge status={item.status} />
