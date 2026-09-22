@@ -5,11 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { useAsync, useDebounced, usePaginated } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
 import { humanise } from '@/utils/format';
+import { formatDateTime } from '@/utils/date';
 import { DEFAULT_DIAL, formatPhone, localTenDigits } from '@/utils/phone';
 import { validate, studentRegistrationSchema, teacherRegistrationSchema } from '@/utils/validation';
 import {
@@ -77,6 +79,7 @@ export function UserManager({
 }) {
   const { t } = useTranslation();
   const { user: actor, can } = useAuth();
+  const { language } = useLanguage();
   const toast = useToast();
   const router = useRouter();
   const params = useLocalSearchParams<{ action?: string }>();
@@ -248,8 +251,9 @@ export function UserManager({
           { value: 'all', label: t('common.all') },
           { value: 'active', label: t('common.active') },
           { value: 'pending', label: t('common.pending') },
-          { value: 'inactive', label: t('common.inactive') },
           { value: 'suspended', label: t('common.suspended') },
+          { value: 'blocked', label: t('common.blocked') },
+          { value: 'inactive', label: t('common.inactive') },
         ]}
         value={statusFilter}
         onChange={setStatusFilter}
@@ -341,6 +345,41 @@ export function UserManager({
               />
               <Divider />
               <DetailRow label={t('auth.country')} value={selected.country} icon="globe-outline" />
+              <Divider />
+              {/* Whether this person has ever actually signed in. An account can
+                  exist for somebody who never used it - one made for them, or a
+                  registration abandoned halfway. */}
+              <DetailRow
+                label={t('admin.authentication')}
+                value={
+                  selected.lastLoginAt ? t('admin.authenticated') : t('admin.notAuthenticated')
+                }
+                icon={selected.lastLoginAt ? 'shield-checkmark-outline' : 'shield-outline'}
+              />
+              <Divider />
+              <DetailRow
+                label={t('admin.lastLogin')}
+                value={
+                  selected.lastLoginAt
+                    ? formatDateTime(selected.lastLoginAt, language)
+                    : t('admin.neverSignedIn')
+                }
+                icon="time-outline"
+              />
+              <Divider />
+              <DetailRow
+                label={t('admin.createdDate')}
+                value={formatDateTime(selected.createdAt, language)}
+                icon="calendar-outline"
+              />
+              <Divider />
+              {/* Said plainly, because it is the question every admin asks: the
+                  password is not stored anywhere anybody can read it back. */}
+              <DetailRow
+                label={t('auth.password')}
+                value={t('admin.passwordManaged')}
+                icon="lock-closed-outline"
+              />
               <Divider />
               <DetailRow
                 label={selected.role === 'student' ? t('auth.studentId') : t('auth.teacherId')}
@@ -1188,8 +1227,9 @@ function UserForm({
         options={[
           { value: 'active', label: t('common.active') },
           { value: 'pending', label: t('common.pending') },
-          { value: 'inactive', label: t('common.inactive') },
           { value: 'suspended', label: t('common.suspended') },
+          { value: 'blocked', label: t('common.blocked') },
+          { value: 'inactive', label: t('common.inactive') },
         ]}
         onChange={(v) => set('status', v)}
       />
