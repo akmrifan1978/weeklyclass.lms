@@ -153,9 +153,21 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
           user,
           existing?.id
         );
-        // A brand-new quiz has no questions yet, so go straight to the editor.
+        /*
+         * A brand-new assignment has no questions yet, so go straight to the
+         * editor - the one in the area this person is allowed in.
+         *
+         * This always sent everybody to /(admin)/..., which the role gate turns
+         * a teacher straight out of. Creating an assignment therefore dropped a
+         * teacher back on their dashboard, with a draft they could not add a
+         * single question to - and an assignment with no questions cannot be
+         * published. From where they stood, assignments simply did not work.
+         */
         if (!existing) {
-          setTimeout(() => router.push(`/(admin)/quiz/${id}`), 300);
+          setTimeout(() => {
+            if (user.role === 'teacher') router.push(`/(teacher)/quiz/${id}`);
+            else router.push(`/(admin)/quiz/${id}`);
+          }, 300);
         }
         return id;
       }}
@@ -176,7 +188,11 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
             quiz.timeLimit ? formatDuration(quiz.timeLimit) : t('quiz.noTimeLimit'),
           ].join(' · ')}
           badges={[{ label: t(`common.${quiz.status === 'closed' ? 'archived' : quiz.status}`), tone: quiz.status }]}
-          onPress={() => router.push(`/(admin)/quiz/${quiz.id}`)}
+          onPress={() =>
+            user?.role === 'teacher'
+              ? router.push(`/(teacher)/quiz/${quiz.id}`)
+              : router.push(`/(admin)/quiz/${quiz.id}`)
+          }
           extraActions={
             can('EDIT_QUIZ') ? (
               <IconButton
