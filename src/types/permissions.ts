@@ -106,6 +106,12 @@ export const DEFAULT_TEACHER_PERMISSIONS: PermissionMap = {
   // withholding them by default means every new teacher starts by asking.
   CREATE_WORKBOOK: true,
   PUBLISH_WORKBOOK: true,
+  // Setting the week's assignment is the other half of teaching the lesson,
+  // and it is bounded already: the rules let a teacher write one only for a
+  // class they actually teach. Deleting somebody's assignment, with the
+  // attempts under it, stays with an admin.
+  CREATE_QUIZ: true,
+  EDIT_QUIZ: true,
   ANSWER_QUESTIONS: true,
   VIEW_RESULTS: true,
   UPLOAD_MATERIAL: true,
