@@ -61,7 +61,7 @@ export async function markAttendance(
     }))
   );
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.attendance,

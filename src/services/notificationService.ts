@@ -168,7 +168,7 @@ export async function send(input: SendInput, actor: AppUser): Promise<SendOutcom
     deliveryNote: note,
   });
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.notifications,
@@ -307,7 +307,7 @@ export function listAllNotifications(options: {
 
 export async function cancelScheduled(id: string, actor: AppUser): Promise<void> {
   await updateDocById<AppNotification>(COLLECTIONS.notifications, id, { status: 'cancelled' });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.notifications,
@@ -383,7 +383,7 @@ export async function saveAnnouncement(
 
   if (id) {
     await updateDocById<Announcement>(COLLECTIONS.announcements, id, payload);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.announcements,
@@ -394,7 +394,7 @@ export async function saveAnnouncement(
   }
 
   const newId = await createDoc(COLLECTIONS.announcements, payload, { actorId: actor.uid });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.announcements,
@@ -452,7 +452,7 @@ export async function deleteNotifications(
 
 export async function deleteAnnouncement(id: string, actor: AppUser): Promise<void> {
   await softDelete(COLLECTIONS.announcements, id, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.announcements,

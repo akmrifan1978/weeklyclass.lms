@@ -61,7 +61,7 @@ export async function saveNote(
     { actorId: actor.uid }
   );
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.divineNames,

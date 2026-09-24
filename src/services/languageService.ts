@@ -69,7 +69,7 @@ export async function setEnabled(
   actor: AppUser
 ): Promise<void> {
   await updateDocById<AppLanguage>(COLLECTIONS.languages, code, { enabled });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.languages,
@@ -111,7 +111,7 @@ export async function saveLanguage(
     { actorId: actor.uid }
   );
 
-  await audit.log({
+  void audit.log({
     actor,
     action: isNew ? 'CREATE' : 'UPDATE',
     collection: COLLECTIONS.languages,
@@ -138,7 +138,7 @@ export async function deleteLanguage(
   }
 
   await hardDelete(COLLECTIONS.languages, language.code);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.languages,

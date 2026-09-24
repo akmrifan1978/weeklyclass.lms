@@ -183,7 +183,7 @@ export async function saveLesson(
     // withdraws it here in the same action rather than leaving the public page
     // advertising something the class can no longer open.
     await syncPublicLesson(id, { ...(before ?? {}), ...payload });
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.lessons,
@@ -221,7 +221,7 @@ export async function saveLesson(
     },
     actor
   );
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.lessons,
@@ -235,7 +235,7 @@ export async function deleteLesson(id: string, actor: AppUser): Promise<void> {
   const before = await getLesson(id);
   await softDelete(COLLECTIONS.lessons, id, actor.uid);
   await removePublicLesson(id);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.lessons,
@@ -310,7 +310,7 @@ export async function saveArticle(
   if (id) {
     const before = await getArticle(id);
     await updateDocById<Article>(COLLECTIONS.articles, id, payload);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.articles,
@@ -325,7 +325,7 @@ export async function saveArticle(
   }
 
   const newId = await createDoc(COLLECTIONS.articles, payload, { actorId: actor.uid });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.articles,
@@ -338,7 +338,7 @@ export async function saveArticle(
 export async function deleteArticle(id: string, actor: AppUser): Promise<void> {
   const before = await getArticle(id);
   await softDelete(COLLECTIONS.articles, id, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.articles,
@@ -500,7 +500,7 @@ export async function saveMaterial(
 
   if (id) {
     await updateDocById<Material>(COLLECTIONS.materials, id, payload);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.materials,
@@ -513,7 +513,7 @@ export async function saveMaterial(
 
   const newId = await createDoc(COLLECTIONS.materials, payload, { actorId: actor.uid });
   tell(false);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.materials,
@@ -528,7 +528,7 @@ export async function deleteMaterial(id: string, actor: AppUser): Promise<void> 
   await softDelete(COLLECTIONS.materials, id, actor.uid);
   // The Storage object is removed by the caller (storageService.remove) so this
   // service stays free of Storage concerns.
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.materials,

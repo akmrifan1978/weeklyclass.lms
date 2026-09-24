@@ -156,7 +156,7 @@ export async function createWorkbook(input: WorkbookInput, user: AppUser): Promi
     { actorId: user.uid }
   );
 
-  await audit.log({
+  void audit.log({
     actor: user,
     action: 'CREATE',
     collection: COLLECTIONS.workbooks,
@@ -180,7 +180,7 @@ export async function updateWorkbook(
   if (changes.audience) Object.assign(payload, audienceFields(changes.audience));
 
   await updateDocById<Workbook>(COLLECTIONS.workbooks, id, payload);
-  await audit.log({
+  void audit.log({
     actor: user,
     action: 'UPDATE',
     collection: COLLECTIONS.workbooks,
@@ -207,7 +207,7 @@ export async function publish(
     ...audienceFields(audience),
   });
 
-  await audit.log({
+  void audit.log({
     actor: user,
     action: 'UPDATE',
     collection: COLLECTIONS.workbooks,
@@ -230,7 +230,7 @@ export async function publish(
 
 export async function unpublish(workbook: Workbook, user: AppUser): Promise<void> {
   await updateDocById<Workbook>(COLLECTIONS.workbooks, workbook.id, { status: 'draft' });
-  await audit.log({
+  void audit.log({
     actor: user,
     action: 'UPDATE',
     collection: COLLECTIONS.workbooks,
@@ -248,7 +248,7 @@ export async function unpublish(workbook: Workbook, user: AppUser): Promise<void
  */
 export async function deleteWorkbook(workbook: Workbook, user: AppUser): Promise<void> {
   await softDelete(COLLECTIONS.workbooks, workbook.id, user.uid);
-  await audit.log({
+  void audit.log({
     actor: user,
     action: 'DELETE',
     collection: COLLECTIONS.workbooks,

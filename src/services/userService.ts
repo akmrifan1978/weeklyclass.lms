@@ -176,7 +176,7 @@ export async function updateUser(
   // person is published, and a save that switches publishing off has to be
   // able to take the profile down.
   await syncPublicTeacher(uid, { ...before, ...payload });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.users,
@@ -284,7 +284,7 @@ export async function changeUsername(
     });
   });
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.users,
@@ -308,7 +308,7 @@ export async function setStatus(
   // Suspending a teacher takes their public profile down with them. An account
   // that can no longer sign in should not still be advertised as staff.
   await syncPublicTeacher(uid, { ...before, status });
-  await audit.log({
+  void audit.log({
     actor,
     action: status === 'active' ? 'ACTIVATE' : 'DEACTIVATE',
     collection: COLLECTIONS.users,
@@ -351,7 +351,7 @@ export async function updatePermissions(
     if (from !== to) changed[key] = { from, to };
   }
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'PERMISSION_CHANGED',
     collection: COLLECTIONS.users,
@@ -375,7 +375,7 @@ export async function removeUser(uid: string, actor: AppUser): Promise<void> {
       console.warn('[WeeklyClass] could not release the removed account\'s number and username', error)
     );
   }
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.users,
@@ -579,7 +579,7 @@ export async function createUserAsAdmin(
       throw error;
     }
 
-    await audit.log({
+    void audit.log({
       actor,
       action: 'CREATE',
       collection: COLLECTIONS.users,
@@ -668,7 +668,7 @@ export async function requirePasswordChange(
     }))
   );
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.users,

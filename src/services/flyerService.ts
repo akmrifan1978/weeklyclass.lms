@@ -152,7 +152,7 @@ export async function saveFlyer(
     }
 
     await updateDocById<Flyer>(COLLECTIONS.flyers, id, payload);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.flyers,
@@ -167,7 +167,7 @@ export async function saveFlyer(
   }
 
   const newId = await createDoc(COLLECTIONS.flyers, payload, { actorId: actor.uid });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.flyers,
@@ -186,7 +186,7 @@ export async function saveFlyer(
  */
 export async function setActive(flyer: Flyer, active: boolean, actor: AppUser): Promise<void> {
   await updateDocById<Flyer>(COLLECTIONS.flyers, flyer.id, { active });
-  await audit.log({
+  void audit.log({
     actor,
     action: active ? 'ACTIVATE' : 'DEACTIVATE',
     collection: COLLECTIONS.flyers,
@@ -202,7 +202,7 @@ export async function deleteFlyer(flyer: Flyer, actor: AppUser): Promise<void> {
   // somebody is paying for.
   if (flyer.storagePath) await storageService.remove(flyer.storagePath).catch(() => undefined);
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.flyers,

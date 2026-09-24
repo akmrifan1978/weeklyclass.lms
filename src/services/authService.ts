@@ -983,6 +983,34 @@ async function runRegistration(
      * STU-2026-H7H5K2 can see at a glance that it was not issued by the
      * counter, and can renumber it if the order matters to them.
      */
+    /*
+     * The username and number are claimed WHILE the id is being allocated.
+     *
+     * Neither needs the other: the claim writes `usernames/{username}` and
+     * `mobiles/{key}`, the counter reads and writes a counter document. Run one
+     * after the other they cost two round trips to a database in another
+     * country - and the counter is the slowest step there is, so the claim was
+     * simply sitting behind it for two or three seconds.
+     *
+     * The failure is caught rather than thrown from here: this promise is not
+     * awaited until below, and a rejection with nobody listening yet is an
+     * unhandled rejection. It is re-thrown at the join, so nothing is lost.
+     */
+    let claimFailure: unknown = null;
+    const claim = withTokenRetry('identity claim', credential.user, () =>
+      claimIdentity({
+        username,
+        email,
+        authEmail,
+        uid,
+        role,
+        mobile: input.mobile,
+        mobileCountryCode: input.mobileCountryCode,
+      })
+    ).catch((error: unknown) => {
+      claimFailure = error;
+    });
+
     const prefix = role === 'student' ? 'STU' : 'TCH';
     let generatedId: string;
     try {
@@ -1117,19 +1145,8 @@ async function runRegistration(
       throw error;
     });
 
-    const claim = withTokenRetry('identity claim', credential.user, () =>
-      claimIdentity({
-        username,
-        email,
-        authEmail,
-        uid,
-        role,
-        mobile: input.mobile,
-        mobileCountryCode: input.mobileCountryCode,
-      })
-    );
-
     await Promise.all([writeProfile, claim]);
+    if (claimFailure) throw claimFailure;
     step('5/6 profile written and username claimed');
 
     // Everything above is essential and is awaited. These two are not: the

@@ -66,7 +66,7 @@ export async function requestReset(target: AppUser, actor: AppUser): Promise<str
     { actorId: actor.uid }
   );
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.users,
