@@ -98,7 +98,7 @@ export async function saveKhutbah(
 
   if (id) {
     await updateDocById<KhutbahEntry>(COLLECTIONS.khutbahs, id, payload);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.khutbahs,
@@ -121,7 +121,7 @@ export async function saveKhutbah(
     actor
   );
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.khutbahs,
@@ -133,7 +133,7 @@ export async function saveKhutbah(
 
 export async function deleteKhutbah(id: string, actor: AppUser): Promise<void> {
   await softDelete(COLLECTIONS.khutbahs, id, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.khutbahs,

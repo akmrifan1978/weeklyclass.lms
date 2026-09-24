@@ -216,7 +216,7 @@ export async function saveVideo(
   if (id) {
     const before = await getVideo(id);
     await updateDocById<VideoItem>(COLLECTIONS.videos, id, payload);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.videos,
@@ -234,7 +234,7 @@ export async function saveVideo(
 
   const newId = await createDoc(COLLECTIONS.videos, payload, { actorId: actor.uid });
   tell(false);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.videos,
@@ -266,7 +266,7 @@ export async function setFeatured(id: string, actor: AppUser): Promise<void> {
   batch.update(doc(db, COLLECTIONS.videos, id), { isFeatured: true });
   await batch.commit();
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.videos,
@@ -277,7 +277,7 @@ export async function setFeatured(id: string, actor: AppUser): Promise<void> {
 
 export async function clearFeatured(id: string, actor: AppUser): Promise<void> {
   await updateDocById<VideoItem>(COLLECTIONS.videos, id, { isFeatured: false });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.videos,
@@ -289,7 +289,7 @@ export async function clearFeatured(id: string, actor: AppUser): Promise<void> {
 export async function deleteVideo(id: string, actor: AppUser): Promise<void> {
   const before = await getVideo(id);
   await softDelete(COLLECTIONS.videos, id, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.videos,

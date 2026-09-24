@@ -17,14 +17,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
 import { APP_NAME } from '@/constants/app';
 import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
-import { friendlyMessage } from '@/utils/errors';
+import { AppError, friendlyMessage } from '@/utils/errors';
 import {
   studentRegistrationSchema,
   teacherRegistrationSchema,
   validate,
 } from '@/utils/validation';
 import { register } from '@/services/authService';
-import { isMobileAvailable, isUsernameAvailable } from '@/services/identityService';
 import { DEFAULT_DIAL, localTenDigits } from '@/utils/phone';
 import { getSettings } from '@/services/settingsService';
 import { listBranches, listClasses, listCountries } from '@/services/orgService';
@@ -41,7 +40,7 @@ import {
   TextField,
   type Option,
 } from '@/components/ui';
-import type { Branch, ClassRoom, Country, LanguageCode, UserRole } from '@/types';
+import type { AgeBand, Branch, ClassRoom, Country, LanguageCode, UserRole } from '@/types';
 
 type Role = Extract<UserRole, 'student' | 'teacher'>;
 
@@ -73,6 +72,29 @@ function usernameFromMobile(mobile: string): string {
   if (whole) return whole;
   const digits = mobile.replace(/[^0-9]/g, '');
   return digits.length >= 4 ? digits.slice(0, 10) : '';
+}
+
+/**
+ * The ages the groups are split at. The centre's own bands: children, then
+ * teenagers from thirteen, then everybody from eighteen.
+ */
+const TEENAGER_FROM = 13;
+const ADULT_FROM = 18;
+
+/** Which band a date of birth falls in, or null while it is incomplete. */
+function ageBandFor(dateOfBirth: string): AgeBand | null {
+  if (!dateOfBirth) return null;
+  const born = new Date(`${dateOfBirth}T00:00:00`);
+  if (Number.isNaN(born.getTime())) return null;
+  const now = new Date();
+  const beforeBirthday =
+    now.getMonth() < born.getMonth() ||
+    (now.getMonth() === born.getMonth() && now.getDate() < born.getDate());
+  const age = now.getFullYear() - born.getFullYear() - (beforeBirthday ? 1 : 0);
+  if (age < 0 || age > 120) return null;
+  if (age >= ADULT_FROM) return 'adults';
+  if (age >= TEENAGER_FROM) return 'teenagers';
+  return 'children';
 }
 
 const EMPTY: FormState = {
@@ -107,6 +129,9 @@ export default function RegisterScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  // Set once the person chooses a group themselves, which stops the
+  // suggestion below from overruling them.
+  const classPicked = useRef(false);
   const [done, setDone] = useState<{ id: string; pending: boolean } | null>(null);
   // Until someone edits the username themselves, it mirrors their mobile
   // number — that is what most people here expect to sign in with.
@@ -268,6 +293,40 @@ export default function RegisterScreen() {
   );
 
   /**
+   * The group this student belongs in, worked out rather than asked for.
+   *
+   * The groups are split by age and by gender - Children, Teenagers and Adults,
+   * each male and female - and the student has already said both: the date of
+   * birth gives the band, the gender gives the half. Where exactly one group
+   * matches, it is filled in for them.
+   *
+   * Only where exactly one matches. Two groups for the same age and gender is a
+   * choice somebody has to make, and none at all is not something to guess at -
+   * in both cases the picker is left as it was.
+   */
+  const suggestedClass = useMemo(() => {
+    const band = ageBandFor(form.dateOfBirth);
+    if (!band || !form.gender) return null;
+    const matches = classes.filter((c) => c.ageBand === band && c.gender === form.gender);
+    return matches.length === 1 ? matches[0] : null;
+  }, [classes, form.dateOfBirth, form.gender]);
+
+  /*
+   * Filled in for them until they fill it in themselves. Somebody who picks a
+   * group by hand, or types a class code they were given, has said something
+   * about their own case that an age and a gender cannot know.
+   */
+  useEffect(() => {
+    if (!suggestedClass || classPicked.current) return;
+    if (form.classId === suggestedClass.id) return;
+    set('classId', suggestedClass.id);
+    if (suggestedClass.branchId) set('branchId', suggestedClass.branchId);
+    // Keyed on the suggestion itself: re-running it whenever the form object
+    // changes would undo the person's own choice a moment after they made it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestedClass?.id]);
+
+  /**
    * The teachers who come with the chosen group.
    *
    * Not asked for and not chosen — a student does not pick their teacher, the
@@ -340,33 +399,18 @@ export default function RegisterScreen() {
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      // Both checked here so the message lands on the field that is actually
-      // wrong; the writes themselves are guarded by a Firestore transaction, so
-      // a race still cannot create a duplicate.
-      //
-      // The mobile number is checked FIRST and deliberately so. It is the unique
-      // identity, and the username defaults to the same digits — so registering
-      // a number twice fails both checks, and reporting "username taken" would
-      // send someone off editing the wrong field.
-      //
-      // Both default to "free" if the lookup itself fails. These are a courtesy
-      // that puts the message on the right field; the transaction inside
-      // claimIdentity is the actual guarantee. Letting a failed *check* block
-      // registration would be the worst of both worlds — it stops nothing and
-      // refuses someone who has done nothing wrong.
-      const [mobileFree, usernameFree] = await Promise.all([
-        isMobileAvailable(result.data.mobile, form.mobileCountryCode).catch(() => true),
-        isUsernameAvailable(result.data.username).catch(() => true),
-      ]);
-      if (!mobileFree) {
-        setErrors({ mobile: 'validation.mobileTaken' });
-        return;
-      }
-      if (!usernameFree) {
-        setErrors({ username: 'validation.usernameTaken' });
-        return;
-      }
-
+      /*
+      * The number and the username are NOT checked here first.
+      *
+      * `register` checks both itself, at the same time as it reads the
+      * settings, and refuses with the same two messages. Asking here as well
+      * put two more round trips to a database in another country in front of
+      * every registration - a second or more of waiting, before anything had
+      * begun, to learn what the next step was about to learn anyway.
+      *
+      * The message still lands on the right field: the catch below puts those
+      * two refusals back on the number and the username.
+      */
       const outcome = await register(role, {
         fullName: result.data.fullName,
         username: result.data.username,
@@ -386,6 +430,13 @@ export default function RegisterScreen() {
       logEvent(AnalyticsEvents.signUp, { role });
       setDone({ id: outcome.generatedId, pending: outcome.requiresApproval });
     } catch (error) {
+      // "That number is taken" belongs on the number, not in a banner at the
+      // bottom of a long form.
+      const key = error instanceof AppError ? error.userMessage : '';
+      if (key === 'validation.mobileTaken' || key === 'validation.usernameTaken') {
+        setErrors({ [key === 'validation.mobileTaken' ? 'mobile' : 'username']: key });
+        return;
+      }
       setFormError(friendlyMessage(error, t));
       toast.error(friendlyMessage(error, t));
     } finally {
@@ -586,6 +637,7 @@ export default function RegisterScreen() {
                   value={classCode}
                   onChangeText={(value) => {
                     const next = value.toUpperCase();
+                    classPicked.current = next.trim().length > 0;
                     setClassCode(next);
                     const match = codedClasses.find(
                       (c) => (c.code ?? '').toUpperCase() === next.trim()
@@ -616,19 +668,27 @@ export default function RegisterScreen() {
                 ) : null}
               </>
             ) : role === 'student' && classOptions.length ? (
-              <Select
-                label={t('classGroup.field')}
-                value={form.classId}
-                options={classOptions}
-                onChange={(v) => {
-                  set('classId', v);
-                  const chosen = classes.find((c) => c.id === v);
-                  if (chosen?.branchId) set('branchId', chosen.branchId);
-                }}
-                error={errors.classId}
-                required={classRequired}
-                allowClear={!classRequired}
-              />
+              <>
+                <Select
+                  label={t('classGroup.field')}
+                  value={form.classId}
+                  options={classOptions}
+                  onChange={(v) => {
+                    classPicked.current = true;
+                    set('classId', v);
+                    const chosen = classes.find((c) => c.id === v);
+                    if (chosen?.branchId) set('branchId', chosen.branchId);
+                  }}
+                  error={errors.classId}
+                  required={classRequired}
+                  allowClear={!classRequired}
+                />
+                {/* Said out loud, because a field that fills itself in is
+                    unsettling unless it tells you why. */}
+                {suggestedClass && form.classId === suggestedClass.id && !classPicked.current ? (
+                  <Text style={styles.classMatched}>{t('auth.classAutoPicked')}</Text>
+                ) : null}
+              </>
             ) : null}
             {/* Who will be teaching, named as soon as the group is known —
                 whether it was typed as a code or picked from the list. A

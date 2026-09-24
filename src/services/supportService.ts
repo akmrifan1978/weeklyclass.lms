@@ -200,7 +200,7 @@ export async function replyToRequest(
     status: 'answered',
   });
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.supportRequests,
@@ -288,7 +288,7 @@ export async function closeRequest(
   await updateDocById<SupportRequest>(COLLECTIONS.supportRequests, requestId, {
     status: 'closed',
   });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.supportRequests,
@@ -473,7 +473,7 @@ export async function answerQuestion(
     status: 'answered',
   });
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.qaQuestions,
@@ -649,7 +649,7 @@ export async function hideQuestion(
   actor: AppUser
 ): Promise<void> {
   await updateDocById<QaQuestion>(COLLECTIONS.qaQuestions, questionId, { hidden });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.qaQuestions,

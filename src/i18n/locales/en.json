@@ -180,7 +180,8 @@
     "guestLogin": "Guest Login",
     "registrationInProgress": "Your registration is already being sent. Please wait a moment.",
     "usernameRule": "10 digits, no country code — for example 0544170199.",
-    "accountBlocked": "Your account has been blocked. Please contact your administrator."
+    "accountBlocked": "Your account has been blocked. Please contact your administrator.",
+    "classAutoPicked": "Chosen from your age and gender. Change it if it is not right."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",

@@ -66,7 +66,7 @@ export async function saveCountry(
       code,
       deleted: false,
     });
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.countries,
@@ -82,7 +82,7 @@ export async function saveCountry(
     { status: 'active', ...data, code, deleted: false },
     { actorId: actor.uid }
   );
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.countries,
@@ -102,7 +102,7 @@ export async function deleteCountry(country: Country, actor: AppUser): Promise<v
     throw new AppError('errors.countryInUse', 'failed-precondition');
   }
   await softDelete(COLLECTIONS.countries, country.id, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.countries,
@@ -128,7 +128,7 @@ export async function saveOrganization(
 ): Promise<string> {
   if (id) {
     await updateDocById<Organization>(COLLECTIONS.organizations, id, data);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.organizations,
@@ -143,7 +143,7 @@ export async function saveOrganization(
     { status: 'active', ...data },
     { actorId: actor.uid }
   );
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.organizations,
@@ -160,7 +160,7 @@ export async function deleteOrganization(org: Organization, actor: AppUser): Pro
     throw new AppError('errors.organizationInUse', 'failed-precondition');
   }
   await softDelete(COLLECTIONS.organizations, org.id, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.organizations,
@@ -192,7 +192,7 @@ export async function saveBranch(
   if (id) {
     const before = await getBranch(id);
     await updateDocById<Branch>(COLLECTIONS.branches, id, data);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.branches,
@@ -210,7 +210,7 @@ export async function saveBranch(
     { status: 'active', ...data },
     { actorId: actor.uid }
   );
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.branches,
@@ -223,7 +223,7 @@ export async function saveBranch(
 export async function deleteBranch(id: string, actor: AppUser): Promise<void> {
   const before = await getBranch(id);
   await softDelete(COLLECTIONS.branches, id, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.branches,
@@ -284,7 +284,7 @@ export async function saveClass(
     // Students carry a copy of who teaches them; changing that here has to
     // reach them, or the copy starts lying. See reallocateTeachers below.
     await reallocateTeachers(id, before, payload as Partial<ClassRoom>);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.classes,
@@ -299,7 +299,7 @@ export async function saveClass(
   }
 
   const newId = await createDoc(COLLECTIONS.classes, payload, { actorId: actor.uid });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.classes,
@@ -391,7 +391,7 @@ function sameList(a: string[], b: string[]): boolean {
 export async function deleteClass(id: string, actor: AppUser): Promise<void> {
   const before = await getClass(id);
   await softDelete(COLLECTIONS.classes, id, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.classes,

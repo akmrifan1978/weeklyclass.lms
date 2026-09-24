@@ -100,7 +100,7 @@ export async function saveQuiz(
 
   if (id) {
     await updateDocById<Quiz>(COLLECTIONS.quizzes, id, payload);
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.quizzes,
@@ -111,7 +111,7 @@ export async function saveQuiz(
   }
 
   const newId = await createDoc(COLLECTIONS.quizzes, payload, { actorId: actor.uid });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.quizzes,
@@ -131,7 +131,7 @@ export async function setQuizStatus(
   const before = await getQuiz(quizId);
 
   await updateDocById<Quiz>(COLLECTIONS.quizzes, quizId, { status });
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.quizzes,
@@ -159,7 +159,7 @@ export async function setQuizStatus(
 export async function deleteQuiz(quizId: string, actor: AppUser): Promise<void> {
   const before = await getQuiz(quizId);
   await softDelete(COLLECTIONS.quizzes, quizId, actor.uid);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.quizzes,
@@ -270,7 +270,7 @@ export async function saveQuestions(
 
   await batch.commit();
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.quizzes,
@@ -509,7 +509,7 @@ export async function adjustResult(
     passed: percentage >= 50,
   });
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.results,

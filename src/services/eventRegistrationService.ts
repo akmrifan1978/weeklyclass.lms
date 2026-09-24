@@ -338,7 +338,7 @@ export async function confirmBooking(
     )}.${joinLine}`
   );
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.eventRegistrations,
@@ -393,7 +393,7 @@ export async function cancel(
     );
   }
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.eventRegistrations,
@@ -436,7 +436,7 @@ export async function rejectBooking(
       : `Your request for "${registration.eventTitle}" was not accepted. The event may be full.`
   );
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.eventRegistrations,
@@ -480,7 +480,7 @@ export async function setPaid(
     registration.id,
     { paid }
   );
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.eventRegistrations,

@@ -305,7 +305,7 @@ export async function saveEvent(
     const before = await getEvent(id);
     await updateDocById<CalendarEvent>(COLLECTIONS.calendarEvents, id, payload);
     await syncPublicSchedule(id, { ...(before ?? {}), ...payload });
-    await audit.log({
+    void audit.log({
       actor,
       action: 'UPDATE',
       collection: COLLECTIONS.calendarEvents,
@@ -336,7 +336,7 @@ export async function saveEvent(
     },
     actor
   );
-  await audit.log({
+  void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.calendarEvents,
@@ -353,7 +353,7 @@ export async function deleteEvent(id: string, actor: AppUser): Promise<void> {
   // read by strangers, and a soft-deleted advertisement is still an
   // advertisement unless every reader remembers to filter it.
   await deleteDoc(doc(db, COLLECTIONS.publicSchedule, id)).catch(() => undefined);
-  await audit.log({
+  void audit.log({
     actor,
     action: 'DELETE',
     collection: COLLECTIONS.calendarEvents,

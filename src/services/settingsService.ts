@@ -52,7 +52,7 @@ export async function updateSettings(
   );
   cache = { ...before, ...changes };
 
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.settings,

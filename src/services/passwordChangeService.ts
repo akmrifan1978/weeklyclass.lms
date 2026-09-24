@@ -108,7 +108,7 @@ export async function setPassword(
 
   // Records that it happened and who did it. Not the password, and not the
   // ciphertext — an audit log outlives the request it describes.
-  await audit.log({
+  void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.users,
