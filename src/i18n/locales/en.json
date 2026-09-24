@@ -572,7 +572,13 @@
     "leaveNoteTimed": "Your answers are saved, but this assignment is timed and the clock keeps running while you are away.",
     "translateQuestion": "Read in my language",
     "roughTranslation": "Rough translation",
-    "roughTranslationNote": "Translated by software, so it may be imprecise. The original above is what your answer is marked against."
+    "roughTranslationNote": "Translated by software, so it may be imprecise. The original above is what your answer is marked against.",
+    "publishedTo": "Published. {{count}} student(s) in this class group can open it now.",
+    "publishedNoStudents": "Published, but no students are in this class group, so nobody can open it. Edit the assignment and choose a group that has students.",
+    "classWithStudents": "{{name}} · {{count}} students",
+    "classNoStudents": "{{name}} · no students",
+    "copyQuiz": "Copy assignment",
+    "copied": "Copied as a draft. Open the copy, choose its class group, then publish."
   },
   "result": {
     "title": "Results",

@@ -17,6 +17,7 @@ import { gradeFor } from '@/utils/format';
 import { AppError } from '@/utils/errors';
 import type { AppUser, Question, Quiz, QuizAttempt, Result } from '@/types';
 import {
+  countWhere,
   createDoc,
   getById,
   listAll,
@@ -85,6 +86,30 @@ export async function saveQuiz(
   actor: AppUser,
   id?: string
 ): Promise<string> {
+  /*
+   * AN UPDATE WRITES ONLY WHAT THE FORM SENT. The defaults below belong to
+   * creation alone, and applying them to an edit as well was a real bug with a
+   * confusing face: `questionCount` and `totalMarks` are not fields on the
+   * form, so editing a title or a time limit quietly reset a finished
+   * ten-question assignment to "0 Questions" — and because publishing refuses an
+   * assignment with no questions, that assignment could no longer be published
+   * either. `teacherId` went the same way: an admin editing a class's
+   * assignment wiped the teacher off it.
+   */
+  if (id) {
+    const patch: Partial<Quiz> = { ...data };
+    if (actor.role === 'teacher') patch.teacherId = actor.uid;
+    await updateDocById<Quiz>(COLLECTIONS.quizzes, id, patch);
+    void audit.log({
+      actor,
+      action: 'UPDATE',
+      collection: COLLECTIONS.quizzes,
+      documentId: id,
+      summary: `Updated quiz "${data.title}"`,
+    });
+    return id;
+  }
+
   const payload = {
     description: '',
     language: 'en' as const,
@@ -98,18 +123,6 @@ export async function saveQuiz(
     ...data,
   };
 
-  if (id) {
-    await updateDocById<Quiz>(COLLECTIONS.quizzes, id, payload);
-    void audit.log({
-      actor,
-      action: 'UPDATE',
-      collection: COLLECTIONS.quizzes,
-      documentId: id,
-      summary: `Updated quiz "${data.title}"`,
-    });
-    return id;
-  }
-
   const newId = await createDoc(COLLECTIONS.quizzes, payload, { actorId: actor.uid });
   void audit.log({
     actor,
@@ -121,16 +134,45 @@ export async function saveQuiz(
   return newId;
 }
 
+export interface PublishResult {
+  /**
+   * Active students in the class group the assignment belongs to, or null when
+   * the count could not be taken (offline, or a status change that is not a
+   * publish). Zero is a real answer, and the one that matters.
+   */
+  students: number | null;
+}
+
 export async function setQuizStatus(
   quizId: string,
   status: Quiz['status'],
   actor: AppUser
-): Promise<void> {
+): Promise<PublishResult> {
   // Read before the write so we can tell a first publish from a re-publish of
   // something the class has already been told about.
   const before = await getQuiz(quizId);
 
-  await updateDocById<Quiz>(COLLECTIONS.quizzes, quizId, { status });
+  /*
+   * Publishing has one precondition — there has to be something to answer —
+   * and it is checked HERE, against the questions themselves, rather than
+   * against the quiz's own `questionCount`. That field has been wrong in live
+   * data (see `saveQuiz`), and a stale zero refused to publish an assignment
+   * that was completely ready. One query, on a button nobody presses twice a
+   * day, and the true count is written back in the same breath so the list
+   * stops reporting "0 Questions" for ten questions.
+   */
+  const repair: Partial<Quiz> = {};
+  if (status === 'published') {
+    const questions = await listQuestions(quizId);
+    if (questions.length === 0) {
+      throw new AppError('validation.minOneQuestion', 'failed-precondition');
+    }
+    const totalMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 1), 0);
+    if (before?.questionCount !== questions.length) repair.questionCount = questions.length;
+    if (before?.totalMarks !== totalMarks) repair.totalMarks = totalMarks;
+  }
+
+  await updateDocById<Quiz>(COLLECTIONS.quizzes, quizId, { status, ...repair });
   void audit.log({
     actor,
     action: 'UPDATE',
@@ -139,21 +181,117 @@ export async function setQuizStatus(
     summary: `Quiz status set to ${status}`,
   });
 
+  if (status !== 'published' || !before) return { students: null };
+
   // Announced here rather than on create, because an assignment is created as a
   // draft and only becomes something a student can open at this moment.
   // Reopening a closed assignment counts as an update, not as a new one.
-  if (status === 'published' && before) {
-    void announce(
-      {
-        kind: 'assignment',
-        title: before.title,
-        classId: before.classId,
-        route: `/(student)/quiz/${quizId}`,
-        isUpdate: before.status === 'closed',
-      },
-      actor
-    );
+  void announce(
+    {
+      kind: 'assignment',
+      title: before.title,
+      classId: before.classId,
+      route: `/(student)/quiz/${quizId}`,
+      isUpdate: before.status === 'closed',
+    },
+    actor
+  );
+
+  /*
+   * HOW MANY PEOPLE CAN ACTUALLY SEE IT. An assignment belongs to one class
+   * group, and students are only ever in the gendered groups — so an assignment
+   * created for a leftover group reaches nobody at all, publishes without a word
+   * of complaint, and looks from the outside exactly like an app that does not
+   * publish assignments. This is what says so out loud.
+   */
+  return {
+    students: await countWhere(COLLECTIONS.users, [
+      ['role', '==', 'student'],
+      ['classId', '==', before.classId],
+      ['status', '==', 'active'],
+    ]).catch(() => null),
+  };
+}
+
+/**
+ * A copy of an assignment — questions and answer key included — as a draft.
+ *
+ * WHY THIS EXISTS. An assignment is given to one class group, and the centre's
+ * adults are two groups: male and female. The same weekly assignment therefore
+ * has to exist twice, and re-typing ten questions to manage that is how a week
+ * gets skipped. The copy is a draft in the same group: open it, change the
+ * group, publish. Nothing is announced to anybody until that publish.
+ */
+export async function duplicateQuiz(
+  quizId: string,
+  actor: AppUser,
+  title?: string
+): Promise<string> {
+  const source = await getQuiz(quizId);
+  if (!source) throw new AppError('errors.notFound', 'not-found');
+
+  const [questions, keys] = await Promise.all([
+    listQuestions(quizId),
+    getDocs(collection(db, answerKeyPath(quizId))),
+  ]);
+  const correctFor = new Map<string, number>(
+    keys.docs.map((key) => [key.id, Number(key.data().correctIndex)])
+  );
+  // A copy whose answer key is incomplete would mark honest answers wrong, and
+  // nothing on screen would show it. Refuse rather than guess at zero.
+  if (questions.some((question) => !correctFor.has(question.id))) {
+    throw new AppError('errors.generic', 'failed-precondition');
   }
+
+  const totalMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 1), 0);
+  const newId = await createDoc(
+    COLLECTIONS.quizzes,
+    {
+      title: title ?? `${source.title} (copy)`,
+      description: source.description ?? '',
+      classId: source.classId,
+      branchId: source.branchId ?? null,
+      teacherId: actor.role === 'teacher' ? actor.uid : (source.teacherId ?? null),
+      language: source.language,
+      timeLimit: source.timeLimit ?? 0,
+      passMark: source.passMark ?? 50,
+      maxAttempts: source.maxAttempts ?? 1,
+      questionCount: questions.length,
+      totalMarks,
+      status: 'draft' as const,
+    },
+    { actorId: actor.uid }
+  );
+
+  const batch = writeBatch(db);
+  questions.forEach((question, index) => {
+    const id = doc(collection(db, questionsPath(newId))).id;
+    batch.set(doc(db, questionsPath(newId), id), {
+      quizId: newId,
+      text: question.text,
+      options: question.options,
+      marks: Number(question.marks) || 1,
+      order: index,
+      explanation: question.explanation ?? null,
+      deleted: false,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(doc(db, answerKeyPath(newId), id), {
+      quizId: newId,
+      correctIndex: correctFor.get(question.id) ?? 0,
+      updatedAt: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+
+  void audit.log({
+    actor,
+    action: 'CREATE',
+    collection: COLLECTIONS.quizzes,
+    documentId: newId,
+    summary: `Copied quiz "${source.title}" with ${questions.length} question(s)`,
+  });
+  return newId;
 }
 
 export async function deleteQuiz(quizId: string, actor: AppUser): Promise<void> {

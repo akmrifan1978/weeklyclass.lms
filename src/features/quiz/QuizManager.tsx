@@ -9,8 +9,14 @@ import { colors } from '@/constants/theme';
 import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import { formatDuration } from '@/utils/date';
-import { deleteQuiz, listQuizzes, saveQuiz, setQuizStatus } from '@/services/quizService';
-import { listClasses } from '@/services/orgService';
+import {
+  deleteQuiz,
+  duplicateQuiz,
+  listQuizzes,
+  saveQuiz,
+  setQuizStatus,
+} from '@/services/quizService';
+import { listClasses, studentCounts } from '@/services/orgService';
 import type { LanguageCode, Quiz, QuizStatus } from '@/types';
 import type { Cursor } from '@/services/firestore';
 import { CrudScreen } from '@/features/CrudScreen';
@@ -56,9 +62,39 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
 
   const { data: classes } = useAsync(loadClasses, [classScope?.join(',')]);
 
+  const classIds = (classes ?? []).map((c) => c.id).join(',');
+
+  /**
+   * Every group in the picker, with the number of students in it.
+   *
+   * The one mistake this screen makes is easy to make and invisible afterwards:
+   * an assignment given to a group with nobody in it. Registration puts
+   * students into the gendered groups, so a plain "Adults" group left over from
+   * before holds nobody — and choosing it publishes an assignment no student
+   * can open. The count turns that into something a person can see before they
+   * choose.
+   */
+  const loadCounts = useCallback(
+    (): Promise<Record<string, number>> =>
+      classIds ? studentCounts(classIds.split(',')) : Promise.resolve({}),
+    [classIds]
+  );
+  const { data: counts } = useAsync(loadCounts, [classIds]);
+
   const classOptions = useMemo<Option[]>(
-    () => (classes ?? []).map((c) => ({ value: c.id, label: c.name })),
-    [classes]
+    () =>
+      (classes ?? []).map((c) => {
+        const students = counts?.[c.id];
+        if (students === undefined) return { value: c.id, label: c.name };
+        return {
+          value: c.id,
+          label:
+            students > 0
+              ? t('quiz.classWithStudents', { name: c.name, count: students })
+              : t('quiz.classNoStudents', { name: c.name }),
+        };
+      }),
+    [classes, counts, t]
   );
 
   /**
@@ -91,17 +127,37 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
     [classScope]
   );
 
-  const cycleStatus = async (quiz: Quiz) => {
+  /*
+   * Publishing used to be refused here whenever `quiz.questionCount` was zero.
+   * That field is written by the question editor and was being reset to zero by
+   * every edit of the assignment's details, so a ready ten-question assignment
+   * could not be published and the reason given on screen — "Add at least one
+   * question" — was untrue. The check now lives in the service, where it counts
+   * the questions themselves; this reports what happened, including how many
+   * students the assignment actually reached.
+   */
+  const cycleStatus = async (quiz: Quiz, reload: () => void) => {
     if (!user) return;
     const next: QuizStatus =
       quiz.status === 'draft' ? 'published' : quiz.status === 'published' ? 'closed' : 'published';
     try {
-      if (next === 'published' && quiz.questionCount === 0) {
-        toast.error(t('validation.minOneQuestion'));
-        return;
-      }
-      await setQuizStatus(quiz.id, next, user);
-      toast.success(t('common.success'));
+      const { students } = await setQuizStatus(quiz.id, next, user);
+      if (next !== 'published' || students === null) toast.success(t('common.success'));
+      else if (students === 0) toast.error(t('quiz.publishedNoStudents'));
+      else toast.success(t('quiz.publishedTo', { count: students }));
+      reload();
+    } catch (error) {
+      toast.error(friendlyMessage(error, t));
+    }
+  };
+
+  /** A second copy of the week's assignment, for the other class group. */
+  const copyQuiz = async (quiz: Quiz, reload: () => void) => {
+    if (!user) return;
+    try {
+      await duplicateQuiz(quiz.id, user, `${quiz.title} (${t('common.copy')})`);
+      toast.success(t('quiz.copied'));
+      reload();
     } catch (error) {
       toast.error(friendlyMessage(error, t));
     }
@@ -194,16 +250,26 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
               : router.push(`/(admin)/quiz/${quiz.id}`)
           }
           extraActions={
-            can('EDIT_QUIZ') ? (
-              <IconButton
-                icon={quiz.status === 'published' ? 'lock-closed-outline' : 'send-outline'}
-                label={t(quiz.status === 'published' ? 'quiz.closeQuiz' : 'quiz.publish')}
-                size={36}
-                color={quiz.status === 'published' ? colors.warning : colors.success}
-                background={quiz.status === 'published' ? colors.warningSoft : colors.successSoft}
-                onPress={() => cycleStatus(quiz)}
-              />
-            ) : undefined
+            <>
+              {can('CREATE_QUIZ') ? (
+                <IconButton
+                  icon="copy-outline"
+                  label={t('quiz.copyQuiz')}
+                  size={36}
+                  onPress={() => copyQuiz(quiz, actions.reload)}
+                />
+              ) : null}
+              {can('EDIT_QUIZ') ? (
+                <IconButton
+                  icon={quiz.status === 'published' ? 'lock-closed-outline' : 'send-outline'}
+                  label={t(quiz.status === 'published' ? 'quiz.closeQuiz' : 'quiz.publish')}
+                  size={36}
+                  color={quiz.status === 'published' ? colors.warning : colors.success}
+                  background={quiz.status === 'published' ? colors.warningSoft : colors.successSoft}
+                  onPress={() => cycleStatus(quiz, actions.reload)}
+                />
+              ) : null}
+            </>
           }
           onEdit={can('EDIT_QUIZ') ? actions.edit : undefined}
           onDelete={can('DELETE_QUIZ') ? actions.remove : undefined}
