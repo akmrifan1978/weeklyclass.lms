@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
-import { friendlyMessage, isOffline } from '@/utils/errors';
+import { friendlyMessage, isOffline, isQuotaExhausted } from '@/utils/errors';
 import { Button } from './Button';
 
 /**
@@ -129,23 +129,34 @@ export function ErrorState({
 }) {
   const { t } = useTranslation();
   const offline = isOffline(error);
+  // Running out of the day's free reads is not a fault, and saying "something
+  // went wrong" about a limit that clears itself sends an administrator looking
+  // for a problem that is not there. A clock, not an alarm.
+  const quota = isQuotaExhausted(error);
 
   return (
     <View style={styles.centred}>
       <View style={[styles.emptyIcon, styles.errorIcon]}>
         <Ionicons
-          name={offline ? 'cloud-offline-outline' : 'alert-circle-outline'}
+          name={
+            quota ? 'time-outline' : offline ? 'cloud-offline-outline' : 'alert-circle-outline'
+          }
           size={30}
-          color={colors.danger}
+          color={quota ? colors.warning : colors.danger}
         />
       </View>
       <Text style={styles.emptyTitle} accessibilityRole="header">
-        {offline ? t('empty.offlineTitle') : t('empty.somethingWrong')}
+        {quota
+          ? t('empty.quotaTitle')
+          : offline
+            ? t('empty.offlineTitle')
+            : t('empty.somethingWrong')}
       </Text>
       <Text style={styles.emptyMessage}>
         {offline ? t('empty.offlineMessage') : friendlyMessage(error, t)}
       </Text>
-      {onRetry ? (
+      {/* No retry: the allowance comes back on a clock, not on a button. */}
+      {onRetry && !quota ? (
         <Button
           label={t('common.retry')}
           onPress={onRetry}

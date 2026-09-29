@@ -144,3 +144,15 @@ export function isPermissionDenied(error: unknown): boolean {
 export function isOffline(error: unknown): boolean {
   return errorKey(error) === 'errors.networkUnavailable';
 }
+
+/**
+ * The day's free database allowance is used up.
+ *
+ * Worth telling apart from a failure, because nothing is wrong: no data is
+ * lost, nobody needs to be called, and the allowance returns of its own accord
+ * at the daily reset. Pressing a retry button cannot bring it back any sooner,
+ * so the screen that shows this offers none.
+ */
+export function isQuotaExhausted(error: unknown): boolean {
+  return errorKey(error) === 'errors.quotaExceeded';
+}

@@ -882,7 +882,8 @@
     "notAssignedClass": "لم يتم تعيينك إلى صف بعد. يرجى التواصل مع المدير.",
     "somethingWrong": "حدث خطأ ما",
     "offlineTitle": "أنت غير متصل",
-    "offlineMessage": "اتصل بالإنترنت لعرض أحدث المحتوى."
+    "offlineMessage": "اتصل بالإنترنت لعرض أحدث المحتوى.",
+    "quotaTitle": "متوقف حتى التجديد اليومي"
   },
   "permissions": {
     "VIEW_STUDENTS": "عرض الطلاب",
