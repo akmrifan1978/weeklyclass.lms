@@ -228,7 +228,7 @@
     "permissionDenied": "You do not have permission to do that.",
     "notFound": "We could not find that record.",
     "alreadyExists": "That record already exists.",
-    "quotaExceeded": "Storage limit reached. Please contact your administrator.",
+    "quotaExceeded": "Today's free database allowance is used up, so nothing new can be loaded. The app works again by itself after the daily reset, about 10 a.m. Jeddah time. Nothing has been lost.",
     "failedPrecondition": "This action cannot be completed right now.",
     "cancelled": "The operation was cancelled.",
     "uploadFailed": "File upload failed. Please try again.",

@@ -138,6 +138,18 @@ export async function send(input: SendInput, actor: AppUser): Promise<SendOutcom
     sentAt: scheduled ? null : new Date(),
     status: scheduled ? ('scheduled' as const) : ('sent' as const),
     readBy: [] as string[],
+    /*
+     * Written as null, on purpose, so the delivery run can ASK for what it has
+     * not pushed instead of reading the newest 25 notifications every five
+     * minutes to find out. Firestore's free plan allows 50,000 document reads a
+     * day; that query alone was spending 7,200 of them to discover, nearly
+     * every time, that there was nothing to send. A field that exists and is
+     * null can be queried for. A field that is absent cannot.
+     *
+     * The delivery run sets it to a date once the notification has been pushed,
+     * which is also what stops anything being pushed twice.
+     */
+    pushedAt: null as Date | null,
   };
 
   const id = await createDoc(COLLECTIONS.notifications, record, { actorId: actor.uid });
