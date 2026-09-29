@@ -14,6 +14,7 @@ import { COLLECTIONS, STORAGE_KEYS } from '@/constants/app';
 import { watchDoc } from '@/services/firestore';
 import * as authService from '@/services/authService';
 import * as pushService from '@/services/pushService';
+import { clearQueryCache } from '@/services/firestore';
 import { resetDashboardStats } from '@/services/statsService';
 import { setAnalyticsUser, logEvent, AnalyticsEvents } from '@/firebase/analytics';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
@@ -294,6 +295,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // here means the next person to sign in on this device never sees the
       // last one's figures.
       resetDashboardStats();
+      // Nothing one person read stays in memory for the next person to sign in
+      // on the same device - a shared family tablet is the normal case here.
+      clearQueryCache();
 
       // The session ends here, on screen, before any of the tidying up. It used
       // to end last: the person waited for scheduled notifications to be

@@ -19,6 +19,7 @@ import type { AppUser, Question, Quiz, QuizAttempt, Result } from '@/types';
 import {
   countWhere,
   createDoc,
+  forgetCollection,
   getById,
   listAll,
   listPage,
@@ -407,6 +408,9 @@ export async function saveQuestions(
   });
 
   await batch.commit();
+  // The batch above carries the quiz's own question count, and a raw batch does
+  // not pass through the write helpers that clear the query cache.
+  forgetCollection(COLLECTIONS.quizzes);
 
   void audit.log({
     actor,
