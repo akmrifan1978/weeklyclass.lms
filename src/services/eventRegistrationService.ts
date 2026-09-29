@@ -12,7 +12,17 @@ import type {
   EventRegistrationSettings,
 } from '@/types';
 
-import { listPage, updateDocById, type Page } from './firestore';
+import { forgetCollection, listPage, updateDocById, type Page } from './firestore';
+
+/**
+ * Seats change inside transactions, which do not pass through the write helpers
+ * that clear the query cache - so the lists that show how many are left are
+ * told to forget here instead.
+ */
+function forgetBookings(): void {
+  forgetCollection(COLLECTIONS.eventRegistrations);
+  forgetCollection(COLLECTIONS.calendarEvents);
+}
 import { getSettings } from './settingsService';
 import * as audit from './auditService';
 import { formatPhone } from '@/utils/phone';
@@ -250,6 +260,7 @@ export async function book(
       tx.update(eventRef, { registeredCount: taken + seats });
     }
   });
+  forgetBookings();
 
   await audit
     .log({
@@ -318,6 +329,7 @@ export async function confirmBooking(
     });
     tx.update(eventRef, { registeredCount: taken + registration.seats });
   });
+  forgetBookings();
 
   // The ticket is worthless if nobody knows it exists. Best effort: a
   // notification that fails to send must not undo a confirmation that already
@@ -381,6 +393,7 @@ export async function cancel(
       tx.update(eventRef, { registeredCount: Math.max(0, taken - registration.seats) });
     }
   });
+  forgetBookings();
 
   // Only when somebody else cancelled it. A person who cancels their own
   // booking does not need to be told they did.

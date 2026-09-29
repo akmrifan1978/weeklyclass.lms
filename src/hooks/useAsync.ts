@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { clearQueryCache } from '@/services/firestore';
 import type { Cursor, Page } from '@/services/firestore';
 
 /**
@@ -47,8 +48,12 @@ export function useAsync<T>(
         setLoading(false);
         return;
       }
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+      // Pulling to refresh is a request for the server's answer, not the one
+      // this screen was given half a minute ago. See the cache in firestore.ts.
+      if (isRefresh) {
+        clearQueryCache();
+        setRefreshing(true);
+      } else setLoading(true);
       setError(null);
       try {
         const value = await loaderRef.current();
@@ -130,8 +135,11 @@ export function usePaginated<T extends { id: string }>(
         setItems([]);
         return;
       }
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+      // As above: a pull to refresh bypasses the query cache entirely.
+      if (isRefresh) {
+        clearQueryCache();
+        setRefreshing(true);
+      } else setLoading(true);
       setError(null);
       try {
         const page = await fetchRef.current(null);

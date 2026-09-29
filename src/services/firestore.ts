@@ -79,21 +79,97 @@ function buildConstraints(options: ListOptions): QueryConstraint[] {
   return constraints;
 }
 
+/**
+ * A THIRTY-SECOND MEMORY OF WHAT EACH QUERY JUST RETURNED.
+ *
+ * `getDocs` never reads the local cache: every call goes to the server and is
+ * billed one read per document returned. Every list screen refetches when it
+ * mounts, so a student walking Home -> Lessons -> Home paid for the same
+ * documents three times, and Firestore's free plan allows fifty thousand reads
+ * a day for everybody in the centre together. The evening this was written they
+ * ran out seven hours after the daily reset and every screen in the app showed
+ * an error - which reached the admin dashboard as "storage limit reached".
+ *
+ * WHAT KEEPS IT HONEST, because a stale list is a worse bug than a slow one:
+ *
+ *   - Any write to a collection forgets what was remembered about it, so "save
+ *     it and see it in the list" still works. That is the behaviour a cache
+ *     like this breaks first, and the reason the write helpers below all call
+ *     `forgetCollection`.
+ *   - Pull to refresh clears the whole cache before it reloads, so asking for
+ *     fresh data always gets it (see `useAsync`).
+ *   - Thirty seconds, in memory only. Nothing survives a reload, and signing
+ *     out empties it so the next person never sees the last one's data.
+ *   - A live listener (`watchList`) is not affected by any of this. Those
+ *     already serve from Firestore's own cache and are billed only for what
+ *     changed.
+ */
+const CACHE_MS = 30_000;
+
+const pageCache = new Map<string, { at: number; page: Page<BaseDoc> }>();
+
+/**
+ * Dates are rounded to the minute so that "events from now onwards", whose
+ * filter value differs by milliseconds on every call, is still the same
+ * question. Anything else is compared as it is written.
+ */
+function cacheKey(path: string, options: ListOptions): string {
+  const parts = (options.filters ?? []).map((filter) => {
+    if (!filter) return '';
+    const [field, op, value] = filter;
+    const stamp =
+      value instanceof Date ? `d${Math.floor(value.getTime() / 60_000)}` : JSON.stringify(value);
+    return `${field}${op}${stamp}`;
+  });
+  return [
+    path,
+    parts.join('|'),
+    options.orderByField ?? '',
+    options.direction ?? '',
+    options.pageSize ?? PAGE_SIZE,
+    options.excludeDeleted === false ? 'all' : 'live',
+    // A page beyond the first is identified by the document it starts after.
+    options.cursor?.id ?? '',
+  ].join('~');
+}
+
+/** Drops what was remembered about one collection. Called by every write. */
+export function forgetCollection(path: string): void {
+  const prefix = `${path}~`;
+  for (const key of pageCache.keys()) {
+    if (key.startsWith(prefix)) pageCache.delete(key);
+  }
+}
+
+/** Empties the cache: pull to refresh, and signing out. */
+export function clearQueryCache(): void {
+  pageCache.clear();
+}
+
 /** Fetches one page. Requests `pageSize + 1` docs to detect `hasMore` cheaply. */
 export async function listPage<T extends BaseDoc>(
   path: string,
   options: ListOptions = {}
 ): Promise<Page<T>> {
   const pageSize = options.pageSize ?? PAGE_SIZE;
+
+  const key = cacheKey(path, options);
+  const remembered = pageCache.get(key);
+  if (remembered && Date.now() - remembered.at < CACHE_MS) {
+    return remembered.page as Page<T>;
+  }
+
   const snap = await getDocs(query(collection(db, path), ...buildConstraints(options)));
   const docs = snap.docs;
   const hasMore = docs.length > pageSize;
   const visible = hasMore ? docs.slice(0, pageSize) : docs;
-  return {
+  const page: Page<T> = {
     items: visible.map((d) => withId<T>(d)),
     cursor: visible.length ? (visible[visible.length - 1] as QueryDocumentSnapshot) : null,
     hasMore,
   };
+  pageCache.set(key, { at: Date.now(), page: page as Page<BaseDoc> });
+  return page;
 }
 
 /** Convenience for small, bounded reads (dashboard cards, pickers). */
@@ -162,6 +238,7 @@ export async function createDoc<T extends object>(
       createdBy: meta.actorId ?? null,
     })
   );
+  forgetCollection(path);
   return ref.id;
 }
 
@@ -185,6 +262,7 @@ export async function setDocById<T extends object>(
       { merge }
     )
   );
+  forgetCollection(path);
 }
 
 export async function updateDocById<T extends object>(
@@ -198,6 +276,7 @@ export async function updateDocById<T extends object>(
       updatedAt: serverTimestamp(),
     })
   );
+  forgetCollection(path);
 }
 
 /**
@@ -213,6 +292,7 @@ export async function softDelete(path: string, id: string, actorId?: string): Pr
       updatedAt: serverTimestamp(),
     })
   );
+  forgetCollection(path);
 }
 
 export async function restore(path: string, id: string): Promise<void> {
@@ -222,11 +302,13 @@ export async function restore(path: string, id: string): Promise<void> {
     deletedBy: null,
     updatedAt: serverTimestamp(),
   });
+  forgetCollection(path);
 }
 
 /** Permanent removal. Reserved for admin "purge" actions and cleanup jobs. */
 export async function hardDelete(path: string, id: string): Promise<void> {
   await denialContext('delete', `${path}/${id}`, () => deleteDoc(doc(db, path, id)));
+  forgetCollection(path);
 }
 
 /** Server-side count — one billed read per 1,000 documents, not per document. */
@@ -280,6 +362,7 @@ export async function batchWrite(
     }
     await batch.commit();
   }
+  for (const path of new Set(operations.map((op) => op.path))) forgetCollection(path);
 }
 
 /** Collection-group read, used for quiz questions across all quizzes. */
