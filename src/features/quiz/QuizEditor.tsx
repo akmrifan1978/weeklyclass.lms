@@ -145,8 +145,13 @@ export function QuizEditor() {
     setBusy(true);
     try {
       if (dirty) await saveQuestions(id, drafts, user);
-      await setQuizStatus(id, data.quiz.status === 'published' ? 'closed' : 'published', user);
-      toast.success(t('common.success'));
+      const publishing = data.quiz.status !== 'published';
+      const { students } = await setQuizStatus(id, publishing ? 'published' : 'closed', user);
+      // Say who can see it. Nobody is the answer that matters: it means the
+      // assignment was given to a class group with no students in it.
+      if (!publishing || students === null) toast.success(t('common.success'));
+      else if (students === 0) toast.error(t('quiz.publishedNoStudents'));
+      else toast.success(t('quiz.publishedTo', { count: students }));
       setDirty(false);
       await reload();
     } catch (err) {

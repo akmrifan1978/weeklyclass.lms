@@ -216,9 +216,28 @@ async function sendRegistrationAlerts({
    * Only their own registrations: an account an admin created is not news to
    * the admin who created it.
    */
+  /*
+   * Asked for by WHEN THEY JOINED, not by status.
+   *
+   * This read up to a hundred active accounts on every pass to find the handful
+   * created in the last day. At a pass every five minutes that was some 12,700
+   * document reads a day - a quarter of everything the free plan allows -
+   * spent almost entirely on accounts that joined months ago. Bounding the
+   * query by `createdAt` reads the two or three that are actually new.
+   *
+   * One range filter on one field, so Firestore's automatic single-field index
+   * serves it and no composite index is needed. Status and self-registration
+   * are checked here, on the few documents that come back.
+   */
   const approvedCutoff = Date.now() - APPROVED_AGE_HOURS * 60 * 60 * 1000;
-  const approved = (await db.collection('users').where('status', '==', 'active').limit(100).get()).docs
-    .filter((doc) => alive(doc) && when(doc) >= approvedCutoff && doc.data().createdBy === doc.id);
+  const approved = (
+    await db.collection('users').where('createdAt', '>=', new Date(approvedCutoff)).limit(50).get()
+  ).docs.filter(
+    (doc) =>
+      alive(doc) &&
+      String(doc.data().status || '') === 'active' &&
+      doc.data().createdBy === doc.id
+  );
 
   const pending = [...waiting, ...approved];
   if (pending.length === 0) return 0;

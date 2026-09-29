@@ -662,7 +662,16 @@ async function run() {
       .collection('notifications')
       .where('deleted', '==', false)
       .where('status', '==', 'sent')
-      .orderBy('createdAt', 'desc')
+      // Asked for, rather than filtered out afterwards. Reading the newest 25
+      // notifications on every pass cost 25 document reads a run - 7,200 a day
+      // - to discover almost every time that there was nothing to send, out of
+      // the 50,000 a day the free plan allows. Now a quiet pass costs one read.
+      //
+      // Equality filters only and no ordering, so no composite index is needed.
+      // The app writes `pushedAt: null` when it creates a notification; one
+      // from before that has no such field and is not matched, which is correct
+      // - they were all pushed long ago, or are far past the cutoff below.
+      .where('pushedAt', '==', null)
       .limit(25)
       .get();
 

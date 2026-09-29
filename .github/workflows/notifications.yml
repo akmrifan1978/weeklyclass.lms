@@ -1,21 +1,32 @@
 # Runs the notification service on GitHub's machines instead of a laptop.
 name: Notifications
 
-# Every five minutes, and on demand from the Actions tab.
+# Every fifteen minutes, and on demand from the Actions tab.
 #
-# WHY FIVE AND NOT THIRTY. This repository is public, and public repositories
-# get unlimited Actions minutes. The half-hourly schedule was chosen to fit the
-# 2,000 free minutes a PRIVATE repository gets, which does not apply here.
+# WHY FIFTEEN. The limit that bites is not GitHub's - this repository is public,
+# so Actions minutes are unlimited - it is Firestore's free plan, which allows
+# 50,000 document reads a day for the whole app. Every pass costs a few reads
+# whether or not there is anything to deliver, and at five-minute intervals
+# those fixed costs were consuming the day's allowance before the students had
+# used the app: the day this was written, reads ran out and every screen showed
+# an error. The queries this run makes were cut down at the same time, so a
+# quiet pass is now a handful of reads rather than seventy.
 #
-# If this repository is ever made private, change the cron back to '*/30 * * * *'
-# or it will run past the free allowance: at five-minute intervals every run is
-# billed as a whole minute, which is 8,640 minutes a month against 2,000 free.
+# Fifteen minutes is how late a phone notification can arrive for someone who
+# does not have the app open. In the app itself nothing waits at all - the
+# Notification Centre is a live listener and updates the moment something is
+# sent.
+#
+# If this repository is ever made private, Actions minutes become the binding
+# limit too: at fifteen-minute intervals every run is billed as a whole minute,
+# which is 2,880 minutes a month against the 2,000 a private repository gets -
+# so make it '*/30 * * * *' as well.
 #
 # GitHub's scheduler is best effort. A run can arrive a few minutes late,
 # especially on the hour when everybody else's jobs are queued.
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 # One at a time. Two overlapping runs would each claim work the other was

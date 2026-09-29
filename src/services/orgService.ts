@@ -2,6 +2,7 @@ import { COLLECTIONS } from '@/constants/app';
 import type { AppUser, Branch, ClassRoom, Country, Organization, Subject } from '@/types';
 import {
   batchWrite,
+  countWhere,
   createDoc,
   getById,
   listAll,
@@ -23,6 +24,34 @@ import * as audit from './auditService';
  * No country, city or timezone is hard-coded anywhere in the app; admins add
  * them from the dashboard.
  */
+
+/**
+ * How many active students are in each of these class groups.
+ *
+ * Counted rather than stored: `studentCount` exists on the class document and
+ * has never been written by anything, so reading it would report zero for a
+ * group of thirty-five. These are aggregate counts — Firestore answers them
+ * without sending the accounts themselves — run in parallel, and a group whose
+ * count fails is left out rather than reported as empty.
+ *
+ * Used where picking the wrong group has consequences: an assignment given to a
+ * group nobody is in reaches nobody.
+ */
+export async function studentCounts(classIds: string[]): Promise<Record<string, number>> {
+  const counted = await Promise.all(
+    classIds.map(async (id) => {
+      const count = await countWhere(COLLECTIONS.users, [
+        ['role', '==', 'student'],
+        ['classId', '==', id],
+        ['status', '==', 'active'],
+      ]).catch(() => null);
+      return [id, count] as const;
+    })
+  );
+  return Object.fromEntries(
+    counted.filter((entry): entry is readonly [string, number] => entry[1] !== null)
+  );
+}
 
 // --- Countries -------------------------------------------------------------
 
