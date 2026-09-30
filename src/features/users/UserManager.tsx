@@ -87,6 +87,15 @@ export function UserManager({
   const [term, setTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>(role ?? 'all');
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'all'>('all');
+  /**
+   * "Show me who is in no class group."
+   *
+   * Worth a filter of its own because the consequence is silent on both sides:
+   * a student in no group sees no lessons and no assignments, and a teacher in
+   * no group cannot set one or take attendance - and nothing on any screen said
+   * so. They were found by reading the database.
+   */
+  const [allocation, setAllocation] = useState<'all' | 'unallocated'>('all');
   const [selected, setSelected] = useState<AppUser | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
@@ -122,6 +131,31 @@ export function UserManager({
   const canEdit = role === 'teacher' ? can('EDIT_TEACHERS') : can('EDIT_STUDENTS');
   const canDelete = role === 'teacher' ? can('DELETE_TEACHERS') : can('DELETE_STUDENTS');
 
+  /**
+   * Which teachers a class group has, so a teacher who has none can be named.
+   *
+   * A student carries their own group on their account; a teacher's is held on
+   * the group, so the groups themselves have to be read. Nine documents, once,
+   * and the query cache means walking in and out of this screen does not read
+   * them again.
+   */
+  const loadGroups = useCallback(() => listClasses({ pageSize: 100 }), []);
+  const { data: groups } = useAsync(loadGroups, []);
+  const allocatedTeachers = useMemo(
+    () => new Set((groups?.items ?? []).flatMap((group) => group.teacherIds ?? [])),
+    [groups]
+  );
+
+  /** True when this person belongs to no class group. Admins are not in one. */
+  const inNoClass = useCallback(
+    (item: AppUser) => {
+      if (item.role === 'student') return !item.classId;
+      if (item.role === 'teacher') return !allocatedTeachers.has(item.uid);
+      return false;
+    },
+    [allocatedTeachers]
+  );
+
   const fetchPage = useCallback(
     (cursor: Cursor) =>
       listUsers({
@@ -129,12 +163,19 @@ export function UserManager({
         status: statusFilter === 'all' ? undefined : statusFilter,
         search: search || undefined,
         cursor,
-        pageSize: 20,
+        // A teacher's allocation lives on the class groups, not on the account,
+        // so it cannot be asked of the query - the filter has to be applied to
+        // what comes back. One page big enough to hold the whole centre, only
+        // while that filter is on, so nothing is missed on a page nobody
+        // scrolled to.
+        pageSize: allocation === 'unallocated' ? 200 : 20,
       }),
-    [role, roleFilter, statusFilter, search]
+    [role, roleFilter, statusFilter, search, allocation]
   );
 
-  const list = usePaginated(fetchPage, [role, roleFilter, statusFilter, search]);
+  const list = usePaginated(fetchPage, [role, roleFilter, statusFilter, search, allocation]);
+
+  const rows = allocation === 'unallocated' ? list.items.filter(inNoClass) : list.items;
 
   // A deep link from the dashboard opens the create sheet directly.
   useEffect(() => {
@@ -260,18 +301,32 @@ export function UserManager({
         style={{ marginTop: spacing.sm }}
       />
 
+      <ChipGroup<'all' | 'unallocated'>
+        options={[
+          { value: 'all', label: t('common.all') },
+          { value: 'unallocated', label: t('admin.noClassChip') },
+        ]}
+        value={allocation}
+        onChange={setAllocation}
+        style={{ marginTop: spacing.sm }}
+      />
+
       <Spacer />
 
       <AsyncBoundary
         loading={list.loading}
         error={list.error}
-        empty={list.items.length === 0}
+        empty={rows.length === 0}
         onRetry={list.reload}
         skeleton={<SkeletonList count={6} />}
-        emptyProps={{ icon: 'people-outline', title: t('common.noResults') }}
+        emptyProps={{
+          icon: 'people-outline',
+          title:
+            allocation === 'unallocated' ? t('admin.everyoneAllocated') : t('common.noResults'),
+        }}
       >
         <View style={{ gap: spacing.md }}>
-          {list.items.map((item) => (
+          {rows.map((item) => (
             <Card key={item.id} onPress={() => setSelected(item)} accessibilityLabel={item.fullName}>
               <View style={styles.row}>
                 <Avatar name={item.fullName} uri={item.profileImage} size={44} />
@@ -293,6 +348,16 @@ export function UserManager({
                       ? `${t('admin.lastLogin')}: ${formatDateTime(item.lastLoginAt, language)}`
                       : t('admin.neverSignedIn')}
                   </Text>
+                  {/* Says what it costs them, not just that a field is empty.
+                      An admin scanning the list should not have to remember
+                      what a missing class group means. */}
+                  {inNoClass(item) ? (
+                    <Text style={styles.rowNoClass} numberOfLines={2}>
+                      {item.role === 'teacher'
+                        ? t('admin.noClassTeacher')
+                        : t('admin.noClassStudent')}
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={styles.rowEnd}>
                   <StatusBadge status={item.status} />
@@ -1307,6 +1372,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
   rowMeta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  // Existing warning token: this is something to attend to, not an error.
+  rowNoClass: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.semibold, marginTop: 2 },
   rowEnd: { alignItems: 'flex-end', gap: spacing.sm },
   approveButton: {
     width: 30,
