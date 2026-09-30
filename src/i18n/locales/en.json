@@ -741,7 +741,11 @@
     "lastLogin": "Last login",
     "neverSignedIn": "Never signed in",
     "createdDate": "Created",
-    "passwordManaged": "Never shown. Reset it with the buttons below."
+    "passwordManaged": "Never shown. Reset it with the buttons below.",
+    "noClassChip": "No class group",
+    "noClassStudent": "In no class group — cannot see lessons or assignments",
+    "noClassTeacher": "In no class group — cannot set assignments or take attendance",
+    "everyoneAllocated": "Everybody is in a class group"
   },
   "settings": {
     "title": "Settings",
