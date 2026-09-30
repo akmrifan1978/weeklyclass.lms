@@ -100,15 +100,30 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
         // Staff see every class; a student sees their own.
         classId: isStaff ? null : (user?.classId ?? null),
         eventId: eventId ?? null,
+        // Staff are handed the hidden ones as well, so the count below can be
+        // shown. They stay out of the list until somebody asks for them.
+        includeHidden: isStaff,
       }),
     [isStaff, user?.classId, eventId]
   );
   const { data, loading, refreshing, error, reload, refresh } = useAsync(load, [load]);
 
-  const sorted = [...(data ?? [])].sort((a, b) => {
+  const byStatus = (a: QaQuestion, b: QaQuestion) => {
     if (a.status === b.status) return 0;
     return a.status === 'open' ? -1 : 1;
-  });
+  };
+
+  /**
+   * Hidden questions sit behind a line that says how many there are, rather
+   * than in the list. Out of the way, but no longer out of reach: hiding is
+   * how a teacher sets aside something that should not be on the class's
+   * screen, and it has to stay undoable by somebody.
+   */
+  const [showHidden, setShowHidden] = useState(false);
+  const everything = data ?? [];
+  const hiddenOnes = everything.filter((q) => q.hidden === true).sort(byStatus);
+  const visible = everything.filter((q) => q.hidden !== true).sort(byStatus);
+  const sorted = showHidden ? [...visible, ...hiddenOnes] : visible;
 
   const ask = async () => {
     /*
@@ -273,6 +288,18 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
     }
   };
 
+  /** The way back. Says so out loud, because the last one did not. */
+  const restore = async (item: QaQuestion) => {
+    if (!user) return;
+    try {
+      await support.hideQuestion(item.id, false, user);
+      toast.success(t('qa.restored'));
+      void reload();
+    } catch (err) {
+      toast.error(friendlyMessage(err, t));
+    }
+  };
+
   return (
     <>
       {/* Named when an admin has said who answers. Students ask more readily
@@ -327,6 +354,26 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           />
         </Card>
 
+        {/* Staff only, and only when there is something behind it. */}
+        {isStaff && hiddenOnes.length > 0 ? (
+          <Pressable
+            onPress={() => setShowHidden((shown) => !shown)}
+            style={styles.hiddenToggle}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name={showHidden ? 'eye-outline' : 'eye-off-outline'}
+              size={16}
+              color={colors.textMuted}
+            />
+            <Text style={styles.hiddenToggleText}>
+              {showHidden
+                ? t('qa.hideHidden')
+                : t('qa.showHidden', { count: hiddenOnes.length })}
+            </Text>
+          </Pressable>
+        ) : null}
+
         {loading ? (
           <SkeletonList count={3} />
         ) : error ? (
@@ -341,6 +388,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                 <Text style={styles.asker}>{item.askedByName}</Text>
                 <Text style={styles.date}>{relativeTime(item.createdAt)}</Text>
               </View>
+              {item.hidden ? <Text style={styles.hiddenNote}>{t('qa.hiddenNote')}</Text> : null}
               {/* Who it was asked of — the name it was asked with, kept on the
                   question, so it stays right after the list changes. */}
               {item.scholarName ? (
@@ -455,13 +503,23 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                       onPress={() => setConfirmPublic(item)}
                     />
                   ) : null}
-                  <IconButton
-                    icon="eye-off-outline"
-                    label={t('qa.hide')}
-                    size={32}
-                    color={colors.textMuted}
-                    onPress={() => hide(item)}
-                  />
+                  {item.hidden ? (
+                    <Button
+                      label={t('qa.restore')}
+                      icon="eye-outline"
+                      size="sm"
+                      variant="outline"
+                      onPress={() => restore(item)}
+                    />
+                  ) : (
+                    <IconButton
+                      icon="eye-off-outline"
+                      label={t('qa.hide')}
+                      size={32}
+                      color={colors.textMuted}
+                      onPress={() => hide(item)}
+                    />
+                  )}
                   {/* Only an admin deletes somebody else's question. A teacher
                       hides it, which keeps what the student wrote. */}
                   {user?.role === 'admin' ? (
@@ -700,6 +758,18 @@ const styles = StyleSheet.create({
   answerText: { fontSize: fontSize.sm, color: colors.text, lineHeight: 20, marginTop: 2 },
   pending: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.md },
   spokenOnly: { fontStyle: 'italic', color: colors.textSecondary },
+  // The line that leads back to a hidden question, and the note on the
+  // question itself. Existing tokens only - a hidden question is quieter than
+  // the rest of the list, not a different colour scheme.
+  hiddenToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  hiddenToggleText: { fontSize: fontSize.xs, color: colors.textMuted },
+  hiddenNote: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm },
   voiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
