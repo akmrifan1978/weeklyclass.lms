@@ -30,6 +30,7 @@ import {
 } from './firestore';
 import * as audit from './auditService';
 import { announce } from './announceService';
+import { listClasses, studentCounts } from './orgService';
 
 /**
  * Quizzes.
@@ -223,11 +224,13 @@ export async function setQuizStatus(
  * gets skipped. The copy is a draft in the same group: open it, change the
  * group, publish. Nothing is announced to anybody until that publish.
  */
-export async function duplicateQuiz(
-  quizId: string,
-  actor: AppUser,
-  title?: string
-): Promise<string> {
+/** An assignment with its questions and their answers, ready to be copied. */
+async function readForCopy(quizId: string): Promise<{
+  source: Quiz;
+  questions: Question[];
+  correctFor: Map<string, number>;
+  totalMarks: number;
+}> {
   const source = await getQuiz(quizId);
   if (!source) throw new AppError('errors.notFound', 'not-found');
 
@@ -245,13 +248,25 @@ export async function duplicateQuiz(
   }
 
   const totalMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 1), 0);
+  return { source, questions, correctFor, totalMarks };
+}
+
+/** Writes one copy of an assignment into a class group. Two round trips. */
+async function writeCopy(
+  read: Awaited<ReturnType<typeof readForCopy>>,
+  into: { classId: string; branchId?: string | null },
+  status: Quiz['status'],
+  actor: AppUser,
+  title?: string
+): Promise<string> {
+  const { source, questions, correctFor, totalMarks } = read;
   const newId = await createDoc(
     COLLECTIONS.quizzes,
     {
-      title: title ?? `${source.title} (copy)`,
+      title: title ?? source.title,
       description: source.description ?? '',
-      classId: source.classId,
-      branchId: source.branchId ?? null,
+      classId: into.classId,
+      branchId: into.branchId ?? source.branchId ?? null,
       teacherId: actor.role === 'teacher' ? actor.uid : (source.teacherId ?? null),
       language: source.language,
       timeLimit: source.timeLimit ?? 0,
@@ -259,7 +274,7 @@ export async function duplicateQuiz(
       maxAttempts: source.maxAttempts ?? 1,
       questionCount: questions.length,
       totalMarks,
-      status: 'draft' as const,
+      status,
     },
     { actorId: actor.uid }
   );
@@ -284,15 +299,134 @@ export async function duplicateQuiz(
     });
   });
   await batch.commit();
+  return newId;
+}
+
+export async function duplicateQuiz(
+  quizId: string,
+  actor: AppUser,
+  title?: string
+): Promise<string> {
+  const read = await readForCopy(quizId);
+  const newId = await writeCopy(
+    read,
+    { classId: read.source.classId },
+    'draft',
+    actor,
+    title ?? `${read.source.title} (copy)`
+  );
 
   void audit.log({
     actor,
     action: 'CREATE',
     collection: COLLECTIONS.quizzes,
     documentId: newId,
-    summary: `Copied quiz "${source.title}" with ${questions.length} question(s)`,
+    summary: `Copied quiz "${read.source.title}" with ${read.questions.length} question(s)`,
   });
   return newId;
+}
+
+export interface PublishToAllResult {
+  /** Class groups that now hold this assignment, the original included. */
+  groups: number;
+  /** Students who can open it. */
+  students: number;
+  /** Groups that already had it and were left alone. */
+  skipped: number;
+}
+
+/**
+ * THE SAME WEEKLY ASSIGNMENT, GIVEN TO EVERY CLASS GROUP AT ONCE.
+ *
+ * An assignment belongs to one group, because a result belongs to a class and
+ * a mark sheet that mixes groups is no use to anybody. But the centre writes
+ * one assignment a week for all of its groups, and doing that by hand meant
+ * writing the same ten questions once per group - which is how the week the
+ * male group got an assignment and the female group did not happens.
+ *
+ * So: written once, then copied into every group that has students in it, each
+ * copy published and announced to its own class. Groups with nobody in them are
+ * skipped - an assignment in an empty group reaches no one and only clutters
+ * the list.
+ *
+ * SAFE TO PRESS TWICE. A group that already has an assignment with this title
+ * is left alone, so a second press adds nothing rather than giving every
+ * student the same assignment twice.
+ */
+export async function publishToAllClasses(
+  quizId: string,
+  actor: AppUser
+): Promise<PublishToAllResult> {
+  const read = await readForCopy(quizId);
+  if (read.questions.length === 0) {
+    throw new AppError('validation.minOneQuestion', 'failed-precondition');
+  }
+
+  const [groupPage, existing] = await Promise.all([
+    listClasses({ pageSize: 100 }),
+    // Every assignment that already carries this title, so the ones already
+    // given out are not given out again.
+    listAll<Quiz>(COLLECTIONS.quizzes, {
+      filters: [['title', '==', read.source.title]],
+      pageSize: 100,
+    }),
+  ]);
+
+  const taken = new Set(existing.map((quiz) => quiz.classId));
+  const counts = await studentCounts(groupPage.items.map((group) => group.id));
+
+  let groups = 0;
+  let students = 0;
+  let skipped = 0;
+
+  for (const group of groupPage.items) {
+    const size = counts[group.id] ?? 0;
+    if (size === 0) continue;
+
+    if (group.id === read.source.classId) {
+      // The original. Already published means this group has already been told,
+      // and publishing again would announce the same assignment to them twice -
+      // which is exactly what somebody pressing this a second time is trying
+      // not to do.
+      if (read.source.status === 'published') {
+        groups += 1;
+        students += size;
+        continue;
+      }
+      // Publishing it is what announces it and repairs its question count.
+      const outcome = await setQuizStatus(quizId, 'published', actor);
+      groups += 1;
+      students += outcome.students ?? size;
+      continue;
+    }
+
+    if (taken.has(group.id)) {
+      skipped += 1;
+      continue;
+    }
+
+    const copyId = await writeCopy(
+      read,
+      { classId: group.id, branchId: group.branchId ?? null },
+      'draft',
+      actor
+    );
+    // Published through the same path as any other assignment, so the class is
+    // announced to and the count is written exactly as it would be by hand.
+    const outcome = await setQuizStatus(copyId, 'published', actor);
+    groups += 1;
+    students += outcome.students ?? size;
+  }
+
+  void audit.log({
+    actor,
+    action: 'UPDATE',
+    collection: COLLECTIONS.quizzes,
+    documentId: quizId,
+    summary: `Published "${read.source.title}" to ${groups} class group(s), ${students} student(s)`,
+  });
+
+  return { groups, students, skipped };
 }
 
 export async function deleteQuiz(quizId: string, actor: AppUser): Promise<void> {
