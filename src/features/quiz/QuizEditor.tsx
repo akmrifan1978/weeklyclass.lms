@@ -12,6 +12,7 @@ import { friendlyMessage } from '@/utils/errors';
 import {
   getQuiz,
   listQuestionsWithAnswers,
+  publishToAllClasses,
   saveQuestions,
   setQuizStatus,
   type QuestionDraft,
@@ -47,6 +48,12 @@ export function QuizEditor() {
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
+  /**
+   * Publishing to every class group is asked about first. It is the one action
+   * here that reaches people who were not in the plan when the assignment was
+   * written, and it cannot be taken back with a button.
+   */
+  const [confirmAll, setConfirmAll] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return null;
@@ -161,6 +168,25 @@ export function QuizEditor() {
     }
   };
 
+  /** One assignment, every class group that has students, one press. */
+  const publishEverywhere = async () => {
+    if (!user || !id) return;
+    setConfirmAll(false);
+    setBusy(true);
+    try {
+      if (dirty) await saveQuestions(id, drafts, user);
+      const { groups, students, skipped } = await publishToAllClasses(id, user);
+      toast.success(t('quiz.publishedAll', { groups, students }));
+      if (skipped > 0) toast.show(t('quiz.publishedAllSkipped', { count: skipped }));
+      setDirty(false);
+      await reload();
+    } catch (err) {
+      toast.error(friendlyMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const totalMarks = drafts.reduce((sum, draft) => sum + (Number(draft.marks) || 0), 0);
 
   return (
@@ -198,6 +224,20 @@ export function QuizEditor() {
                     loading={busy}
                     onPress={handlePublish}
                     style={{ marginTop: spacing.md }}
+                  />
+                ) : null}
+                {/* The centre writes one assignment a week for groups that are
+                    split by age and gender. This is that week, given out in
+                    one press instead of retyping the questions per group. */}
+                {can('EDIT_QUIZ') && drafts.length > 0 ? (
+                  <Button
+                    label={t('quiz.publishAll')}
+                    icon="people-outline"
+                    variant="outline"
+                    size="sm"
+                    loading={busy}
+                    onPress={() => setConfirmAll(true)}
+                    style={{ marginTop: spacing.sm }}
                   />
                 ) : null}
               </Card>
@@ -327,6 +367,15 @@ export function QuizEditor() {
           ) : null}
         </AsyncBoundary>
       </Screen>
+
+      <ConfirmDialog
+        visible={confirmAll}
+        title={t('quiz.publishAllTitle')}
+        message={t('quiz.publishAllConfirm')}
+        confirmLabel={t('quiz.publishAll')}
+        onCancel={() => setConfirmAll(false)}
+        onConfirm={publishEverywhere}
+      />
 
       <ConfirmDialog
         visible={confirmRemove !== null}
