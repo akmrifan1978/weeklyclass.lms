@@ -306,6 +306,16 @@ export interface QaQuery {
   eventId?: string | null;
   cursor?: Cursor;
   pageSize?: number;
+  /**
+   * Staff only: bring back the hidden ones too, marked as hidden.
+   *
+   * Hiding was a one-way door. `hideQuestion` has always been able to undo
+   * itself, but a hidden question was filtered out of the only list there is,
+   * so there was nothing left to press - and a spoken question, which has no
+   * text, left nothing on screen to recognise either. One mis-tap and a
+   * student's question was gone with no way back to it.
+   */
+  includeHidden?: boolean;
 }
 
 export async function listQuestions(options: QaQuery = {}): Promise<QaQuestion[]> {
@@ -323,6 +333,7 @@ export async function listQuestions(options: QaQuery = {}): Promise<QaQuestion[]
   // `hidden == false` filter would need a composite index for every combination
   // of class and event, and would also hide older questions saved before the
   // field existed.
+  if (options.includeHidden) return page.items;
   return page.items.filter((q) => q.hidden !== true);
 }
 

@@ -1227,7 +1227,12 @@
     "makePublicTitle": "Make this answer public?",
     "makePublicConfirm": "Students will get a notification about this question and its answer: the class it was asked in, or every student if it has no class.",
     "madePublic": "The answer is now public. Students have been notified.",
-    "publicAnswer": "Answer made public"
+    "publicAnswer": "Answer made public",
+    "restore": "Restore",
+    "restored": "The question is back in the list.",
+    "hiddenNote": "Hidden from the list. Restore it to answer it.",
+    "showHidden": "Show hidden ({{count}})",
+    "hideHidden": "Hide the hidden ones again"
   },
   "hadith": {
     "authenticityNote": "Sahih al-Bukhari and Sahih Muslim are the two collections whose authenticity is least disputed. Within the other books individual narrations carry different gradings, which are not shown here — each one lists its book and number so you can check it.",
