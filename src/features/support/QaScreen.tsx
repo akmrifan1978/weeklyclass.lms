@@ -79,6 +79,18 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   const [editScholarId, setEditScholarId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<QaQuestion | null>(null);
   const [confirmPublic, setConfirmPublic] = useState<QaQuestion | null>(null);
+  /**
+   * Hiding asks first, now.
+   *
+   * It was an unlabelled eye icon sitting next to Answer, and the one other
+   * thing on the card a teacher can press. Twice, a Mowlavi answered a question
+   * and then pressed it within five seconds - reading it, reasonably, as "show
+   * this" or "publish the answer". It is the opposite: the question and the
+   * answer he had just written came off the list for everybody, the student
+   * included, and the student's notification then opened a page with nothing on
+   * it. Sharing an answer with the class is a separate, admin-only button.
+   */
+  const [confirmHide, setConfirmHide] = useState<QaQuestion | null>(null);
 
   /*
    * A clock for the edit window.
@@ -124,6 +136,12 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
   const hiddenOnes = everything.filter((q) => q.hidden === true).sort(byStatus);
   const visible = everything.filter((q) => q.hidden !== true).sort(byStatus);
   const sorted = showHidden ? [...visible, ...hiddenOnes] : visible;
+  /**
+   * A hidden question that has already been answered is the one worth saying
+   * out loud: somebody did the work, the student was told there was an answer,
+   * and the answer is behind this line.
+   */
+  const answeredHidden = hiddenOnes.filter((q) => q.answer || q.answerAudioUrl).length;
 
   const ask = async () => {
     /*
@@ -369,7 +387,12 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
             <Text style={styles.hiddenToggleText}>
               {showHidden
                 ? t('qa.hideHidden')
-                : t('qa.showHidden', { count: hiddenOnes.length })}
+                : answeredHidden > 0
+                  ? t('qa.showHiddenAnswered', {
+                      count: hiddenOnes.length,
+                      answered: answeredHidden,
+                    })
+                  : t('qa.showHidden', { count: hiddenOnes.length })}
             </Text>
           </Pressable>
         ) : null}
@@ -512,12 +535,14 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
                       onPress={() => restore(item)}
                     />
                   ) : (
-                    <IconButton
-                      icon="eye-off-outline"
+                    // Written out rather than an icon, because an icon is what
+                    // was mistaken for its opposite.
+                    <Button
                       label={t('qa.hide')}
-                      size={32}
-                      color={colors.textMuted}
-                      onPress={() => hide(item)}
+                      icon="eye-off-outline"
+                      size="sm"
+                      variant="ghost"
+                      onPress={() => setConfirmHide(item)}
                     />
                   )}
                   {/* Only an admin deletes somebody else's question. A teacher
@@ -631,6 +656,19 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           const target = confirmDelete;
           setConfirmDelete(null);
           if (target) void removeQuestion(target);
+        }}
+      />
+
+      <ConfirmDialog
+        visible={Boolean(confirmHide)}
+        title={t('qa.hideTitle')}
+        message={t('qa.hideConfirm')}
+        confirmLabel={t('qa.hide')}
+        onCancel={() => setConfirmHide(null)}
+        onConfirm={() => {
+          const target = confirmHide;
+          setConfirmHide(null);
+          if (target) void hide(target);
         }}
       />
 
@@ -768,7 +806,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     marginBottom: spacing.sm,
   },
-  hiddenToggleText: { fontSize: fontSize.xs, color: colors.textMuted },
+  // Warning, not muted: it was grey and missed. Existing token.
+  hiddenToggleText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.semibold },
   hiddenNote: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm },
   voiceRow: {
     flexDirection: 'row',

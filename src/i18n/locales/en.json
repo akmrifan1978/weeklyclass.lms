@@ -1241,7 +1241,10 @@
     "restored": "The question is back in the list.",
     "hiddenNote": "Hidden from the list. Restore it to answer it.",
     "showHidden": "Show hidden ({{count}})",
-    "hideHidden": "Hide the hidden ones again"
+    "hideHidden": "Hide the hidden ones again",
+    "hideTitle": "Hide this question?",
+    "hideConfirm": "It comes off the list for everybody, including the student who asked — and so does the answer. This is not how an answer is shared with the class. You can bring it back with \"Show hidden\".",
+    "showHiddenAnswered": "Show hidden ({{count}}) — {{answered}} already answered"
   },
   "hadith": {
     "authenticityNote": "Sahih al-Bukhari and Sahih Muslim are the two collections whose authenticity is least disputed. Within the other books individual narrations carry different gradings, which are not shown here — each one lists its book and number so you can check it.",
