@@ -91,6 +91,17 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
    * it. Sharing an answer with the class is a separate, admin-only button.
    */
   const [confirmHide, setConfirmHide] = useState<QaQuestion | null>(null);
+  /**
+   * A recording in progress, or on its way to the server.
+   *
+   * Tracked per form - asking, answering, editing - so the button that sends it
+   * can wait for it instead of reporting an empty question. Neither a question
+   * nor an answer has ever needed text: a spoken one is a whole one, and the
+   * list labels it as spoken. What was missing was the few seconds in between.
+   */
+  const [askVoiceBusy, setAskVoiceBusy] = useState(false);
+  const [answerVoiceBusy, setAnswerVoiceBusy] = useState(false);
+  const [editVoiceBusy, setEditVoiceBusy] = useState(false);
 
   /*
    * A clock for the edit window.
@@ -158,6 +169,12 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
      * an empty form with no recording is not a short question, it is a slip.
      */
     if (!user) return;
+    // Still recording, or still sending the recording. Not an empty question -
+    // just not finished yet, which is a different sentence.
+    if (askVoiceBusy) {
+      toast.show(t('qa.voiceStillWorking'));
+      return;
+    }
     if (!question.trim() && !voice) {
       toast.error(t('qa.sayOrWriteSomething'));
       return;
@@ -200,6 +217,10 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
      * describing it in writing.
      */
     if (!answering || !user) return;
+    if (answerVoiceBusy) {
+      toast.show(t('qa.voiceStillWorking'));
+      return;
+    }
     if (!answerText.trim() && !answerVoice) {
       toast.error(t('qa.sayOrWriteSomething'));
       return;
@@ -238,6 +259,10 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
     if (!support.canChangeOwnQuestion(editing, user, Date.now())) {
       toast.error(t('qa.editWindow', { minutes: 0 }));
       setEditing(null);
+      return;
+    }
+    if (editVoiceBusy) {
+      toast.show(t('qa.voiceStillWorking'));
       return;
     }
     if (!editText.trim() && !editVoice) {
@@ -342,6 +367,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           <View style={styles.voiceRow}>
             {user ? (
               <VoiceRecorder
+                onBusyChange={setAskVoiceBusy}
                 ownerId={user.uid}
                 onRecorded={(url, seconds) => setVoice({ url, seconds })}
               />
@@ -367,7 +393,8 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
             label={t('qa.ask')}
             icon="help-circle-outline"
             onPress={ask}
-            loading={busy}
+            // Waits while the recording is being sent, rather than refusing.
+            loading={busy || askVoiceBusy}
             fullWidth
           />
         </Card>
@@ -568,7 +595,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
         title={t('qa.answer')}
         onClose={() => setAnswering(null)}
         onSubmit={answer}
-        submitting={busy}
+        submitting={busy || answerVoiceBusy}
       >
         <Text style={styles.originalLabel}>{t('qa.theQuestion')}</Text>
         <Text style={styles.original}>{answering?.question}</Text>
@@ -586,6 +613,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           {user ? (
             <VoiceRecorder
               ownerId={user.uid}
+              onBusyChange={setAnswerVoiceBusy}
               onRecorded={(url, seconds) => setAnswerVoice({ url, seconds })}
             />
           ) : null}
@@ -609,7 +637,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
         title={t('qa.editTitle')}
         onClose={() => setEditing(null)}
         onSubmit={saveEdit}
-        submitting={busy}
+        submitting={busy || editVoiceBusy}
       >
         <ScholarChoice scholars={scholars} value={editScholarId} onChange={setEditScholarId} />
         {/* Text, recording, or both — the same freedom as asking. */}
@@ -638,6 +666,7 @@ export function QaScreen({ eventId }: { eventId?: string | null }) {
           {user ? (
             <VoiceRecorder
               ownerId={user.uid}
+              onBusyChange={setEditVoiceBusy}
               onRecorded={(url, seconds) => setEditVoice({ url, seconds })}
             />
           ) : null}
