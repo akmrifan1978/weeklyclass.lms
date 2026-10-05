@@ -32,10 +32,22 @@ type RecorderState = 'idle' | 'recording' | 'uploading';
 
 export function VoiceRecorder({
   onRecorded,
+  onBusyChange,
   ownerId,
 }: {
   /** Called with the uploaded audio URL and how long it runs. */
   onRecorded: (url: string, seconds: number) => void;
+  /**
+   * Whether a recording is being made or sent right now.
+   *
+   * The form needs to know. A recording reaches the form only once it has
+   * finished uploading, so between pressing stop and that moment the form holds
+   * nothing - and pressing Ask in that gap was answered with "type something or
+   * record a voice message first", to somebody who had just done exactly that.
+   * On a slow connection from Jeddah, a half-minute recording leaves a real
+   * window for that.
+   */
+  onBusyChange?: (busy: boolean) => void;
   ownerId: string;
 }) {
   const { t } = useTranslation();
@@ -54,6 +66,12 @@ export function VoiceRecorder({
       void recorder.current?.stop().catch(() => undefined);
     };
   }, []);
+
+  /** One place to change state, so the form is always told. */
+  const go = (next: RecorderState) => {
+    setState(next);
+    onBusyChange?.(next !== 'idle');
+  };
 
   const startTicker = () => {
     setSeconds(0);
@@ -106,11 +124,11 @@ export function VoiceRecorder({
         };
       }
 
-      setState('recording');
+      go('recording');
       startTicker();
     } catch (error) {
       toast.error(friendlyMessage(error, t));
-      setState('idle');
+      go('idle');
     }
   };
 
@@ -123,11 +141,11 @@ export function VoiceRecorder({
     recorder.current = null;
 
     if (!uri) {
-      setState('idle');
+      go('idle');
       return;
     }
 
-    setState('uploading');
+    go('uploading');
     try {
       const uploaded = await storageService.upload({
         uri,
@@ -141,7 +159,7 @@ export function VoiceRecorder({
     } catch (error) {
       toast.error(friendlyMessage(error, t));
     } finally {
-      setState('idle');
+      go('idle');
       setSeconds(0);
     }
   };
