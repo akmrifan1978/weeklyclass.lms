@@ -379,6 +379,26 @@ service cloud.firestore {
                       isSelf(uid)
                       && onlyChanged([
                            'fullName', 'mobile', 'profileImage', 'language',
+                           /*
+                            * The rest of the number, and the rest of the person.
+                            *
+                            * `mobileCountryCode` and `mobileE164` are written by
+                            * the same save as `mobile` - the service derives
+                            * them - so leaving them out did not protect
+                            * anything, it simply denied the whole save. Editing
+                            * your own number from your own profile was refused
+                            * outright, which is not what the screen offered.
+                            *
+                            * `email` here is the CONTACT address, not the one
+                            * the account signs in with: that is `authEmail`,
+                            * which is absent from this list on purpose and
+                            * changes only through a flow that asks for the
+                            * password. `country` is the person's nationality,
+                            * asked at registration and until now unchangeable
+                            * by the person it describes. Neither grants
+                            * anything.
+                            */
+                           'mobileCountryCode', 'mobileE164', 'email', 'country',
                            // Per-dashboard language choices and the personal
                            // Qur'an reading plan. Both are the person's own
                            // settings: they grant nothing and are safe to let
@@ -386,6 +406,20 @@ service cloud.firestore {
                            'dashboardLanguages', 'quranPlan', 'quranBookmark',
                            'dateOfBirth', 'gender', 'qualification',
                            'pushTokens', 'lastLoginAt', 'searchTokens', 'updatedAt',
+                           /*
+                            * Whether this person has notifications switched on
+                            * anywhere, written by their own device when they
+                            * switch it on or off.
+                            *
+                            * It exists because `pushSubscriptions` is readable
+                            * by nobody - deliberately, since a subscription is
+                            * a capability to push to that device - so an admin
+                            * asking "who is actually going to receive this?"
+                            * had no way to find out. A flag on the account
+                            * answers that without exposing anything: it says
+                            * on or off, and nothing about the device.
+                            */
+                           'pushEnabled', 'pushEnabledAt',
                            // Cleared by the app once a new password has been
                            // set. A prompt rather than a boundary: somebody
                            // could clear it without changing anything, and all

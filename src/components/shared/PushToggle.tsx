@@ -67,7 +67,7 @@ export function PushToggle() {
   const disable = async () => {
     setBusy(true);
     try {
-      await push.disablePush();
+      await push.disablePush(user?.uid);
       setSubscribed(false);
       toast.success(t('push.disabled'));
     } catch (error) {

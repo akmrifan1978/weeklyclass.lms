@@ -93,10 +93,19 @@ export async function registerForPush(): Promise<PushRegistration> {
 }
 
 /** Stores the token under a stable per-device key so re-installs replace it. */
+/**
+ * The device token, and the same summary the web path writes: an admin needs
+ * one question answered - will this person receive anything - and it must not
+ * depend on which kind of device they happen to use.
+ */
 export async function saveToken(uid: string, token: string): Promise<void> {
   const deviceKey = `${Platform.OS}_${Device.modelName ?? 'device'}`.replace(/[^\w]/g, '_');
   await updateDoc(doc(db, COLLECTIONS.users, uid), {
     [`pushTokens.${deviceKey}`]: token,
+    // The same summary the web path writes, in the same field, so "who will
+    // receive this?" has one answer whichever kind of device somebody uses.
+    pushEnabled: true,
+    pushEnabledAt: new Date(),
   });
 }
 
