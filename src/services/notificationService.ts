@@ -11,7 +11,9 @@ import type {
   NotificationTarget,
   Priority,
 } from '@/types';
+import i18n from '@/i18n';
 import {
+  countWhere,
   createDoc,
   getById,
   listAll,
@@ -23,6 +25,8 @@ import {
   type ListOptions,
   type Page,
 } from './firestore';
+import { notificationsRoute } from './notificationRoutes';
+import { updateSettings } from './settingsService';
 import { sendExpoPush, type PushSendReport } from './pushService';
 import * as audit from './auditService';
 import { cached } from './offlineCache';
@@ -374,6 +378,69 @@ async function fetchAnnouncementsFor(user: AppUser, pageSize = 10): Promise<Anno
     })
     .sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority])
     .slice(0, pageSize);
+}
+
+export interface NotificationReach {
+  /** Active accounts with notifications switched on somewhere. */
+  on: number;
+  /** Active accounts altogether. */
+  total: number;
+}
+
+/**
+ * How many people a notification will actually reach on their phone.
+ *
+ * Counted from a flag on the accounts, not from the subscriptions: those are
+ * readable by nobody, deliberately, because a subscription is a capability to
+ * push to that device. Two aggregate counts, which Firestore answers without
+ * sending the accounts themselves.
+ *
+ * In-app delivery is not in question - everybody signed in sees a notification
+ * in their Notification Centre. This is about the ones that arrive while the
+ * app is shut.
+ */
+export async function notificationReach(): Promise<NotificationReach> {
+  const [on, total] = await Promise.all([
+    countWhere(COLLECTIONS.users, [
+      ['status', '==', 'active'],
+      ['pushEnabled', '==', true],
+    ]),
+    countWhere(COLLECTIONS.users, [['status', '==', 'active']]),
+  ]);
+  return { on, total };
+}
+
+/**
+ * Asks everybody to turn notifications on, in one press.
+ *
+ * WHAT IT CANNOT DO, said plainly because the button must not imply otherwise:
+ * nothing here can grant a browser permission on somebody else's device. That
+ * permission is given by the person holding the phone, in response to something
+ * they pressed, and no server may do it for them.
+ *
+ * What this does instead is the honest whole of what is possible: it sends
+ * everyone a notification saying what to do, and it stamps the settings
+ * document so that every home screen in the app shows a card with a single
+ * button that turns them on. Press it again next month and the card returns for
+ * whoever still has not - including the people who dismissed it last time.
+ */
+export async function askEveryoneToEnableNotifications(actor: AppUser): Promise<SendOutcome> {
+  const outcome = await send(
+    {
+      title: i18n.t('push.askAllTitle'),
+      message: i18n.t('push.askAllMessage'),
+      category: 'general',
+      targetRole: 'all',
+      route: notificationsRoute(actor.role),
+    },
+    actor
+  );
+
+  // The stamp is what the home-screen card watches. Written after the
+  // notification, so a failure to send does not leave a card asking people to
+  // act on a message that never arrived.
+  await updateSettings({ notifyPromptAt: new Date() }, actor);
+  return outcome;
 }
 
 export function getAnnouncement(id: string): Promise<Announcement | null> {

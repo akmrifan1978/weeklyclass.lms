@@ -78,7 +78,8 @@
     "unpublish": "Unpublish",
     "publishedToast": "Published. Everyone can see it now.",
     "unpublishedToast": "Moved back to draft. Hidden from everyone.",
-    "blocked": "Blocked"
+    "blocked": "Blocked",
+    "notNow": "Not now"
   },
   "auth": {
     "studentLogin": "Student Login",
@@ -685,7 +686,9 @@
     "verifyInboxHelp": "We have sent a confirmation link to the new address. Nothing changes until you open it. Until then, keep signing in exactly as you do now — and the first time after you open it, sign in with the new email address.",
     "changeUsername": "Change username",
     "changeUsernameHint": "Your password, role, permissions and every record stay exactly as they are. Only the name you sign in with changes.",
-    "usernameChanged": "Username changed."
+    "usernameChanged": "Username changed.",
+    "contactEmailHint": "Where the centre writes to you. Not the address you sign in with.",
+    "editElsewhere": "Username, sign-in email and password are changed further down this page."
   },
   "admin": {
     "manageUsers": "Manage users",
@@ -1604,7 +1607,18 @@
     "turnOff": "Turn off",
     "enabled": "Notifications are on for this device",
     "disabled": "Notifications are off for this device",
-    "deniedToast": "The browser refused. Allow Notifications for this site in its settings."
+    "deniedToast": "The browser refused. Allow Notifications for this site in its settings.",
+    "nudgeTitle": "Turn on notifications",
+    "nudgeMessage": "The centre has asked everybody to switch these on, so lessons, assignments and answers reach you even when the app is closed.",
+    "notGranted": "Notifications were not switched on.",
+    "askAll": "Ask everyone to turn on notifications",
+    "askAllTitle": "Please turn on notifications",
+    "askAllMessage": "Open the app and press \"Turn on notifications\" on the home screen, so lessons, assignments and answers reach you even when the app is closed.",
+    "askAllConfirmTitle": "Ask everybody to turn notifications on?",
+    "askAllConfirm": "Everyone gets a notification, and a card appears on their home screen with one button that switches notifications on. A phone’s permission can only be given on that phone, by the person holding it — this asks them all at once, which is as far as it can go.",
+    "askAllDone": "Everybody has been asked. The card is now on their home screen.",
+    "reachCount": "Notifications are on for {{on}} of {{total}} active accounts",
+    "reachHint": "In-app notifications reach everybody. This figure is about the ones that arrive while the app is closed, which each person switches on on their own device."
   },
   "classGroup": {
     "field": "Class Group",

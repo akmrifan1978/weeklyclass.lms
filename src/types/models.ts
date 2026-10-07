@@ -144,6 +144,17 @@ export interface AppUser extends BaseDoc {
 
   /** Expo / FCM push tokens, keyed by device id. */
   pushTokens?: Record<string, string>;
+  /**
+   * Whether this person has notifications switched on, on at least one device.
+   *
+   * A summary, written by their own device - the subscriptions themselves are
+   * readable by nobody, so this is how an admin can see who a notification will
+   * actually reach. It can be out of date in one direction: somebody who
+   * revokes permission in their browser settings, rather than in the app, still
+   * reads as on until the app next looks.
+   */
+  pushEnabled?: boolean;
+  pushEnabledAt?: FireDate;
 
   /** When the registration declaration was accepted. */
   declarationAcceptedAt?: FireDate;
@@ -1089,6 +1100,16 @@ export interface BannerItem {
 }
 
 export interface AppSettings {
+  /**
+   * When an admin last asked everybody to turn notifications on.
+   *
+   * A date rather than a flag, because the ask has to be repeatable: each time
+   * it is pressed, the card comes back for everybody who has not switched them
+   * on - including people who dismissed the previous one. A phone's permission
+   * can only be granted on the phone, by the person holding it; this is the
+   * nearest an administrator can honestly get to doing it for them.
+   */
+  notifyPromptAt?: FireDate;
   appName: string;
   tagline: string;
   /**

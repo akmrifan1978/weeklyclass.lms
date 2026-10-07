@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
+import { LANGUAGES } from '@/constants/app';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { useAsync, useDebounced, usePaginated } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
@@ -1293,6 +1294,19 @@ function UserForm({
           ) : null}
         </>
       )}
+
+      {/* The language the app greets them in, and the one their notifications
+          are written in. Asked at registration, and until now the one answer
+          an admin could not correct. */}
+      <Select<LanguageCode>
+        label={t('auth.preferredLanguage')}
+        value={form.language}
+        options={LANGUAGES.map((language) => ({
+          value: language.code,
+          label: language.nativeName ?? language.name,
+        }))}
+        onChange={(v) => set('language', v ?? 'en')}
+      />
 
       <Select<UserStatus>
         label={t('common.status')}

@@ -18,10 +18,11 @@ import { changePassword, changeSignInEmail } from '@/services/authService';
 import { changeUsername } from '@/services/userService';
 import { isSyntheticAuthEmail } from '@/services/identityService';
 import { updateUser } from '@/services/userService';
-import { getBranch, getClass } from '@/services/orgService';
+import { getBranch, getClass, listCountries } from '@/services/orgService';
 import * as storageService from '@/services/storageService';
 import type { LanguageCode } from '@/types';
 import {
+  DateField,
   PhoneField,
   AppHeader,
   Avatar,
@@ -61,10 +62,24 @@ export function ProfileScreen() {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  /**
+   * Everything about the person that the person may change.
+   *
+   * It used to be three fields - name, number, qualification - while
+   * registration asked for six, so a date of birth typed wrongly on the way in,
+   * or a nationality chosen in a hurry, could only be put right by an
+   * administrator. The ones still missing from here are missing deliberately:
+   * username, sign-in email and password each have their own flow below,
+   * because each has a consequence beyond the profile.
+   */
   const [form, setForm] = useState({
     fullName: '',
+    email: '',
     mobile: '',
     mobileCountryCode: DEFAULT_DIAL,
+    country: '',
+    dateOfBirth: '',
+    gender: '' as '' | 'male' | 'female',
     qualification: '',
   });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
@@ -84,11 +99,23 @@ export function ProfileScreen() {
 
   if (!user) return null;
 
+  /**
+   * The nationality list, read only once somebody opens the sheet - nobody
+   * looking at their own profile should pay for a list they are not editing.
+   */
+  const loadCountries = useCallback(() => listCountries().catch(() => []), []);
+  const { data: countries } = useAsync(loadCountries, [], { enabled: editing });
+  const countryOptions = (countries ?? []).map((c) => ({ value: c.code, label: c.name }));
+
   const openEdit = () => {
     setForm({
       fullName: user.fullName,
+      email: user.email ?? '',
       mobile: user.mobile,
       mobileCountryCode: user.mobileCountryCode ?? DEFAULT_DIAL,
+      country: user.country ?? '',
+      dateOfBirth: user.dateOfBirth ?? '',
+      gender: (user.gender ?? '') as '' | 'male' | 'female',
       qualification: user.qualification ?? '',
     });
     setErrors({});
@@ -106,8 +133,14 @@ export function ProfileScreen() {
         user.uid,
         {
           fullName: form.fullName.trim(),
+          email: form.email.trim(),
           mobile: form.mobile.trim(),
           mobileCountryCode: form.mobileCountryCode,
+          country: form.country,
+          // Null rather than an empty string: these are "not said", and a blank
+          // string would read as an answer in every list that shows them.
+          dateOfBirth: form.dateOfBirth || null,
+          gender: form.gender || null,
           ...(user.role === 'teacher' ? { qualification: form.qualification.trim() } : {}),
         },
         user
@@ -476,12 +509,44 @@ export function ProfileScreen() {
           icon="person-outline"
           required
         />
+        <TextField
+          label={t('auth.email')}
+          value={form.email}
+          onChangeText={(v) => setForm((p) => ({ ...p, email: v }))}
+          icon="mail-outline"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          hint={t('profile.contactEmailHint')}
+        />
         <PhoneField
           label={t('auth.mobile')}
           dial={form.mobileCountryCode}
           onDialChange={(dial) => setForm((p) => ({ ...p, mobileCountryCode: dial }))}
           value={form.mobile}
           onChangeText={(v) => setForm((p) => ({ ...p, mobile: v }))}
+        />
+        <Select
+          label={t('auth.nationality')}
+          value={form.country || null}
+          options={countryOptions}
+          onChange={(v) => setForm((p) => ({ ...p, country: v ?? '' }))}
+          searchable
+          allowClear
+        />
+        <DateField
+          label={t('auth.dateOfBirth')}
+          value={form.dateOfBirth}
+          onChange={(v: string) => setForm((p) => ({ ...p, dateOfBirth: v }))}
+        />
+        <Select<'male' | 'female'>
+          label={t('auth.gender')}
+          value={form.gender || null}
+          options={[
+            { value: 'male', label: t('auth.male') },
+            { value: 'female', label: t('auth.female') },
+          ]}
+          onChange={(v) => setForm((p) => ({ ...p, gender: v ?? '' }))}
+          allowClear
         />
         {isTeacher ? (
           <TextField
@@ -491,9 +556,9 @@ export function ProfileScreen() {
             icon="ribbon-outline"
           />
         ) : null}
-        <Text style={styles.note}>
-          {t('auth.username')}, {t('auth.email')} — {t('admin.manageUsers')}
-        </Text>
+        {/* What is NOT here, and where it is instead - each of these three has
+            a consequence beyond the profile, so each keeps its own flow. */}
+        <Text style={styles.note}>{t('profile.editElsewhere')}</Text>
       </FormSheet>
 
       <FormSheet

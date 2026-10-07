@@ -174,11 +174,28 @@ export async function enablePush(user: AppUser): Promise<PushState> {
     { actorId: user.uid }
   );
 
+  // Said on the account as well, because nobody may read the subscriptions -
+  // this is what lets an admin see how many people a notification will reach.
+  // Best effort: the subscription above is what makes delivery work, and
+  // failing to record the summary must not undo it.
+  await markPushEnabled(user.uid, true);
+
   return 'granted';
 }
 
+/**
+ * The summary on the person's own account: notifications are on, or they are
+ * not. Written by their own device, which is the only thing that knows.
+ */
+export async function markPushEnabled(uid: string, enabled: boolean): Promise<void> {
+  await updateDocById<AppUser>(COLLECTIONS.users, uid, {
+    pushEnabled: enabled,
+    ...(enabled ? { pushEnabledAt: new Date() } : {}),
+  }).catch(() => undefined);
+}
+
 /** Stops this browser receiving, and forgets it. */
-export async function disablePush(): Promise<void> {
+export async function disablePush(uid?: string): Promise<void> {
   if (pushState() === 'unsupported') return;
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
@@ -186,6 +203,9 @@ export async function disablePush(): Promise<void> {
 
   const id = idFor(subscription.endpoint);
   await subscription.unsubscribe().catch(() => undefined);
+  // This device is off. Other devices of theirs may still be on, which this
+  // cannot know - it reads as off until the next device switches on again.
+  if (uid) await markPushEnabled(uid, false);
   // Soft-deleted rather than removed, so the sender skips it and a record of
   // the device having existed survives.
   await updateDocById(COLLECTIONS.pushSubscriptions, id, { deleted: true }).catch(

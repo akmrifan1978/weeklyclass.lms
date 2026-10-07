@@ -12,6 +12,10 @@ import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme
 import { useAsync } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
 import { getSettings, updateSettings } from '@/services/settingsService';
+import {
+  askEveryoneToEnableNotifications,
+  notificationReach,
+} from '@/services/notificationService';
 import { PermissionGuard } from '@/components/shared/RoleGuard';
 import { ImageField } from '@/components/shared/ImageField';
 import { BannerManager } from '@/features/settings/BannerManager';
@@ -23,6 +27,7 @@ import type { AppSettings, CalendarSystem, IslamicFeature, LanguageCode } from '
 import {
   AsyncBoundary,
   Button,
+  ConfirmDialog,
   Card,
   Divider,
   Screen,
@@ -61,9 +66,32 @@ function SettingsScreen() {
   const [form, setForm] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
+  /** Asking everybody to turn notifications on: confirmed first, then sent. */
+  const [confirmAsk, setConfirmAsk] = useState(false);
+  const [asking, setAsking] = useState(false);
 
   const load = useCallback(() => getSettings(true), []);
   const { data, loading, error, reload } = useAsync(load, []);
+
+  // How many people a notification reaches on their phone. Two aggregate
+  // counts, reloaded after the ask so the figure is the one it just changed.
+  const loadReach = useCallback(() => notificationReach(), []);
+  const { data: reach, reload: reloadReach } = useAsync(loadReach, []);
+
+  const askEveryone = async () => {
+    if (!user) return;
+    setConfirmAsk(false);
+    setAsking(true);
+    try {
+      await askEveryoneToEnableNotifications(user);
+      toast.success(t('push.askAllDone'));
+      await reloadReach();
+    } catch (err) {
+      toast.error(friendlyMessage(err, t));
+    } finally {
+      setAsking(false);
+    }
+  };
 
   useEffect(() => {
     if (data) {
@@ -332,6 +360,31 @@ function SettingsScreen() {
 
         <Spacer />
 
+        {/*
+          Notifications, and the one thing an administrator can honestly do
+          about them for everybody at once.
+        */}
+        <SectionHeader title={t('nav.notifications')} icon="notifications-outline" />
+        <Card>
+          <Text style={styles.reach}>
+            {reach
+              ? t('push.reachCount', { on: reach.on, total: reach.total })
+              : t('common.loading')}
+          </Text>
+          <Text style={styles.reachHint}>{t('push.reachHint')}</Text>
+          <Divider />
+          <Button
+            label={t('push.askAll')}
+            icon="notifications-outline"
+            variant="outline"
+            size="sm"
+            loading={asking}
+            onPress={() => setConfirmAsk(true)}
+          />
+        </Card>
+
+        <Spacer />
+
         {/* The one setting that reaches every screen in the app, so it is worth
             its own section rather than a line in a list of switches. */}
         <SectionHeader title={t('settings.ticker')} icon="megaphone-outline" />
@@ -524,6 +577,17 @@ function SettingsScreen() {
 
         <Spacer size={spacing.xxxl} />
       </AsyncBoundary>
+
+      {/* Asked about first: it notifies everybody, and that is not something to
+          do by brushing a button on the way past. */}
+      <ConfirmDialog
+        visible={confirmAsk}
+        title={t('push.askAllConfirmTitle')}
+        message={t('push.askAllConfirm')}
+        confirmLabel={t('push.askAll')}
+        onCancel={() => setConfirmAsk(false)}
+        onConfirm={askEveryone}
+      />
     </Screen>
   );
 }
@@ -537,6 +601,8 @@ export default function AdminSettings() {
 }
 
 const styles = StyleSheet.create({
+  reach: { fontSize: 13, fontWeight: '600', color: '#111A2E' },
+  reachHint: { fontSize: 11, color: '#4B5A75', lineHeight: 16, marginTop: 4, marginBottom: 12 },
   sectionHint: {
     fontSize: fontSize.xs,
     color: colors.textMuted,

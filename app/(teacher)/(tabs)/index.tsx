@@ -25,6 +25,7 @@ import { IslamicTiles } from '@/components/shared/IslamicTiles';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
 import { UpcomingClasses } from '@/components/shared/UpcomingClasses';
+import { NotificationNudge } from '@/components/shared/NotificationNudge';
 import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import {
   Avatar,
@@ -107,6 +108,9 @@ export default function TeacherHome() {
       {/* At the top, as asked. It draws nothing when no flyer is
           running, so it costs no space on the ordinary day. */}
       <FlyerStrip position="dashboard" />
+      {/* The administrator's one ask, answered with one button. Draws nothing
+          unless notifications are off and an admin has asked for them. */}
+      <NotificationNudge />
 
       {/* The app banner an admin chose in Settings. Nothing is drawn until
           they choose something. */}

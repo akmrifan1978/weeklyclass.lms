@@ -44,6 +44,7 @@ import {
 import { NavDrawer } from '@/components/shared/NavDrawer';
 import { useVisibleIslamicTiles } from '@/components/shared/IslamicTiles';
 import { RatingPrompt } from '@/components/shared/RatingPrompt';
+import { NotificationNudge } from '@/components/shared/NotificationNudge';
 import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import { studentNavSections } from '@/constants/studentNav';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
@@ -169,6 +170,9 @@ export default function StudentHome() {
       {/* At the top, as asked. It draws nothing when no flyer is
           running, so it costs no space on the ordinary day. */}
       <FlyerStrip position="dashboard" />
+      {/* The administrator's one ask, answered with one button. Draws nothing
+          unless notifications are off and an admin has asked for them. */}
+      <NotificationNudge />
 
       {/* The app banner an admin chose in Settings. Nothing is drawn until
           they choose something. */}

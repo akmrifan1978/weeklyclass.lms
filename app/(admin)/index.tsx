@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { NotificationNudge } from '@/components/shared/NotificationNudge';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -60,6 +61,9 @@ export default function AdminDashboard() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['bottom']}>
+      {/* The administrator's one ask, answered with one button. Draws nothing
+          unless notifications are off and an admin has asked for them. */}
+      <NotificationNudge />
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.welcome}>{greeting}</Text>
