@@ -1472,7 +1472,19 @@
     "whatsappLink": "WhatsApp සමූහ සබැඳිය",
     "whatsappLinkHint": "WhatsApp හි සමූහය සාදා, එහි ආරාධනා සබැඳිය පිටපත් කර මෙහි අලවන්න. වෙන් කිරීම තහවුරු වූ සැමගේ ප්‍රවේශපත්‍රයේ එක්වීමේ බොත්තමක් දිස්වේ. හිස්ව තැබුවහොත් WhatsApp කිසිතැනක නොපෙන්වයි.",
     "whatsappLinkInvalid": "එය සමූහ ආරාධනා සබැඳියක් නොවේ. WhatsApp හි සමූහය විවෘත කර, \"සබැඳිය හරහා ආරාධනා කරන්න\" තට්ටු කර, https://chat.whatsapp.com/ ලෙස ආරම්භ වන සබැඳිය අලවන්න.",
-    "joinWhatsapp": "WhatsApp සමූහයට එක්වන්න"
+    "joinWhatsapp": "WhatsApp සමූහයට එක්වන්න",
+    "scanTitle": "ටිකට්පත",
+    "scanValid": "වැඩි ටිකට්පතක්",
+    "scanPending": "ආසනය වෙන් කර ඇත — තවම ස්ථීර නැත",
+    "scanCancelled": "අවලංගු කළා — වැඩි නොවේ",
+    "scanRejected": "ප්රතික්ශේප කළා — වැඩි නොවේ",
+    "scanUnpaid": "ගෙවීම තවම බාකියයි",
+    "scanPaid": "ගෙවා ඇත",
+    "scanHolder": "ටිකට්පත හිමිකරු",
+    "scanSeats": "ආසන",
+    "scanNotFound": "මෙම කේතයට ටිකට්පතයක් නැත",
+    "scanNotFoundHelp": "QR යටතේ මුද්රිත කේතය පරීක්සා බලන්න.",
+    "scanAtDoor": "දොරටුවෙන් මෙම තිරය පෙන්වන්න."
   },
   "notes": {
     "new": "නව සටහන",

@@ -482,6 +482,35 @@ service cloud.firestore {
       allow write: if can('MANAGE_CALENDAR');
     }
 
+    /**
+     * The thin public copy of a ticket, so that scanning the QR on a ticket
+     * shows the ticket rather than six characters of nothing.
+     *
+     * READ BY ANYBODY, because the person holding the ticket at the door is
+     * not necessarily signed in, and the steward scanning it may not be
+     * either. The document is written to hold only what that moment needs -
+     * event, date, venue, seats, validity, and a first name with an initial.
+     *
+     * WRITTEN BY THE HOLDER OR BY STAFF, but never into a lie: the status on
+     * the public copy must equal the status on the booking it names, so
+     * somebody cannot publish "confirmed" over their own pending request. The
+     * booking is the authority; this is a copy of it, and the rule is what
+     * makes that true rather than merely intended.
+     */
+    match /publicTickets/{ticketCode} {
+      allow read: if true;
+
+      allow create, update: if isSignedIn()
+                            && request.resource.data.status ==
+                               get(/databases/$(database)/documents/eventRegistrations/$(request.resource.data.registrationId)).data.status
+                            && (
+                              get(/databases/$(database)/documents/eventRegistrations/$(request.resource.data.registrationId)).data.userId == request.auth.uid
+                              || can('MANAGE_CALENDAR')
+                            );
+
+      allow delete: if can('MANAGE_CALENDAR');
+    }
+
     // Two more thin public copies, for the same reason and under the same rule
     // as publicSchedule above: a document is granted whole or not at all, so
     // anything a stranger may read has to be a document holding only that.
