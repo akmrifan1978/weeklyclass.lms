@@ -13,6 +13,12 @@ export const COLLECTIONS = {
   divineNames: 'divineNames',
   khutbahs: 'khutbahs',
   pushSubscriptions: 'pushSubscriptions',
+  /**
+   * The thin public copy of a ticket, keyed by its printed code, so that
+   * scanning the QR on the door shows what the ticket is. See
+   * eventRegistrationService.syncPublicTicket for what it may and may not hold.
+   */
+  publicTickets: 'publicTickets',
   passwordResets: 'passwordResets',
   passwordChanges: 'passwordChanges',
   branches: 'branches',
@@ -131,6 +137,16 @@ export interface LanguageOption {
  * can enable/disable and add more without shipping a new build — see
  * `languageService.ts`.
  */
+/**
+ * Where the app is published.
+ *
+ * Used only to build the link inside a ticket's QR code when there is no page
+ * to take an origin from, which means the native app. On the web the ticket
+ * links to whatever site it was opened from, so a test build never sends
+ * somebody to the live one or the other way round.
+ */
+export const PUBLIC_SITE_URL = 'https://weeklyclass-lms.web.app';
+
 export const LANGUAGES: LanguageOption[] = [
   { code: 'en', name: 'English', nativeName: 'English', rtl: false },
   { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', rtl: false },

@@ -1472,7 +1472,19 @@
     "whatsappLink": "WhatsApp group link",
     "whatsappLinkHint": "Create the group in WhatsApp, copy its invite link and paste it here. Everyone whose booking is confirmed gets a Join button on their ticket. Leave it empty and no WhatsApp appears anywhere.",
     "whatsappLinkInvalid": "That is not a group invite link. Open the group in WhatsApp, tap Invite via link, and paste the link that starts with https://chat.whatsapp.com/",
-    "joinWhatsapp": "Join WhatsApp Group"
+    "joinWhatsapp": "Join WhatsApp Group",
+    "scanTitle": "Ticket",
+    "scanValid": "Valid ticket",
+    "scanPending": "Seat reserved — not yet confirmed",
+    "scanCancelled": "Cancelled — not valid",
+    "scanRejected": "Declined — not valid",
+    "scanUnpaid": "Payment still owed",
+    "scanPaid": "Paid",
+    "scanHolder": "Ticket holder",
+    "scanSeats": "Seats",
+    "scanNotFound": "No ticket with this code",
+    "scanNotFoundHelp": "Check the code printed under the QR. A ticket cancelled long ago may also have been removed.",
+    "scanAtDoor": "Show this screen at the door."
   },
   "notes": {
     "new": "New note",

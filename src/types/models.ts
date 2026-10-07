@@ -505,6 +505,37 @@ export interface EventParticipant {
 }
 
 /** One person's booking. Lives in its own collection; see supportService. */
+/**
+ * What a stranger with a camera may learn from a ticket.
+ *
+ * The QR on a ticket used to carry the six-character code and nothing else, so
+ * scanning it produced the string "A7K3PQ" - true, useless, and identical in
+ * appearance to a scan that had failed. It now carries a link to a page, and
+ * this is the document that page reads.
+ *
+ * WHAT IS IN IT is decided by who can read it, which is anybody holding the
+ * ticket: the event, the date, the door the ticket is for, how many seats, and
+ * whether it is valid. The holder is named only as a first name and an initial
+ * - enough for a steward to match the person in front of them, not enough to
+ * be a directory of who is attending. No mobile number, no email, no amount
+ * paid, no participant list. A document is granted whole or not at all, so
+ * anything a stranger may read has to be a document holding only that.
+ */
+export interface PublicTicket extends BaseDoc {
+  /** The printed code, which is also this document's id. */
+  code: string;
+  registrationId: string;
+  eventTitle: string;
+  date?: string | null;
+  startTime?: string | null;
+  venue?: string | null;
+  /** "Mohamed R." */
+  holder: string;
+  seats: number;
+  status: BookingStatus;
+  paid?: boolean;
+}
+
 export interface EventRegistration extends BaseDoc {
   eventId: string;
   eventTitle: string;

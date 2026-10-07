@@ -99,7 +99,12 @@ export function TicketSheet({
               the printed code stays exactly as prominent as it was. */}
           <View style={styles.qrFrame}>
             <QRCode
-              value={code}
+              // A LINK, not the bare code. Scanned with any phone camera this
+              // opens the ticket's own page - the event, the date, the door,
+              // the seats and whether it is valid. The code alone produced the
+              // string "A7K3PQ", which tells a steward nothing and looks
+              // exactly like a scan that failed.
+              value={bookings.ticketUrl(code)}
               size={QR_SIZE}
               // Black on white, not the brand colours. This is read by a
               // camera in whatever light the doorway has, and contrast is the

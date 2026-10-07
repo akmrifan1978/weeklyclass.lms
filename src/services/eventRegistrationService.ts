@@ -1,7 +1,7 @@
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 
 import { db } from '@/firebase/config';
-import { COLLECTIONS } from '@/constants/app';
+import { COLLECTIONS, PUBLIC_SITE_URL } from '@/constants/app';
 import { AppError } from '@/utils/errors';
 import type {
   AgeGroup,
@@ -10,9 +10,10 @@ import type {
   EventParticipant,
   EventRegistration,
   EventRegistrationSettings,
+  PublicTicket,
 } from '@/types';
 
-import { forgetCollection, listPage, updateDocById, type Page } from './firestore';
+import { forgetCollection, getById, listPage, setDocById, updateDocById, type Page } from './firestore';
 
 /**
  * Seats change inside transactions, which do not pass through the write helpers
@@ -261,6 +262,7 @@ export async function book(
     }
   });
   forgetBookings();
+  await refreshPublicTicket(registrationId);
 
   await audit
     .log({
@@ -330,6 +332,7 @@ export async function confirmBooking(
     tx.update(eventRef, { registeredCount: taken + registration.seats });
   });
   forgetBookings();
+  await refreshPublicTicket(registration.id);
 
   // The ticket is worthless if nobody knows it exists. Best effort: a
   // notification that fails to send must not undo a confirmation that already
@@ -394,6 +397,7 @@ export async function cancel(
     }
   });
   forgetBookings();
+  await refreshPublicTicket(registration.id);
 
   // Only when somebody else cancelled it. A person who cancels their own
   // booking does not need to be told they did.
@@ -482,6 +486,80 @@ async function notify(
   }
 }
 
+/**
+ * Where a scanned ticket leads.
+ *
+ * The origin is taken from the page the ticket was opened on, so a ticket
+ * shown from the live site links to the live site and one shown from a test
+ * build links to that. Native has no such page, and falls back to the address
+ * the app is published at.
+ */
+export function ticketUrl(code: string): string {
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : PUBLIC_SITE_URL;
+  return `${origin}/ticket/${code}`;
+}
+
+/** "Mohamed Rifan" -> "Mohamed R." Enough to match a face, not a directory. */
+function holderName(fullName: string): string {
+  const parts = String(fullName ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
+
+/**
+ * Publishes the thin copy a scan reads, and keeps it true.
+ *
+ * Called after every change that alters what the door should be told:
+ * booking, confirming, cancelling, declining, and marking paid. Best effort -
+ * a booking that saved but whose public copy did not is a ticket that still
+ * works at the door by its printed code, and rolling the booking back over it
+ * would be the worse outcome by a wide margin.
+ */
+export async function syncPublicTicket(registration: EventRegistration): Promise<void> {
+  const event = await getById<CalendarEvent>(
+    COLLECTIONS.calendarEvents,
+    registration.eventId
+  ).catch(() => null);
+
+  await setDocById(
+    COLLECTIONS.publicTickets,
+    ticketCode(registration.id),
+    {
+      code: ticketCode(registration.id),
+      registrationId: registration.id,
+      eventTitle: registration.eventTitle,
+      date: event?.date ?? null,
+      startTime: event?.startTime ?? null,
+      venue: event?.venue ?? event?.location ?? null,
+      holder: holderName(registration.userName),
+      seats: registration.seats,
+      status: registration.status,
+      paid: registration.paid === true,
+    },
+    { actorId: registration.userId }
+  ).catch((error: unknown) => {
+    console.warn('[WeeklyClass] booking saved, but its public ticket did not:', error);
+  });
+}
+
+/** Re-reads a booking and republishes its public copy. */
+async function refreshPublicTicket(registrationId: string): Promise<void> {
+  const row = await getById<EventRegistration>(
+    COLLECTIONS.eventRegistrations,
+    registrationId
+  ).catch(() => null);
+  if (row) await syncPublicTicket(row);
+}
+
+/** What a scanned ticket shows. Readable by anybody holding the code. */
+export function publicTicket(code: string): Promise<PublicTicket | null> {
+  return getById<PublicTicket>(COLLECTIONS.publicTickets, String(code ?? '').toUpperCase());
+}
+
 /** Marks a booking as paid. Admin bookkeeping, not a payment gateway. */
 export async function setPaid(
   registration: EventRegistration,
@@ -493,6 +571,7 @@ export async function setPaid(
     registration.id,
     { paid }
   );
+  await refreshPublicTicket(registration.id);
   void audit.log({
     actor,
     action: 'UPDATE',
