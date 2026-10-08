@@ -655,6 +655,48 @@ async function run() {
   initializeApp({ credential: cert(require(keyPath)) });
   const db = getFirestore();
 
+  /**
+   * Once a day, catch anything written without `pushedAt`.
+   *
+   * The main query below asks for notifications whose `pushedAt` is null, and
+   * a document that lacks the field entirely is invisible to it - which is
+   * exactly how Q&A notifications stopped reaching phones without anything
+   * appearing to be wrong. Every writer in the app sets the field now, but
+   * "every writer remembers" is not a property a system should rely on.
+   *
+   * So once a day the newest twenty-five are read and any missing the field
+   * are given it: null when recent enough to still be worth delivering, so the
+   * next pass picks them up, and a timestamp when they are not, so they are
+   * never reconsidered. Twenty-five reads a day against the fifty thousand the
+   * free plan allows.
+   */
+  const sweepForMissingMarker = async () => {
+    const recent = await db
+      .collection('notifications')
+      .where('deleted', '==', false)
+      .where('status', '==', 'sent')
+      .orderBy('createdAt', 'desc')
+      .limit(25)
+      .get();
+
+    const cutoff = Date.now() - MAX_AGE_HOURS * 60 * 60 * 1000;
+    let repaired = 0;
+    for (const doc of recent.docs) {
+      const data = doc.data();
+      if ('pushedAt' in data) continue;
+      const created = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null;
+      const deliverable = created && created.getTime() >= cutoff;
+      await doc.ref.update(
+        deliverable
+          ? { pushedAt: null }
+          : { pushedAt: new Date(), pushReport: { skipped: 'no marker, too old' } }
+      );
+      repaired += 1;
+      console.log(`  repaired a notification with no pushedAt marker (${deliverable ? 'will be sent' : 'too old to send'})`);
+    }
+    if (repaired === 0) console.log('  no notifications were missing their marker');
+  };
+
   const pass = async () => {
     // Anything sent and not yet pushed. `pushedAt` is the marker, so a
     // notification is never delivered twice however often this runs.
@@ -705,6 +747,16 @@ async function run() {
 
   // Two jobs, one loop, one thing to keep running.
   const everyPass = async () => {
+    // Once a day, in the small hours, and never twice: the sweep costs
+    // twenty-five reads and exists only to catch a writer that forgot the
+    // marker. Running it every pass would spend those reads ninety-six times
+    // over for an answer that is almost always "nothing to repair".
+    if (new Date().getUTCHours() === 3) {
+      await sweepForMissingMarker().catch((error) =>
+        console.warn('  ! marker sweep failed:', error.message)
+      );
+    }
+
     const pushed = await pass();
     await mintResetLinks(getAuth(), db).catch((error) =>
       console.warn('  ! reset pass failed:', error.message)
