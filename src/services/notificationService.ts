@@ -174,9 +174,18 @@ export async function send(input: SendInput, actor: AppUser): Promise<SendOutcom
       body: record.message,
       data: { notificationId: id, route: record.route },
     });
+    /*
+     * "No registered devices to push to" was a lie, and a discouraging one.
+     *
+     * This line only knows about Expo tokens, which the native app registers.
+     * Everybody here is on the web app, whose subscriptions are held where no
+     * browser may read them and are sent by the delivery service a moment
+     * later. So an admin who had just reached five phones was told there were
+     * no devices, and reasonably concluded the notification had gone nowhere.
+     */
     note =
       push.attempted === 0
-        ? `Delivered in-app to ${recipients.length} user(s). No registered devices to push to.`
+        ? `Delivered in-app to ${recipients.length} user(s). Phone alerts go out with the next delivery run.`
         : `Delivered in-app to ${recipients.length} user(s); pushed to ${push.accepted}/${push.attempted} device(s).`;
   }
 
