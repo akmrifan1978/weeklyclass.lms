@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { PublicPage } from '@/components/public/PublicPage';
 import { ListState, PublicCard, SignInPrompt } from '@/components/public/PublicControls';
 import { useAsync } from '@/hooks/useAsync';
+import { socialUrl } from '@/utils/socialLinks';
 import { getSettings } from '@/services/settingsService';
 import { brand, colors, fontSize, fontWeight, radius, spacing, TOUCH_TARGET } from '@/constants/theme';
 import { tone } from '@/components/public/tone';
@@ -49,37 +50,44 @@ export default function PublicContact() {
         icon: 'logo-whatsapp' as const,
         label: 'WhatsApp',
         value: social.whatsapp,
-        url: social.whatsapp ?? null,
+        url: socialUrl('whatsapp', social.whatsapp),
       },
       {
         key: 'website',
         icon: 'globe-outline' as const,
         label: t('public.contact.website'),
         value: social.website,
-        url: social.website ?? null,
+        url: socialUrl('website', social.website),
       },
       {
         key: 'youtube',
         icon: 'logo-youtube' as const,
         label: 'YouTube',
         value: social.youtube,
-        url: social.youtube ?? null,
+        url: socialUrl('youtube', social.youtube),
       },
       {
         key: 'facebook',
         icon: 'logo-facebook' as const,
         label: 'Facebook',
         value: social.facebook,
-        url: social.facebook ?? null,
+        url: socialUrl('facebook', social.facebook),
       },
       {
         key: 'instagram',
         icon: 'logo-instagram' as const,
         label: 'Instagram',
         value: social.instagram,
-        url: social.instagram ?? null,
+        url: socialUrl('instagram', social.instagram),
       },
-    ].filter((channel) => Boolean(channel.value?.trim()));
+      /*
+       * A row needs an address, not just a value. The Facebook field once held
+       * a page NAME, which has no address - and a row with no address opened
+       * the app's own site with the name as a path, reporting that the page
+       * could not be found. Better absent than wrong: the settings screen is
+       * where that gets corrected, and it now says so.
+       */
+    ].filter((channel) => Boolean(channel.value?.trim()) && Boolean(channel.url));
   }, [settings, t]);
 
   /**

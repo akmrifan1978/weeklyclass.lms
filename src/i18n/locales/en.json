@@ -876,7 +876,9 @@
     "autoApproveHelp": "ON: a new student registration is approved at once and can sign in straight away. OFF: it stays Pending until an admin approves it. A teacher who registers always waits for an admin, either way.",
     "scholarAccount": "Account to notify",
     "scholarAccountPick": "Choose a teacher or admin",
-    "scholarNotLinked": "Not linked to an account yet — nobody is notified about questions for this Mowlavi."
+    "scholarNotLinked": "Not linked to an account yet — nobody is notified about questions for this Mowlavi.",
+    "socialHint": "Paste the full link, e.g. https://facebook.com/yourpage. A page name is not a link.",
+    "socialNotALink": "This is not a link. Open the page, copy the address from the browser, and paste it here."
   },
   "confirm": {
     "deleteTitle": "Delete this record?",
