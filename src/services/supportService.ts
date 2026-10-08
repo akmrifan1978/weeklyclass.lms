@@ -377,6 +377,21 @@ async function notifyOnce(
       sentAt: new Date(),
       status: 'sent',
       readBy: [],
+      /*
+       * WITHOUT THIS, NOTHING REACHES A PHONE.
+       *
+       * The delivery run asks for notifications whose `pushedAt` is null,
+       * which is how a quiet pass costs one read instead of twenty-five. A
+       * document that has no such field is not matched by that question - in
+       * Firestore, `== null` finds a field that is present and null, not one
+       * that is absent - so a Q&A notification written here went into the
+       * Notification Centre and never to anybody's phone. A Mowlavi answered a
+       * question on 4 October and the student's phone stayed silent.
+       *
+       * Every writer of a notification owes this field. There are two: the one
+       * in notificationService, and this one.
+       */
+      pushedAt: null,
       questionId: input.questionId,
     },
     { actorId: actor.uid },
