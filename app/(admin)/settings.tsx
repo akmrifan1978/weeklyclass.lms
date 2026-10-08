@@ -11,6 +11,7 @@ import { DEFAULT_SETTINGS, ISLAMIC_FEATURES } from '@/constants/app';
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { useAsync } from '@/hooks/useAsync';
 import { friendlyMessage } from '@/utils/errors';
+import { isUnusableSocial } from '@/utils/socialLinks';
 import { getSettings, updateSettings } from '@/services/settingsService';
 import {
   askEveryoneToEnableNotifications,
@@ -286,6 +287,10 @@ function SettingsScreen() {
             onChangeText={(v) => setSocial('youtube', v)}
             icon="logo-youtube"
             autoCapitalize="none"
+            hint={t('settings.socialHint')}
+            error={
+              isUnusableSocial('youtube', form.social.youtube) ? 'settings.socialNotALink' : undefined
+            }
           />
           <TextField
             label="Facebook"
@@ -293,6 +298,10 @@ function SettingsScreen() {
             onChangeText={(v) => setSocial('facebook', v)}
             icon="logo-facebook"
             autoCapitalize="none"
+            hint={t('settings.socialHint')}
+            error={
+              isUnusableSocial('facebook', form.social.facebook) ? 'settings.socialNotALink' : undefined
+            }
           />
           <TextField
             label="Instagram"
@@ -300,6 +309,10 @@ function SettingsScreen() {
             onChangeText={(v) => setSocial('instagram', v)}
             icon="logo-instagram"
             autoCapitalize="none"
+            hint={t('settings.socialHint')}
+            error={
+              isUnusableSocial('instagram', form.social.instagram) ? 'settings.socialNotALink' : undefined
+            }
           />
           <TextField
             label="WhatsApp"
