@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 
 import { clearQueryCache } from '@/services/firestore';
 import type { Cursor, Page } from '@/services/firestore';
@@ -75,6 +76,8 @@ export function useAsync<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, enabled]);
 
+  useRefreshOnReturn(() => void run(true));
+
   return {
     data,
     loading,
@@ -84,6 +87,39 @@ export function useAsync<T>(
     refresh: () => run(true),
     setData,
   };
+}
+
+/**
+ * COMING BACK TO A SCREEN SHOWS WHAT IS THERE NOW.
+ *
+ * A screen in a stack is not unmounted when you move off it, so returning to
+ * it ran no query at all: the list you were shown could be an hour old, and the
+ * student who registered in the meantime was simply absent. The report was
+ * "students are supposed to update automatically", and it was right.
+ *
+ * So returning to a screen reloads it - but only after half a minute away,
+ * because stepping into a record and straight back out is the commonest
+ * movement in the app and should not cost a round trip every time. The reload
+ * goes through the refresh path, which clears the query cache first, so what
+ * comes back is the server's answer and not the one from a moment ago.
+ */
+const REFRESH_AFTER_MS = 30_000;
+
+function useRefreshOnReturn(reload: () => void): void {
+  const left = useRef<number | null>(null);
+  const reloadRef = useRef(reload);
+  reloadRef.current = reload;
+
+  useFocusEffect(
+    useCallback(() => {
+      const away = left.current;
+      if (away !== null && Date.now() - away >= REFRESH_AFTER_MS) reloadRef.current();
+      left.current = null;
+      return () => {
+        left.current = Date.now();
+      };
+    }, [])
+  );
 }
 
 export interface PaginatedState<T> {
@@ -184,6 +220,13 @@ export function usePaginated<T extends { id: string }>(
     void loadFirst(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, enabled]);
+
+  // As above: a list you walk back to shows what is there now, not what was
+  // there when you first opened it.
+  useRefreshOnReturn(() => {
+    cursor.current = null;
+    void loadFirst(true);
+  });
 
   return {
     items,

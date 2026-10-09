@@ -6,7 +6,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { colors, spacing } from '@/constants/theme';
 import { useAsync, usePaginated } from '@/hooks/useAsync';
 import { listClasses } from '@/services/orgService';
-import { listQuizzes, listResults, summariseResults } from '@/services/quizService';
+import {
+  completionFor,
+  listQuizzes,
+  listResults,
+  summariseResults,
+} from '@/services/quizService';
 import { ResultRow } from '@/components/shared/ContentCards';
 import type { Cursor } from '@/services/firestore';
 import {
@@ -71,6 +76,21 @@ export function ResultsManager({ classScope }: { classScope?: string[] }) {
   const list = usePaginated(fetchPage, [classId, quizId]);
   const summary = summariseResults(list.items);
 
+  /**
+   * "Twelve of forty have finished this."
+   *
+   * Only once an assignment is chosen, because out of how many is a question
+   * about one assignment and one class group - across every assignment at once
+   * it would be a number with no meaning. The class comes from the assignment
+   * already loaded above, so this is two counts and no extra lookup.
+   */
+  const chosen = (refs?.quizzes ?? []).find((quiz) => quiz.id === quizId) ?? null;
+  const loadCompletion = useCallback(
+    () => (chosen ? completionFor(chosen.id, chosen.classId) : Promise.resolve(null)),
+    [chosen]
+  );
+  const { data: completion } = useAsync(loadCompletion, [quizId, chosen?.classId]);
+
   return (
     <Screen refreshing={list.refreshing} onRefresh={list.refresh} edges={['bottom']}>
       <Text style={styles.title} accessibilityRole="header">
@@ -119,12 +139,23 @@ export function ResultsManager({ classScope }: { classScope?: string[] }) {
           icon="checkmark-circle-outline"
           accent={colors.success}
         />
-        <StatCard
-          label={t('common.showing', { count: summary.count, total: summary.count })}
-          value={summary.count}
-          icon="list-outline"
-          accent={colors.slate}
-        />
+        {/* With an assignment chosen this answers "how many have done it?";
+            without one there is no "out of", so it stays as it was. */}
+        {completion ? (
+          <StatCard
+            label={t('result.completedLabel')}
+            value={`${completion.completed}/${completion.students}`}
+            icon="people-outline"
+            accent={colors.success}
+          />
+        ) : (
+          <StatCard
+            label={t('common.showing', { count: summary.count, total: summary.count })}
+            value={summary.count}
+            icon="list-outline"
+            accent={colors.slate}
+          />
+        )}
       </Grid>
 
       <Spacer />

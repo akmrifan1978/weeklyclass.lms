@@ -764,6 +764,39 @@ export function listResults(options: {
   });
 }
 
+export interface Completion {
+  /** Students who have finished it. */
+  completed: number;
+  /** Students it was given to - the class group it belongs to. */
+  students: number;
+}
+
+/**
+ * How many have finished an assignment, out of how many were given it.
+ *
+ * The results screen could already be filtered to one assignment, but the
+ * number beside it counted the rows on screen - twenty-five at a time - so an
+ * assignment finished by forty people reported twenty-five, and one finished
+ * by nobody reported nothing at all rather than "none of forty". Two
+ * aggregations, which Firestore answers without sending a single result.
+ *
+ * `classId` comes from the assignment the caller already has in hand, so this
+ * costs nothing to look up.
+ */
+export async function completionFor(quizId: string, classId?: string | null): Promise<Completion> {
+  const [completed, students] = await Promise.all([
+    countWhere(COLLECTIONS.results, [['quizId', '==', quizId]]),
+    classId
+      ? countWhere(COLLECTIONS.users, [
+          ['role', '==', 'student'],
+          ['classId', '==', classId],
+          ['status', '==', 'active'],
+        ])
+      : Promise.resolve(0),
+  ]);
+  return { completed, students };
+}
+
 export function getResult(id: string): Promise<Result | null> {
   return getById<Result>(COLLECTIONS.results, id);
 }
