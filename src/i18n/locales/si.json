@@ -603,7 +603,8 @@
     "bestScore": "හොඳම ලකුණු",
     "reviewAnswers": "පිළිතුරු සමාලෝචනය",
     "yourAnswer": "ඔබේ පිළිතුර",
-    "correctAnswer": "නිවැරදි පිළිතුර"
+    "correctAnswer": "නිවැරදි පිළිතුර",
+    "completedLabel": "අවසන් කළ සිසුන්"
   },
   "notification": {
     "title": "දැනුම්දීම්",

@@ -603,7 +603,8 @@
     "bestScore": "Best score",
     "reviewAnswers": "Review answers",
     "yourAnswer": "Your answer",
-    "correctAnswer": "Correct answer"
+    "correctAnswer": "Correct answer",
+    "completedLabel": "Students finished"
   },
   "notification": {
     "title": "Notifications",

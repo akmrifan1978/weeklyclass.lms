@@ -603,7 +603,8 @@
     "bestScore": "أفضل درجة",
     "reviewAnswers": "مراجعة الإجابات",
     "yourAnswer": "إجابتك",
-    "correctAnswer": "الإجابة الصحيحة"
+    "correctAnswer": "الإجابة الصحيحة",
+    "completedLabel": "الطلاب الذين أنهوه"
   },
   "notification": {
     "title": "الإشعارات",
