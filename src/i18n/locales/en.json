@@ -1611,7 +1611,8 @@
     "audioAttached": "Audio attached",
     "videoAttached": "Video attached",
     "image": "Image",
-    "imageHint": "One image for this khutbah or bayan. Choosing another replaces it."
+    "imageHint": "One image for this khutbah or bayan. Choosing another replaces it.",
+    "deleteConfirm": "Delete this khutbah? The recording, the translation and the record of who gave it all go. This cannot be undone."
   },
   "push": {
     "section": "Notifications on this device",

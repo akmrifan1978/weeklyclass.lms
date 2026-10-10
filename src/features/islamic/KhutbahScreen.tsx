@@ -23,6 +23,7 @@ import {
   ChipGroup,
   DateField,
   EmptyState,
+  ConfirmDialog,
   FormSheet,
   Screen,
   SearchField,
@@ -78,6 +79,20 @@ export function KhutbahScreen() {
         .filter((entry) => matchesSearch(term, entry.title, entry.speaker, entry.venue)),
     [data, kind, term]
   );
+
+  const [confirmDelete, setConfirmDelete] = useState<KhutbahEntry | null>(null);
+
+  const removeEntry = async (entry: KhutbahEntry) => {
+    if (!user) return;
+    setConfirmDelete(null);
+    try {
+      await khutbahs.deleteKhutbah(entry.id, user);
+      toast.success(t('common.success'));
+      await reload();
+    } catch (error) {
+      toast.error(friendlyMessage(error, t));
+    }
+  };
 
   const startEdit = (entry: KhutbahEntry | null) => {
     setEditing(entry);
@@ -353,16 +368,36 @@ export function KhutbahScreen() {
                     </View>
                   ) : null}
 
-                  {canEdit ? (
-                    <Pressable
-                      onPress={() => startEdit(entry)}
-                      accessibilityRole="button"
-                      style={styles.editRow}
-                    >
-                      <Ionicons name="create-outline" size={14} color={colors.primary} />
-                      <Text style={styles.editText}>{t('common.edit')}</Text>
-                    </Pressable>
-                  ) : null}
+                  <View style={styles.adminRow}>
+                    {canEdit ? (
+                      <Pressable
+                        onPress={() => startEdit(entry)}
+                        accessibilityRole="button"
+                        style={styles.editRow}
+                      >
+                        <Ionicons name="create-outline" size={14} color={colors.primary} />
+                        <Text style={styles.editText}>{t('common.edit')}</Text>
+                      </Pressable>
+                    ) : null}
+
+                    {/* Removing one is an admin's alone, which is what the
+                        security rules have always said - the button simply did
+                        not exist, so the rule described something nobody could
+                        do. Asked about first: a khutbah is a record of a sermon
+                        that was given, and there is no undo. */}
+                    {user?.role === 'admin' ? (
+                      <Pressable
+                        onPress={() => setConfirmDelete(entry)}
+                        accessibilityRole="button"
+                        style={styles.editRow}
+                      >
+                        <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                        <Text style={[styles.editText, styles.deleteText]}>
+                          {t('common.delete')}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
                 </View>
               ) : null}
             </Card>
@@ -371,6 +406,16 @@ export function KhutbahScreen() {
 
         <Spacer size={spacing.xxl} />
       </Screen>
+
+      <ConfirmDialog
+        visible={Boolean(confirmDelete)}
+        title={t('common.delete')}
+        message={t('khutbah.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        destructive
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => confirmDelete && void removeEntry(confirmDelete)}
+      />
 
       <FormSheet
         visible={sheetOpen}
@@ -589,6 +634,8 @@ const styles = StyleSheet.create({
   textRtl: { textAlign: 'right', writingDirection: 'rtl', fontSize: fontSize.md, lineHeight: 32 },
   noTranslation: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
   editRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.lg },
+  adminRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.md },
+  deleteText: { color: colors.danger },
   editText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
   editorHint: {
     fontSize: fontSize.xs,
