@@ -18,7 +18,10 @@ import { Button } from '@/components/ui';
  */
 function isDirectMedia(url: string): boolean {
   if (/\/video\/upload\//.test(url) && url.includes('res.cloudinary.com')) return true;
-  return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url);
+  // Sound as well as pictures. A khutbah is usually a recording of somebody
+  // speaking, and a link to an mp3 was being treated as something that could
+  // not be played - which sent a listener out to a browser tab to hear it.
+  return /\.(mp4|webm|ogg|mov|m4v|mp3|m4a|aac|wav|oga|opus|3gp)(\?|#|$)/i.test(url);
 }
 
 /**

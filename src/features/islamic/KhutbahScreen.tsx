@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -19,7 +19,6 @@ import { ImageField } from '@/components/shared/ImageField';
 import type { ContentStatus, KhutbahEntry, KhutbahKind, LanguageCode } from '@/types';
 import {
   AppHeader,
-  Button,
   Card,
   ChipGroup,
   DateField,
@@ -305,15 +304,22 @@ export function KhutbahScreen() {
                     </View>
                   ) : null}
 
+                  {/*
+                    A pasted link plays here too, rather than sending somebody
+                    to YouTube.
+
+                    It was a button that left the app, which for a khutbah is
+                    the wrong way round: the recording is the point of the
+                    page, and the translation beneath it is what somebody reads
+                    while it plays. The player handles all three cases itself -
+                    YouTube and Vimeo as an embed, a sound or video file in
+                    place, and anything it genuinely cannot play (a Drive page,
+                    say) still offers to open it.
+                  */}
                   {entry.audioUrl ? (
-                    <Button
-                      label={t('khutbah.listen')}
-                      icon="play-circle-outline"
-                      variant="outline"
-                      size="sm"
-                      onPress={() => Linking.openURL(entry.audioUrl!).catch(() => undefined)}
-                      style={{ marginTop: spacing.md, alignSelf: 'flex-start' }}
-                    />
+                    <View style={{ marginTop: spacing.md }}>
+                      <VideoPlayer url={entry.audioUrl} title={entry.title} />
+                    </View>
                   ) : null}
 
                   {canEdit ? (
