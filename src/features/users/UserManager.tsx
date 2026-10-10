@@ -34,7 +34,11 @@ import {
   watchPending,
   type PasswordResetRequest,
 } from '@/services/passwordResetService';
-import { canSetPassword, setPassword } from '@/services/passwordChangeService';
+import {
+  canSetPassword,
+  pendingPasswordChange,
+  setPassword,
+} from '@/services/passwordChangeService';
 import type { AppUser, Branch, ClassRoom, Country, LanguageCode, UserRole, UserStatus } from '@/types';
 import {
   PhoneField,
@@ -117,6 +121,18 @@ export function UserManager({
     return watchPending(setResets, () => setResets([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Whether a password this admin set is still waiting to be applied.
+   *
+   * Read when a person's card is opened, which is the moment somebody is about
+   * to tell a student their new password. One document, and only then.
+   */
+  const loadPending = useCallback(
+    () => (selected ? pendingPasswordChange(selected.uid) : Promise.resolve(null)),
+    [selected]
+  );
+  const { data: pendingPassword } = useAsync(loadPending, [selected?.uid]);
 
   const [confirm, setConfirm] = useState<{ user: AppUser; action: 'delete' | 'deactivate' } | null>(
     null
@@ -451,8 +467,14 @@ export function UserManager({
                   password is not stored anywhere anybody can read it back. */}
               <DetailRow
                 label={t('auth.password')}
-                value={t('admin.passwordManaged')}
-                icon="lock-closed-outline"
+                value={
+                  pendingPassword
+                    ? t('auth.passwordPending', {
+                        time: formatDateTime(pendingPassword, language),
+                      })
+                    : t('admin.passwordManaged')
+                }
+                icon={pendingPassword ? 'time-outline' : 'lock-closed-outline'}
               />
               <Divider />
               <DetailRow
