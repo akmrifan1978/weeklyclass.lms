@@ -1,6 +1,14 @@
 import { Platform } from 'react-native';
-import { serverTimestamp } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  limit,
+  query,
+  serverTimestamp,
+  where,
+} from 'firebase/firestore';
 
+import { db } from '@/firebase/config';
 import { COLLECTIONS } from '@/constants/app';
 import { AppError } from '@/utils/errors';
 import type { AppUser } from '@/types';
@@ -79,6 +87,35 @@ async function seal(password: string): Promise<string> {
  * Queues a password change. Returns once the request is written, not once it
  * has been applied — the applying happens on another machine within a minute.
  */
+/**
+ * A password an admin set that has not been applied yet.
+ *
+ * Setting a password cannot take effect in the app: changing somebody else's
+ * password needs the Admin SDK, which only the delivery service has. The app
+ * seals the new password and queues it, and the service applies it on its next
+ * run - seconds when the service on the office machine is running, and as long
+ * as a few hours when only GitHub's scheduler is, because it skips most of the
+ * fifteen-minute slots it is asked for.
+ *
+ * Until then the OLD password is the one that works. An admin who tells a
+ * student their new password in that gap gets "incorrect login details" and no
+ * way to know why - which is what happened to one account on 10 October, and
+ * the reason this is now shown on the card.
+ */
+export async function pendingPasswordChange(uid: string): Promise<Date | null> {
+  const snap = await getDocs(
+    query(
+      collection(db, COLLECTIONS.passwordChanges),
+      where('uid', '==', uid),
+      where('status', '==', 'pending'),
+      limit(1)
+    )
+  );
+  const row = snap.docs[0]?.data();
+  const at = row?.requestedAt ?? row?.createdAt;
+  return at?.toDate ? at.toDate() : null;
+}
+
 export async function setPassword(
   target: AppUser,
   password: string,

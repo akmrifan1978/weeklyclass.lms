@@ -175,14 +175,15 @@
     "resetLinkReady": "Give this link to the person. It can be used once, and their old password stops working as soon as they use it.",
     "newPasswordOptional": "New password (optional)",
     "newPasswordOptionalHint": "Leave blank to keep the current password. Setting one replaces it within a minute — and means you know it, so prefer a reset link where you can.",
-    "passwordQueued": "Saved. The new password takes effect within a minute.",
+    "passwordQueued": "Saved, but not active yet. The student keeps their old password until the delivery service applies this one — minutes if it is running, longer if it is not.",
     "setPasswordUnavailable": "This device cannot set a password securely. Use a desktop browser, or create a reset link instead.",
     "mobileHasUnfinishedAccount": "An unfinished account already exists for this mobile number. Use the same password you chose before, or sign in instead.",
     "guestLogin": "Guest Login",
     "registrationInProgress": "Your registration is already being sent. Please wait a moment.",
     "usernameRule": "10 digits, no country code — for example 0544170199.",
     "accountBlocked": "Your account has been blocked. Please contact your administrator.",
-    "classAutoPicked": "Chosen from your age and gender. Change it if it is not right."
+    "classAutoPicked": "Chosen from your age and gender. Change it if it is not right.",
+    "passwordPending": "New password set {{time}} — waiting to be applied. The old one still works."
   },
   "validation": {
     "identifierRequired": "Enter your email or username",
