@@ -207,7 +207,10 @@ export function KhutbahScreen() {
                   <Text style={styles.title} numberOfLines={2}>
                     {entry.title}
                   </Text>
-                  <Text style={styles.meta} numberOfLines={1}>
+                  {/* Two lines, not one. On a phone a single line fitted the
+                      kind and the date and then cut the speaker's name in
+                      half, which is the part worth reading. */}
+                  <Text style={styles.meta} numberOfLines={2}>
                     {[
                       t(`khutbah.kind_${entry.kind}`),
                       formatShortDate(entry.date),
@@ -239,6 +242,34 @@ export function KhutbahScreen() {
 
               {expanded ? (
                 <View style={styles.body}>
+                  {/*
+                    WHO GAVE IT, WHERE, AND WHEN - said in full.
+
+                    All three were being collected and only the title was
+                    reliably shown: the venue appeared nowhere at all, and the
+                    speaker sat at the end of a one-line summary that a phone
+                    truncated. For a khutbah those three facts are most of the
+                    record, and somebody listening wants them beside the
+                    recording rather than in a list above it.
+                  */}
+                  <View style={styles.facts}>
+                    <View style={styles.fact}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.factText}>{formatShortDate(entry.date)}</Text>
+                    </View>
+                    {entry.speaker ? (
+                      <View style={styles.fact}>
+                        <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                        <Text style={styles.factText}>{entry.speaker}</Text>
+                      </View>
+                    ) : null}
+                    {entry.venue ? (
+                      <View style={styles.fact}>
+                        <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                        <Text style={styles.factText}>{entry.venue}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                   {/* Which language you are reading, and every one on offer.
                       Shown even with a single translation, so nobody has to
                       wonder whether there is another. */}
@@ -527,6 +558,9 @@ const styles = StyleSheet.create({
   kindDotJumuah: { backgroundColor: colors.infoSoft },
   title: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.text },
   meta: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  facts: { gap: 6, marginBottom: spacing.md },
+  fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  factText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
   draft: { fontSize: 10, color: colors.warning, fontWeight: fontWeight.bold, marginTop: 2 },
   body: {
     borderTopWidth: StyleSheet.hairlineWidth,
