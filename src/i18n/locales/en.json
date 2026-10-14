@@ -1032,7 +1032,6 @@
     "categoryMadd": "Madd - lengthening",
     "categoryOther": "Other rules",
     "izhar": "The noon is pronounced clearly, with no nasalisation, when one of the six throat letters follows.",
-    "idgham": "The noon merges into the following letter. With ya, noon, meem and waw it is merged with nasalisation; with lam and ra, without.",
     "iqlab": "The noon becomes a meem before ba, pronounced with nasalisation and the lips together.",
     "ikhfa": "The noon is hidden - neither clear nor fully merged - and held with nasalisation for about two counts.",
     "idghamShafawi": "A meem sakinah followed by another meem merges into it, held with nasalisation.",
@@ -1042,10 +1041,13 @@
     "maddMuttasil": "A madd letter followed by a hamza in the same word. Held four or five counts, and obligatory.",
     "maddMunfasil": "A madd letter at the end of a word followed by a hamza at the start of the next. Held four or five counts.",
     "maddLazim": "A madd letter followed by a sukoon or a doubled letter. Held six counts.",
-    "qalqalah": "An echoing bounce on these five letters when they carry a sukoon. Strongest at the end of a verse.",
+    "qalqalah": "A light echoing bounce on these five letters when they carry a sukoon inside a word.",
     "ghunnah": "A nasal sound held for about two counts on a doubled noon or meem.",
     "lamShamsiyyah": "The lam of \"al-\" is not pronounced; the following letter is doubled instead.",
-    "lamQamariyyah": "The lam of \"al-\" is pronounced clearly before the fourteen moon letters."
+    "lamQamariyyah": "The lam of \"al-\" is pronounced clearly before the fourteen moon letters.",
+    "idghamBighunnah": "The noon merges into the following letter and is held with a nasal sound for about two counts.",
+    "idghamBilaGhunnah": "The noon merges completely into lam or ra, with no nasal sound left behind.",
+    "qalqalahKubra": "The same bounce, stronger, when you stop on a word ending in one of these five letters."
   },
   "zakat": {
     "disclaimer": "A calculation aid, not a religious ruling. The rate and thresholds here are the classical ones, but how some assets are treated differs between scholars - ask someone qualified about your own situation.",
