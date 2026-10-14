@@ -14,6 +14,7 @@ import {
 } from '@/components/public/PublicControls';
 import { VideoPlayer } from '@/components/shared/VideoPlayer';
 import { useAsync } from '@/hooks/useAsync';
+import { useBranding } from '@/hooks/useBranding';
 import { autoThumbnail, listPublicVideos } from '@/services/videoService';
 import { formatShortDate } from '@/utils/date';
 import type { VideoItem } from '@/types';
@@ -105,7 +106,8 @@ function VideoCard({
   onPlay: () => void;
 }) {
   const { t } = useTranslation();
-  const poster = autoThumbnail(video.videoUrl, video.thumbnail);
+  const { defaultThumbnail } = useBranding();
+  const poster = autoThumbnail(video.videoUrl, video.thumbnail) ?? defaultThumbnail;
   const facts = [video.speaker, video.venue].filter(Boolean).join('  ·  ');
 
   return (
