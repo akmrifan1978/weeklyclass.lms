@@ -19,6 +19,7 @@ import { listUsers } from '@/services/userService';
 import { watchAdminUnread } from '@/services/chatService';
 import { QuickAccessTile } from '@/components/shared/ContentCards';
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
+import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
   AsyncBoundary,
@@ -61,6 +62,19 @@ export default function AdminDashboard() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['bottom']}>
+      {/*
+        The flyers, where the person who publishes them can see them.
+
+        They were on the student dashboard, the teacher dashboard and the front
+        page - every screen except the one belonging to the only role allowed to
+        publish a flyer. So an admin put one up and had no way to see it had
+        worked, which reads exactly like a flyer that did not publish.
+
+        Same strip, same rules: it draws nothing at all when no flyer is
+        running, so an ordinary day costs no space here either.
+      */}
+      <FlyerStrip position="dashboard" />
+
       {/* The administrator's one ask, answered with one button. Draws nothing
           unless notifications are off and an admin has asked for them. */}
       <NotificationNudge />
