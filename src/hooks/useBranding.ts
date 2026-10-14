@@ -20,6 +20,14 @@ import type { AppSettings, BannerItem, LogoShape, QaScholar } from '@/types';
 
 export interface Branding {
   logoUrl: string | null;
+  /**
+   * The poster to show for a video that has none of its own.
+   *
+   * The setting existed and only pre-filled the upload form, so a video saved
+   * without a picture showed a grey placeholder for ever after - which is the
+   * one case the setting is named for.
+   */
+  defaultThumbnail: string | null;
   /** Null until an admin picks one, which leaves every logo as it was. */
   logoShape: LogoShape | null;
   bannerItems: BannerItem[];
@@ -29,13 +37,20 @@ export interface Branding {
 function toBranding(settings: AppSettings): Branding {
   return {
     logoUrl: settings.logoUrl?.trim() || null,
+    defaultThumbnail: settings.thumbnailUrl?.trim() || null,
     logoShape: settings.logoShape ?? null,
     bannerItems: usableBannerItems(settings.bannerItems),
     scholars: scholarsFrom(settings),
   };
 }
 
-let current: Branding = { logoUrl: null, logoShape: null, bannerItems: [], scholars: [] };
+let current: Branding = {
+  logoUrl: null,
+  defaultThumbnail: null,
+  logoShape: null,
+  bannerItems: [],
+  scholars: [],
+};
 const listeners = new Set<(value: Branding) => void>();
 let started = false;
 

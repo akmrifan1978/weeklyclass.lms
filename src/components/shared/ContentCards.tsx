@@ -3,6 +3,8 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
+import { useBranding } from '@/hooks/useBranding';
+
 import {
   brand,
   colors,
@@ -109,7 +111,8 @@ export function FeaturedVideoCard({
   locale?: string;
 }) {
   const { t } = useTranslation();
-  const thumbnail = video.thumbnail ?? autoThumbnail(video.videoUrl);
+  const { defaultThumbnail } = useBranding();
+  const thumbnail = video.thumbnail ?? autoThumbnail(video.videoUrl) ?? defaultThumbnail;
 
   return (
     <Card onPress={onPress} padded={false} accessibilityLabel={`${t('video.featured')}: ${video.title}`}>
@@ -189,7 +192,8 @@ export function VideoRow({
   locale?: string;
 }) {
   const { t } = useTranslation();
-  const thumbnail = video.thumbnail ?? autoThumbnail(video.videoUrl);
+  const { defaultThumbnail } = useBranding();
+  const thumbnail = video.thumbnail ?? autoThumbnail(video.videoUrl) ?? defaultThumbnail;
 
   return (
     <Card onPress={onPress} padded={false} accessibilityLabel={video.title}>
