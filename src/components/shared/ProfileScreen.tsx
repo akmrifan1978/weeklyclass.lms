@@ -41,6 +41,7 @@ import {
   TextField,
 } from '@/components/ui';
 import { PushToggle } from '@/components/shared/PushToggle';
+import { UpdateStatus } from '@/components/shared/UpdateStatus';
 
 /**
  * Profile screen for every role. The fields shown adapt to the role, and
@@ -365,6 +366,12 @@ export function ProfileScreen() {
 
         <SectionHeader title={t('push.section')} icon="notifications-outline" />
         <PushToggle />
+
+        {/* Which version this device is running, and a button when it is not
+            the current one. The app updates itself when it returns to the
+            foreground, but that is invisible - and across fifty devices
+            "has this phone got the new version?" needs an answer somewhere. */}
+        <UpdateStatus />
 
         <SectionHeader title={t('profile.preferences')} icon="settings-outline" />
         <Card>
