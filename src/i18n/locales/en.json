@@ -691,7 +691,12 @@
     "changeUsernameHint": "Your password, role, permissions and every record stay exactly as they are. Only the name you sign in with changes.",
     "usernameChanged": "Username changed.",
     "contactEmailHint": "Where the centre writes to you. Not the address you sign in with.",
-    "editElsewhere": "Username, sign-in email and password are changed further down this page."
+    "editElsewhere": "Username, sign-in email and password are changed further down this page.",
+    "versionCurrent": "This device has the latest version",
+    "versionStale": "A newer version is ready",
+    "versionChecking": "Checking for updates…",
+    "versionUnknown": "Version could not be checked",
+    "updateNow": "Update now"
   },
   "admin": {
     "manageUsers": "Manage users",
