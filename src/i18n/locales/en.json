@@ -585,7 +585,8 @@
     "publishAllTitle": "Give this to every class group?",
     "publishAllConfirm": "Every class group that has students gets its own copy of this assignment, published, and its students are notified. Empty groups are skipped, and a group that already has it is left alone.",
     "publishedAll": "Published to {{groups}} class group(s) — {{students}} student(s) can open it.",
-    "publishedAllSkipped": "{{count}} group(s) already had it and were left alone."
+    "publishedAllSkipped": "{{count}} group(s) already had it and were left alone.",
+    "finishedCount": "{{done}}/{{total}} finished"
   },
   "result": {
     "title": "Results",

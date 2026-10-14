@@ -783,6 +783,11 @@ export interface Completion {
  * `classId` comes from the assignment the caller already has in hand, so this
  * costs nothing to look up.
  */
+/** How many have finished one assignment. One aggregation, no documents sent. */
+export function completedCount(quizId: string): Promise<number> {
+  return countWhere(COLLECTIONS.results, [['quizId', '==', quizId]]);
+}
+
 export async function completionFor(quizId: string, classId?: string | null): Promise<Completion> {
   const [completed, students] = await Promise.all([
     countWhere(COLLECTIONS.results, [['quizId', '==', quizId]]),
