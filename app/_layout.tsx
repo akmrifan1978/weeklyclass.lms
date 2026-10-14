@@ -378,8 +378,20 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
       document.addEventListener('visibilitychange', () => void check());
       window.addEventListener('focus', () => void check());
-      // For a device left open on one screen all day.
-      setInterval(() => void check(), 30 * 60 * 1000);
+      // Coming back online is the other moment a device may have missed a
+      // release - the check it tried while offline was swallowed.
+      window.addEventListener('online', () => void check());
+      /*
+       * Every three minutes for a device left open on one screen.
+       *
+       * It was thirty, which is defensible on paper and was not what the centre
+       * experienced: an admin publishes something, looks at the screen already
+       * in front of them, and waits half an hour to see it. The request is for
+       * index.html alone - about a kilobyte, no-cache, no bundle - so twenty
+       * checks an hour per open device is nothing next to being told for a week
+       * that updates do not arrive.
+       */
+      setInterval(() => void check(), 3 * 60 * 1000);
       void check();
     };
 
@@ -406,7 +418,9 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
           document.addEventListener('visibilitychange', check);
           window.addEventListener('focus', check);
           // A backstop for a device left open on one screen all day.
-          setInterval(check, 60 * 60 * 1000);
+          // Same reasoning as the build check above: hourly was too slow to
+          // feel like the app updates itself.
+          setInterval(check, 10 * 60 * 1000);
           check();
         })
         .catch(() => undefined);
