@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +10,7 @@ import { friendlyMessage } from '@/utils/errors';
 import { matchesSearch } from '@/utils/format';
 import { formatDuration } from '@/utils/date';
 import {
+  completedCount,
   deleteQuiz,
   duplicateQuiz,
   listQuizzes,
@@ -111,18 +112,36 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
     [classes]
   );
 
+  /**
+   * How many have finished each assignment on this page.
+   *
+   * On the assignments screen rather than only on Results, because this is
+   * where somebody stands when they ask the question - they have just
+   * published the week's assignment and want to know who has done it. One
+   * aggregation per row, taken with the page, so a list of four costs four
+   * counts and Firestore sends no results at all.
+   */
+  const [finished, setFinished] = useState<Record<string, number>>({});
+
   const fetchPage = useCallback(
     async (cursor: Cursor, search: string) => {
       const page = await listQuizzes({ cursor, pageSize: 20 });
       const scoped = classScope
         ? page.items.filter((quiz) => classScope.includes(quiz.classId))
         : page.items;
-      return {
-        ...page,
-        items: search
-          ? scoped.filter((quiz) => matchesSearch(search, quiz.title, quiz.description))
-          : scoped,
-      };
+      const items = search
+        ? scoped.filter((quiz) => matchesSearch(search, quiz.title, quiz.description))
+        : scoped;
+
+      const counts = await Promise.all(
+        items.map(async (quiz) => [quiz.id, await completedCount(quiz.id).catch(() => -1)] as const)
+      );
+      setFinished((previous: Record<string, number>) => ({
+        ...previous,
+        ...Object.fromEntries(counts.filter(([, n]) => n >= 0)),
+      }));
+
+      return { ...page, items };
     },
     [classScope]
   );
@@ -240,9 +259,19 @@ export function QuizManager({ classScope }: { classScope?: string[] }) {
           meta={[
             classNameFor(quiz.classId),
             `${quiz.questionCount} ${t('quiz.questions')}`,
+            // Who has actually done it: the question an admin asks about the
+            // week's assignment, answered without opening anything.
+            finished[quiz.id] !== undefined
+              ? t('quiz.finishedCount', {
+                  done: finished[quiz.id],
+                  total: counts?.[quiz.classId] ?? '?',
+                })
+              : null,
             `${quiz.totalMarks} ${t('quiz.marks')}`,
             quiz.timeLimit ? formatDuration(quiz.timeLimit) : t('quiz.noTimeLimit'),
-          ].join(' · ')}
+          ]
+            .filter(Boolean)
+            .join(' · ')}
           badges={[{ label: t(`common.${quiz.status === 'closed' ? 'archived' : quiz.status}`), tone: quiz.status }]}
           onPress={() =>
             user?.role === 'teacher'
