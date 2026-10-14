@@ -40,16 +40,27 @@ export const TAJWEED_RULES: TajweedRule[] = [
     category: 'noonSakinah',
     descriptionKey: 'tajweed.izhar',
     letters: 'ء ه ع ح غ خ',
-    example: { text: 'مَنْ آمَنَ', reference: '2:62' },
+    // Spelled as the mushaf spells it. The card sits beside the Qur'an screen,
+    // and a word written two ways in one app is a word a learner mistrusts.
+    example: { text: 'مَنْ ءَامَنَ', reference: '2:62' },
   },
   {
-    id: 'idgham',
-    arabic: 'إدغام',
-    name: 'Idghām',
+    id: 'idghamBighunnah',
+    arabic: 'إدغام بغنة',
+    name: 'Idghām bi-Ghunnah',
     category: 'noonSakinah',
-    descriptionKey: 'tajweed.idgham',
-    letters: 'ي ر م ل و ن',
-    example: { text: 'مِنْ رَّبِّهِمْ', reference: '2:5' },
+    descriptionKey: 'tajweed.idghamBighunnah',
+    letters: 'ي ن م و',
+    example: { text: 'مَن يَقُولُ', reference: '2:8' },
+  },
+  {
+    id: 'idghamBilaGhunnah',
+    arabic: 'إدغام بغير غنة',
+    name: 'Idghām bilā Ghunnah',
+    category: 'noonSakinah',
+    descriptionKey: 'tajweed.idghamBilaGhunnah',
+    letters: 'ل ر',
+    example: { text: 'مِن رَّبِّهِمْ', reference: '2:5' },
   },
   {
     id: 'iqlab',
@@ -78,7 +89,8 @@ export const TAJWEED_RULES: TajweedRule[] = [
     category: 'meemSakinah',
     descriptionKey: 'tajweed.idghamShafawi',
     letters: 'م',
-    example: { text: 'لَهُمْ مَّا', reference: '2:80' },
+    // 2:80 was cited here and does not contain these words at all.
+    example: { text: 'لَهُم مَّا يَشَآءُونَ', reference: '50:35' },
   },
   {
     id: 'ikhfaShafawi',
@@ -122,7 +134,7 @@ export const TAJWEED_RULES: TajweedRule[] = [
     name: 'Madd Munfaṣil',
     category: 'madd',
     descriptionKey: 'tajweed.maddMunfasil',
-    example: { text: 'يَا أَيُّهَا', reference: '2:21' },
+    example: { text: 'إِنَّآ أَعْطَيْنَٰكَ', reference: '108:1' },
   },
   {
     id: 'maddLazim',
@@ -136,12 +148,28 @@ export const TAJWEED_RULES: TajweedRule[] = [
   // --- Other ---------------------------------------------------------------
   {
     id: 'qalqalah',
-    arabic: 'قلقلة',
-    name: 'Qalqalah',
+    arabic: 'قلقلة صغرى',
+    name: 'Qalqalah Ṣughrā',
     category: 'other',
     descriptionKey: 'tajweed.qalqalah',
     letters: 'ق ط ب ج د',
-    example: { text: 'قُلْ أَعُوذُ', reference: '113:1' },
+    /*
+     * This read "قُلْ أَعُوذُ" — which contains no qalqalah at all. The qāf
+     * carries a ḍammah and the sākin letter is lām, which is not one of the
+     * five. A learner matching the rule against the example would have found
+     * nothing to hear. In "قَد أَفْلَحَ" the dāl is sākin inside the phrase,
+     * which is exactly qalqalah ṣughrā.
+     */
+    example: { text: 'قَد أَفْلَحَ', reference: '23:1' },
+  },
+  {
+    id: 'qalqalahKubra',
+    arabic: 'قلقلة كبرى',
+    name: 'Qalqalah Kubrā',
+    category: 'other',
+    descriptionKey: 'tajweed.qalqalahKubra',
+    letters: 'ق ط ب ج د',
+    example: { text: 'وَتَبَّ', reference: '111:1' },
   },
   {
     id: 'ghunnah',
