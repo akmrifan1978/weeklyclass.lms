@@ -26,6 +26,7 @@ import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import { LogoutButton } from '@/components/shared/LogoutButton';
 import { UpcomingClasses } from '@/components/shared/UpcomingClasses';
 import { NotificationNudge } from '@/components/shared/NotificationNudge';
+import { FlyerPopup } from '@/components/shared/FlyerPopup';
 import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import {
   Avatar,
@@ -107,6 +108,9 @@ export default function TeacherHome() {
     <Screen refreshing={refreshing} onRefresh={refresh} edges={['top', 'bottom']}>
       {/* At the top, as asked. It draws nothing when no flyer is
           running, so it costs no space on the ordinary day. */}
+      {/* The poster, over the screen, once per flyer per device. The strip
+          below stays as the place it can be found again. */}
+      <FlyerPopup position="dashboard" />
       <FlyerStrip position="dashboard" />
       {/* The administrator's one ask, answered with one button. Draws nothing
           unless notifications are off and an admin has asked for them. */}

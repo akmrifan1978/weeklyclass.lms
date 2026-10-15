@@ -19,6 +19,7 @@ import { listUsers } from '@/services/userService';
 import { watchAdminUnread } from '@/services/chatService';
 import { QuickAccessTile } from '@/components/shared/ContentCards';
 import { IslamicTiles } from '@/components/shared/IslamicTiles';
+import { FlyerPopup } from '@/components/shared/FlyerPopup';
 import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import { LanguageMenu } from '@/components/shared/LanguageMenu';
 import {
@@ -73,6 +74,9 @@ export default function AdminDashboard() {
         Same strip, same rules: it draws nothing at all when no flyer is
         running, so an ordinary day costs no space here either.
       */}
+      {/* The poster, over the screen, once per flyer per device. The strip
+          below stays as the place it can be found again. */}
+      <FlyerPopup position="dashboard" />
       <FlyerStrip position="dashboard" />
 
       {/* The administrator's one ask, answered with one button. Draws nothing

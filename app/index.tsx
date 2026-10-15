@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { formatShortDate } from '@/utils/date';
 import * as calendarService from '@/services/calendarService';
 import { InstallPrompt } from '@/components/shared/InstallPrompt';
+import { FlyerPopup } from '@/components/shared/FlyerPopup';
 import { FlyerStrip } from '@/components/shared/FlyerStrip';
 import { PublicPage } from '@/components/public/PublicPage';
 import { bookingLabelKey, PublicCard, Tag } from '@/components/public/PublicControls';
@@ -136,6 +137,9 @@ export default function SplashScreen() {
       {/* At the top, above the sign-in choice. Somebody can close it, which
           is what makes putting an advertisement in front of the way in
           defensible rather than merely effective. */}
+      {/* The poster, over the screen, once per flyer per device. The strip
+          below stays as the place it can be found again. */}
+      <FlyerPopup position="home" />
       <FlyerStrip position="home" />
 
       {/* The app banner an admin chose in Settings. Nothing is drawn until
