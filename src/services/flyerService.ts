@@ -57,6 +57,26 @@ export function listFlyers(cursor: Cursor = null): Promise<Page<Flyer>> {
  * delivers changes to DATA and the end of a flyer's run is not one: nothing in
  * Firestore changes at the moment it expires.
  */
+/**
+ * How a flyer is remembered once somebody closes it.
+ *
+ * The id alone was used, which meant closed once, gone for ever: an admin could
+ * replace the poster, change the dates, fix the picture, and the people who had
+ * already dismissed the old one would never see any of it. The id with the
+ * flyer's updated time means a dismissal lasts exactly as long as the flyer
+ * does not change, and an edit brings it back to everybody.
+ */
+export function flyerKey(flyer: Flyer): string {
+  const at = flyer.updatedAt as { seconds?: number } | Date | undefined;
+  const seconds =
+    at instanceof Date
+      ? Math.floor(at.getTime() / 1000)
+      : typeof at?.seconds === 'number'
+        ? at.seconds
+        : null;
+  return seconds === null ? flyer.id : `${flyer.id}@${seconds}`;
+}
+
 export function isShowing(flyer: Flyer, now: Date = new Date()): boolean {
   if (!flyer.active) return false;
 

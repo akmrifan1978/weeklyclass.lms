@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useLive } from '@/hooks/useLive';
-import { isShowing, watchShowing } from '@/services/flyerService';
+import { flyerKey, isShowing, watchShowing } from '@/services/flyerService';
 import type { Flyer } from '@/types';
 import { brand, colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
 
@@ -85,9 +85,9 @@ export function FlyerStrip({
   const { data } = useLive(subscribe, [position, limit]);
 
   const dismiss = useCallback(
-    (id: string) => {
+    (key: string) => {
       setDismissed((current) => {
-        const next = [...(current ?? []), id];
+        const next = [...(current ?? []), key];
         // Best effort. A closed flyer that comes back after a reinstall is a
         // small annoyance; a crash because storage was unavailable is not.
         void AsyncStorage.setItem(DISMISSED_KEY, JSON.stringify(next)).catch(() => undefined);
@@ -102,7 +102,11 @@ export function FlyerStrip({
   // late.
   if (dismissed === null) return null;
 
-  const flyers = (data ?? []).filter((f) => isShowing(f, now) && !dismissed.includes(f.id));
+  // Keyed on the flyer AS IT STANDS: editing it brings it back for everybody
+  // who had closed the previous version.
+  const flyers = (data ?? []).filter(
+    (f) => isShowing(f, now) && !dismissed.includes(flyerKey(f))
+  );
   if (flyers.length === 0) return null;
 
   // Wide enough to read a poster on, narrow enough that a second one peeks in
@@ -125,7 +129,7 @@ export function FlyerStrip({
             width={single ? undefined : cardWidth}
             openLabel={t('flyer.open')}
             closeLabel={t('common.close')}
-            onClose={() => dismiss(flyer.id)}
+            onClose={() => dismiss(flyerKey(flyer))}
           />
         ))}
       </ScrollView>
