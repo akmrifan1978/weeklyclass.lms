@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useLive } from '@/hooks/useLive';
-import { isShowing, watchShowing } from '@/services/flyerService';
+import { flyerKey, isShowing, watchShowing } from '@/services/flyerService';
 import type { Flyer } from '@/types';
 import { colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constants/theme';
 
@@ -46,14 +46,6 @@ import { colors, fontSize, fontWeight, radius, shadow, spacing } from '@/constan
  */
 
 const DISMISSED_KEY = '@weeklyclass/flyers-dismissed';
-
-/** A flyer closed before, identified in a way that an edit resets. */
-function keyFor(flyer: Flyer): string {
-  const stamp =
-    (flyer.updatedAt as { seconds?: number } | undefined)?.seconds ??
-    (flyer.updatedAt instanceof Date ? Math.floor(flyer.updatedAt.getTime() / 1000) : '');
-  return stamp ? `${flyer.id}@${stamp}` : flyer.id;
-}
 
 export function FlyerPopup({ position }: { position: 'home' | 'dashboard' }) {
   const { t } = useTranslation();
@@ -93,7 +85,10 @@ export function FlyerPopup({ position }: { position: 'home' | 'dashboard' }) {
 
   const close = useCallback((flyer: Flyer) => {
     setDismissed((current) => {
-      const next = [...(current ?? []), keyFor(flyer), flyer.id];
+      // The key alone. Storing the bare id as well was the bug that hid this
+      // from the very people it was shown to: a flyer closed in the strip once,
+      // months ago, silenced every later version of itself.
+      const next = [...(current ?? []), flyerKey(flyer)];
       void AsyncStorage.setItem(DISMISSED_KEY, JSON.stringify(next)).catch(() => undefined);
       return next;
     });
@@ -102,7 +97,7 @@ export function FlyerPopup({ position }: { position: 'home' | 'dashboard' }) {
   if (dismissed === null) return null;
 
   const flyer = (data ?? []).find(
-    (f) => isShowing(f, now) && !dismissed.includes(keyFor(f)) && !dismissed.includes(f.id)
+    (f) => isShowing(f, now) && !dismissed.includes(flyerKey(f))
   );
   if (!flyer || flyer.fileType !== 'image') return null;
 
