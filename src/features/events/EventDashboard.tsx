@@ -62,8 +62,31 @@ export function EventDashboard({ route }: { route: '(admin)' | '(teacher)' }) {
     // One pass per event, in parallel. An event's bookings are tens, and this
     // screen is opened by one or two people a week.
     const totals = await Promise.all(
-      events.map(async (event) => [event.id, await totalsFor(event.id).catch(() => null)] as const)
+      events.map(
+        async (event) =>
+          [
+            event.id,
+            await totalsFor(event.id).catch((error: unknown) => {
+              console.error(`[WeeklyClass] totals failed for event ${event.id}`, error);
+              return null;
+            }),
+          ] as const
+      )
     );
+
+    /*
+     * If NOT ONE event could be totalled, say so instead of drawing zeroes.
+     *
+     * One event failing is tolerable — it keeps the other rows readable. Every
+     * event failing is never about the events: it is the read itself, and on
+     * the day this screen shipped it was a missing index. A page of confident
+     * zeroes sent somebody looking for the money rather than for the fault, so
+     * the whole-screen failure is now reported as a failure, with a retry.
+     */
+    if (events.length > 0 && totals.every(([, sum]) => sum === null)) {
+      throw new Error('The figures for these events could not be read.');
+    }
+
     return { events, totals: Object.fromEntries(totals) as Record<string, EventTotals | null> };
   }, []);
 
