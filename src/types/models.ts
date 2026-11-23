@@ -559,12 +559,27 @@ export interface EventFinanceEntry extends BaseDoc {
   eventId: string;
   eventTitle: string;
   type: 'income' | 'expense';
+  /**
+   * A PLANNED figure rather than a real one — a budget line.
+   *
+   * The budget and the accounts are the same shape (a category and an amount,
+   * in or out), so they are the same document with this one flag to tell them
+   * apart. That keeps them in one collection, under one set of rules, read in
+   * one query: a screen showing "planned 4,000, spent 3,250" would otherwise
+   * cost two reads to say one thing.
+   *
+   * Absent means a real one, so every entry recorded before budgets existed is
+   * still an actual. Nothing that counts money may count a planned figure:
+   * `summarise` filters these out of every total it calls received, spent or
+   * net, and they are reported on their own.
+   */
+  planned?: boolean;
   /** What it was: "Hall and seating", "Donation from Br. Yusuf". */
   title: string;
   category: string;
   amount: number;
   currency: string;
-  /** ISO date of the payment itself, not of the record. */
+  /** ISO date: of the payment for an actual, of the event for a budget line. */
   date: string;
   /** Who it was paid to, or received from. */
   party?: string | null;

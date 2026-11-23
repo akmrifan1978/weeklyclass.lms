@@ -45,6 +45,9 @@ export interface EventTotals {
   /** Money in that did not come from a booking: donations, sponsorship. */
   otherIncome: number;
   expenses: number;
+  /** What the event was BUDGETED to take and to cost. Planned, not real. */
+  plannedIncome: number;
+  plannedExpenses: number;
   /** Received plus other income, less expenses. Money that has actually moved. */
   net: number;
   seats: number;
@@ -118,15 +121,26 @@ export async function removeEntry(entry: EventFinanceEntry, actor: AppUser): Pro
 export async function detailsFor(
   eventId: string,
   fallbackCurrency = 'SAR'
-): Promise<{ totals: EventTotals; entries: EventFinanceEntry[] }> {
-  const [bookings, entries] = await Promise.all([
+): Promise<{
+  totals: EventTotals;
+  /** What really happened. */
+  entries: EventFinanceEntry[];
+  /** What was planned to happen. */
+  budget: EventFinanceEntry[];
+}> {
+  const [bookings, all] = await Promise.all([
     listAll<EventRegistration>(COLLECTIONS.eventRegistrations, {
       filters: [['eventId', '==', eventId]],
       pageSize: 300,
     }),
     listEntries(eventId),
   ]);
-  return { totals: summarise(bookings, entries, fallbackCurrency), entries };
+  // Split here, once, so no screen below has to remember which is which.
+  return {
+    totals: summarise(bookings, all, fallbackCurrency),
+    entries: all.filter((entry) => entry.planned !== true),
+    budget: all.filter((entry) => entry.planned === true),
+  };
 }
 
 /** Just the figures, for the list of events. */
@@ -148,18 +162,29 @@ function summarise(
     .filter((b) => b.paid === true)
     .reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
 
-  const otherIncome = entries
-    .filter((e) => e.type === 'income')
-    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-  const expenses = entries
-    .filter((e) => e.type === 'expense')
-    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  /*
+   * Planned and real are added up apart, and never mixed.
+   *
+   * A budget line is a hope; an entry is a fact. Letting one into the other's
+   * total is the single worst thing this file could do - an event would report
+   * money it never received, or costs it never paid, and the figure would look
+   * exactly as solid as the true one.
+   */
+  const sum = (rows: EventFinanceEntry[]) =>
+    rows.reduce((total, e) => total + (Number(e.amount) || 0), 0);
+  const real = entries.filter((e) => e.planned !== true);
+  const planned = entries.filter((e) => e.planned === true);
+
+  const otherIncome = sum(real.filter((e) => e.type === 'income'));
+  const expenses = sum(real.filter((e) => e.type === 'expense'));
 
   return {
     bookedDue,
     bookedReceived,
     otherIncome,
     expenses,
+    plannedIncome: sum(planned.filter((e) => e.type === 'income')),
+    plannedExpenses: sum(planned.filter((e) => e.type === 'expense')),
     // Received, not due: a net flattered by money that has not arrived is the
     // number that gets a centre into trouble.
     net: bookedReceived + otherIncome - expenses,
@@ -173,10 +198,11 @@ function summarise(
 /**
  * The event's accounts as a CSV an organiser can file, print or send on.
  *
- * Two blocks in one sheet: the summary a treasurer reads first, then every
- * entry behind it. The headers are in English on purpose, matching the
- * attendee sheet - this file is opened in Excel months later, often by
- * somebody auditing rather than the person who made it.
+ * Four blocks in one sheet: the summary a treasurer reads first, the budget
+ * against what was actually spent, the budget's own lines, then every real
+ * entry. The headers are in English on purpose, matching the attendee sheet -
+ * this file is opened in Excel months later, often by somebody auditing rather
+ * than the person who made it.
  *
  * ONE EVENT. The event is named in the first row so a printed page found on a
  * desk says which gathering it accounts for.
@@ -185,7 +211,8 @@ export function accountsCsv(
   eventTitle: string,
   eventDate: string,
   totals: EventTotals,
-  entries: EventFinanceEntry[]
+  entries: EventFinanceEntry[],
+  budget: EventFinanceEntry[] = []
 ): string {
   // Quote everything and double any inner quote, exactly as the attendee sheet
   // does: a venue called "Al Khair, Jeddah" must not become two columns.
@@ -193,6 +220,9 @@ export function accountsCsv(
   const row = (...values: unknown[]) => values.map(cell).join(',');
 
   const outstanding = totals.bookedDue - totals.bookedReceived;
+  /* Everything that actually came in, which is what a budget for income is
+     compared against: the attendees' payments plus donations and sponsorship. */
+  const income = totals.bookedReceived + totals.otherIncome;
 
   const lines = [
     row('Event', eventTitle),
@@ -209,6 +239,22 @@ export function accountsCsv(
     row('Other income', totals.otherIncome),
     row('Expenses', totals.expenses),
     row('Net (money actually moved)', totals.net),
+    '',
+    row('BUDGET', 'Planned', 'Actual', 'Difference'),
+    row(
+      'Income',
+      totals.plannedIncome,
+      income,
+      // Income: over the plan is good, so the difference reads actual less
+      // planned. Expenses are the other way round, below.
+      income - totals.plannedIncome
+    ),
+    row('Expenses', totals.plannedExpenses, totals.expenses, totals.plannedExpenses - totals.expenses),
+    '',
+    row('Budget line', 'Type', 'Category', 'Planned', 'Currency', 'Note'),
+    ...budget.map((line) =>
+      row(line.title, line.type, line.category, line.amount, line.currency, line.note ?? '')
+    ),
     '',
     row('Date', 'Type', 'Category', 'Title', 'Paid to / received from', 'Amount', 'Currency', 'Note'),
     ...entries.map((entry) =>

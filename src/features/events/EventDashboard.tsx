@@ -142,6 +142,16 @@ export function EventDashboard({ route }: { route: '(admin)' | '(teacher)' }) {
                       value={`${outstanding} ${currency}`}
                       tone={outstanding > 0 ? colors.warning : colors.textMuted}
                     />
+                    {/* The budget for costs, against what has been spent of
+                        it. Shown only once a budget has been set, so an event
+                        nobody has planned does not carry an empty column. */}
+                    {sum && sum.plannedExpenses > 0 ? (
+                      <Figure
+                        label={t('eventDash.budgetSpent')}
+                        value={`${sum.expenses} / ${sum.plannedExpenses} ${currency}`}
+                        tone={sum.expenses > sum.plannedExpenses ? colors.warning : colors.success}
+                      />
+                    ) : null}
                     <Figure
                       label={t('eventDash.net')}
                       value={`${sum?.net ?? 0} ${currency}`}
