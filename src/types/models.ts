@@ -607,7 +607,24 @@ export interface EventRegistration extends BaseDoc {
  * None of these says anything about money — see `paid`. A confirmed booking is
  * a place held, not a payment received.
  */
-export type BookingStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled';
+/**
+ * A booking's four steps, in the order the centre works through them.
+ *
+ *   pending          somebody has asked for places. Nothing is promised.
+ *   awaitingPayment  an admin has approved it and the seats are held, but the
+ *                    money has not arrived, so there is no ticket yet.
+ *   confirmed        paid, and the ticket with its QR code is valid at the door.
+ *
+ * The middle step is the one that was missing: approving used to confirm
+ * outright, which issued a valid ticket to somebody who had not paid. A free
+ * event has nothing to wait for and goes from pending straight to confirmed.
+ */
+export type BookingStatus =
+  | 'pending'
+  | 'awaitingPayment'
+  | 'confirmed'
+  | 'rejected'
+  | 'cancelled';
 
 export interface CalendarEvent extends BaseDoc {
   title: string;

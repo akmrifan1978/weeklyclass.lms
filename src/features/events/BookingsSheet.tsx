@@ -162,16 +162,18 @@ export function BookingsSheet({
               </Text>
 
               <View style={styles.actions}>
-                {row.status !== 'confirmed' && row.status !== 'cancelled' ? (
+                {/* Approve holds the seats and asks for the money. What turns
+                    an approved booking into a ticket is Mark paid, below. */}
+                {row.status === 'pending' ? (
                   <Button
-                    label={t('event.confirmBookingAction')}
+                    label={t('event.approveBooking')}
                     icon="checkmark-circle-outline"
                     size="sm"
                     loading={busyId === row.id}
                     onPress={() =>
                       void run(row, async () => {
                         await bookings.confirmBooking(row, user!);
-                        toast.success(t('event.confirmed'));
+                        toast.success(t(Number(row.amount) > 0 ? 'event.approved' : 'event.confirmed'));
                       })
                     }
                   />
@@ -201,7 +203,10 @@ export function BookingsSheet({
                       size="sm"
                       variant="outline"
                       onPress={() =>
-                        void run(row, () => bookings.setPaid(row, !row.paid, user!))
+                        void run(row, async () => {
+                          await bookings.setPaid(row, !row.paid, user!);
+                          if (!row.paid) toast.success(t('event.ticketReady'));
+                        })
                       }
                     />
                     <Button

@@ -39,6 +39,18 @@ export function TicketSheet({
   const code = bookings.ticketCode(registration.id);
   const paid = registration.paid === true;
 
+  /*
+   * A QR code is a ticket, so it waits until there is one.
+   *
+   * Before, every booking showed the code the moment it was made - a person
+   * whose request had not been looked at yet held something that looked
+   * exactly like a ticket, and so did somebody who had not paid. The door
+   * cannot tell those apart at arm's length, and neither can the holder.
+   * Until the booking is confirmed this sheet says which step it is at.
+   */
+  const issued = registration.status === 'confirmed';
+  const awaiting = registration.status === 'awaitingPayment';
+
   /**
    * Read from the event rather than copied onto the booking.
    *
@@ -97,7 +109,23 @@ export function TicketSheet({
               A scanner is faster and cannot mis-read a G as a 6, but a phone
               with a cracked screen or a flat battery still has to get in, so
               the printed code stays exactly as prominent as it was. */}
-          <View style={styles.qrFrame}>
+          {!issued ? (
+            <View style={styles.pendingBox}>
+              <Ionicons
+                name={awaiting ? 'cash-outline' : 'time-outline'}
+                size={26}
+                color={awaiting ? colors.warning : colors.textMuted}
+              />
+              <Text style={styles.pendingTitle}>
+                {t(awaiting ? 'event.ticketAwaitingTitle' : 'event.ticketPendingTitle')}
+              </Text>
+              <Text style={styles.pendingBody}>
+                {t(awaiting ? 'event.ticketAwaitingBody' : 'event.ticketPendingBody')}
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={[styles.qrFrame, !issued && styles.hidden]}>
             <QRCode
               // A LINK, not the bare code. Scanned with any phone camera this
               // opens the ticket's own page - the event, the date, the door,
@@ -120,7 +148,7 @@ export function TicketSheet({
               quietZone={QR_QUIET_ZONE}
             />
           </View>
-          <Text style={styles.qrHint}>{t('event.ticketScan')}</Text>
+          {issued ? <Text style={styles.qrHint}>{t('event.ticketScan')}</Text> : null}
 
           <Text style={styles.codeLabel}>{t('event.ticketCode')}</Text>
           <Text style={styles.code} selectable>
@@ -298,6 +326,20 @@ const styles = StyleSheet.create({
   count: { flex: 1, alignItems: 'center' },
   countValue: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.text },
   countLabel: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
+  hidden: { display: 'none' },
+  pendingBox: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  pendingTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text },
+  pendingBody: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   paid: { color: colors.success },
   unpaid: { color: colors.warning },
   holdersLabel: {
