@@ -1207,6 +1207,24 @@
       ]
     },
     {
+      "collectionGroup": "eventFinance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "publicSchedule",
       "queryScope": "COLLECTION",
       "fields": [
