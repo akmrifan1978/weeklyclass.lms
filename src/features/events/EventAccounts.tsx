@@ -62,7 +62,12 @@ export function EventAccounts({ eventId }: { eventId: string }) {
     // Two calls, not three: `detailsFor` returns the entries it added up, so
     // the list below is not a second billed read of the same documents.
     const [event, details] = await Promise.all([getEvent(eventId), detailsFor(eventId)]);
-    return { event, totals: details.totals, entries: details.entries };
+    return {
+      event,
+      totals: details.totals,
+      entries: details.entries,
+      budget: details.budget,
+    };
   }, [eventId]);
 
   const { data, loading, error, refreshing, refresh, reload } = useAsync(load, [eventId]);
@@ -72,6 +77,16 @@ export function EventAccounts({ eventId }: { eventId: string }) {
   const [confirmDelete, setConfirmDelete] = useState<EventFinanceEntry | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
+    /*
+     * Which of the two lists this sheet is writing to.
+     *
+     * One form serves both, because a budget line and a real entry ask almost
+     * the same questions - a category and an amount, in or out. The three
+     * questions that only make sense for money already moved (the day, who it
+     * went to, the receipt) are hidden while planning, and the flag travels to
+     * the document so nothing has to guess afterwards.
+     */
+    planned: false,
     type: 'expense' as 'income' | 'expense',
     title: '',
     category: 'venue',
@@ -82,14 +97,17 @@ export function EventAccounts({ eventId }: { eventId: string }) {
     receiptUrl: '',
   });
 
-  const openSheet = (entry: EventFinanceEntry | null) => {
+  const openSheet = (entry: EventFinanceEntry | null, planned = false) => {
     setEditing(entry);
     setForm({
+      planned: entry ? entry.planned === true : planned,
       type: entry?.type ?? 'expense',
       title: entry?.title ?? '',
       category: entry?.category ?? 'venue',
       amount: entry ? String(entry.amount) : '',
-      date: entry?.date ?? toISODate(),
+      // A budget line is dated to the event, not to today: it is not a thing
+      // that happened on the afternoon somebody wrote it down.
+      date: entry?.date ?? (planned ? (data?.event?.date ?? toISODate()) : toISODate()),
       party: entry?.party ?? '',
       note: entry?.note ?? '',
       receiptUrl: entry?.receiptUrl ?? '',
@@ -115,15 +133,18 @@ export function EventAccounts({ eventId }: { eventId: string }) {
           id: editing?.id,
           eventId,
           eventTitle: data.event.title,
+          planned: form.planned,
           type: form.type,
           title: form.title.trim(),
           category: form.category,
           amount,
           currency: data.totals.currency,
           date: form.date || toISODate(),
-          party: form.party.trim() || null,
+          // A plan has nobody to pay yet and no receipt to show, so these are
+          // cleared rather than carried over from whatever the form last held.
+          party: form.planned ? null : form.party.trim() || null,
           note: form.note.trim() || null,
-          receiptUrl: form.receiptUrl || null,
+          receiptUrl: form.planned ? null : form.receiptUrl || null,
         },
         user
       );
@@ -156,7 +177,7 @@ export function EventAccounts({ eventId }: { eventId: string }) {
     try {
       await saveTextFile(
         safeFilename(`${data.event.title}-accounts`, 'csv'),
-        accountsCsv(data.event.title, data.event.date, data.totals, data.entries)
+        accountsCsv(data.event.title, data.event.date, data.totals, data.entries, data.budget)
       );
       toast.success(t('eventDash.reportDone'));
     } catch (err) {
@@ -166,6 +187,8 @@ export function EventAccounts({ eventId }: { eventId: string }) {
 
   const totals = data?.totals;
   const currency = totals?.currency ?? 'SAR';
+  /** Everything that actually came in — attendees' payments and donations. */
+  const actualIncome = (totals?.bookedReceived ?? 0) + (totals?.otherIncome ?? 0);
   const outstanding = totals ? totals.bookedDue - totals.bookedReceived : 0;
 
   const categoryOptions: Option[] = FINANCE_CATEGORIES.map((c) => ({
@@ -197,6 +220,95 @@ export function EventAccounts({ eventId }: { eventId: string }) {
               <Figure label={t('eventDash.seats')} value={String(totals?.seats ?? 0)} />
             </View>
           </Card>
+
+          <Spacer />
+
+          {/* The budget: what this event was MEANT to take and cost, set
+              before it happens, against what it actually did. Planned figures
+              are kept out of every real total — see summarise(). */}
+          <SectionHeader
+            title={t('eventDash.budget')}
+            icon="clipboard-outline"
+            actionLabel={mayWrite ? t('eventDash.addBudget') : undefined}
+            onAction={mayWrite ? () => openSheet(null, true) : undefined}
+          />
+          <Card>
+            <View style={styles.compareHead}>
+              <Text style={[styles.compareCell, styles.compareLabel]} />
+              <Text style={styles.compareCell}>{t('eventDash.planned')}</Text>
+              <Text style={styles.compareCell}>{t('eventDash.actual')}</Text>
+              <Text style={styles.compareCell}>{t('eventDash.difference')}</Text>
+            </View>
+            <Compare
+              label={t('eventDash.income')}
+              planned={totals?.plannedIncome ?? 0}
+              actual={actualIncome}
+              currency={currency}
+              // More income than planned is good news, so the sign is read
+              // actual-less-planned here and the other way round for costs.
+              good={actualIncome - (totals?.plannedIncome ?? 0) >= 0}
+              difference={actualIncome - (totals?.plannedIncome ?? 0)}
+            />
+            <Compare
+              label={t('eventDash.expenses')}
+              planned={totals?.plannedExpenses ?? 0}
+              actual={totals?.expenses ?? 0}
+              currency={currency}
+              good={(totals?.plannedExpenses ?? 0) - (totals?.expenses ?? 0) >= 0}
+              difference={(totals?.plannedExpenses ?? 0) - (totals?.expenses ?? 0)}
+            />
+            <Text style={styles.netNote}>
+              {(data?.budget ?? []).length === 0
+                ? t('eventDash.noBudget')
+                : t('eventDash.budgetNote')}
+            </Text>
+          </Card>
+
+          {(data?.budget ?? []).length > 0 ? (
+            <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+              {(data?.budget ?? []).map((line) => (
+                <Card key={line.id}>
+                  <View style={styles.entryRow}>
+                    <Ionicons
+                      name={line.type === 'income' ? 'trending-up-outline' : 'trending-down-outline'}
+                      size={20}
+                      color={colors.textSecondary}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.entryTitle} numberOfLines={1}>
+                        {line.title}
+                      </Text>
+                      <Text style={styles.entryMeta} numberOfLines={1}>
+                        {[t(`eventDash.category_${line.category}`), t('eventDash.planned')]
+                          .filter(Boolean)
+                          .join('  ·  ')}
+                      </Text>
+                    </View>
+                    <Text style={styles.entryAmount}>
+                      {line.amount} {line.currency}
+                    </Text>
+                    {mayWrite ? (
+                      <>
+                        <IconButton
+                          icon="create-outline"
+                          label={t('common.edit')}
+                          size={32}
+                          onPress={() => openSheet(line)}
+                        />
+                        <IconButton
+                          icon="trash-outline"
+                          label={t('common.delete')}
+                          size={32}
+                          color={colors.danger}
+                          onPress={() => setConfirmDelete(line)}
+                        />
+                      </>
+                    ) : null}
+                  </View>
+                </Card>
+              ))}
+            </View>
+          ) : null}
 
           <Spacer />
 
@@ -325,11 +437,22 @@ export function EventAccounts({ eventId }: { eventId: string }) {
 
       <FormSheet
         visible={sheetOpen}
-        title={editing ? t('common.edit') : t('eventDash.addEntry')}
+        title={
+          editing
+            ? t('common.edit')
+            : form.planned
+              ? t('eventDash.addBudget')
+              : t('eventDash.addEntry')
+        }
         onClose={() => setSheetOpen(false)}
         onSubmit={save}
         submitting={busy}
       >
+        {/* Says which list is being written to, so an edit opened from the
+            wrong place is obvious before it is saved. */}
+        <Text style={styles.sheetKind}>
+          {t(form.planned ? 'eventDash.budgetKind' : 'eventDash.actualKind')}
+        </Text>
         <Select<'income' | 'expense'>
           label={t('eventDash.entryType')}
           value={form.type}
@@ -360,35 +483,46 @@ export function EventAccounts({ eventId }: { eventId: string }) {
           icon="cash-outline"
           required
         />
-        <DateField
-          label={t('common.date')}
-          value={form.date}
-          onChange={(v: string) => setForm((f) => ({ ...f, date: v }))}
-        />
-        <TextField
-          label={t('eventDash.party')}
-          value={form.party}
-          onChangeText={(v) => setForm((f) => ({ ...f, party: v }))}
-          icon="person-outline"
-          hint={t('eventDash.partyHint')}
-        />
+        {/* A plan has no day and nobody to pay yet. Asking for either would
+            invite a date that means nothing and a name that is a guess. */}
+        {!form.planned ? (
+          <>
+            <DateField
+              label={t('common.date')}
+              value={form.date}
+              onChange={(v: string) => setForm((f) => ({ ...f, date: v }))}
+            />
+            <TextField
+              label={t('eventDash.party')}
+              value={form.party}
+              onChangeText={(v) => setForm((f) => ({ ...f, party: v }))}
+              icon="person-outline"
+              hint={t('eventDash.partyHint')}
+            />
+          </>
+        ) : null}
         <TextField
           label={t('common.notes')}
           value={form.note}
           onChangeText={(v) => setForm((f) => ({ ...f, note: v }))}
           multiline
         />
-        <ImageField
-          label={t('eventDash.receipt')}
-          value={form.receiptUrl}
-          onChange={(url) => setForm((f) => ({ ...f, receiptUrl: url || '' }))}
-        />
+        {/* Nothing to photograph until money has actually changed hands. */}
+        {!form.planned ? (
+          <ImageField
+            label={t('eventDash.receipt')}
+            value={form.receiptUrl}
+            onChange={(url) => setForm((f) => ({ ...f, receiptUrl: url || '' }))}
+          />
+        ) : null}
       </FormSheet>
 
       <ConfirmDialog
         visible={Boolean(confirmDelete)}
         title={t('common.delete')}
-        message={t('eventDash.deleteEntry')}
+        message={t(
+          confirmDelete?.planned === true ? 'eventDash.deleteBudget' : 'eventDash.deleteEntry'
+        )}
         confirmLabel={t('common.delete')}
         destructive
         onCancel={() => setConfirmDelete(null)}
@@ -411,6 +545,46 @@ function Figure({ label, value }: { label: string; value: string }) {
     <View style={styles.figure}>
       <Text style={styles.figureLabel}>{label}</Text>
       <Text style={styles.figureValue}>{value}</Text>
+    </View>
+  );
+}
+
+/**
+ * One line of the budget: planned, actual, and the gap between them.
+ *
+ * The gap is coloured rather than signed only, because "-1,200" tells a reader
+ * nothing until they work out which direction is bad. Under budget and over
+ * target are both green; the opposite of each is amber.
+ */
+function Compare({
+  label,
+  planned,
+  actual,
+  difference,
+  currency,
+  good,
+}: {
+  label: string;
+  planned: number;
+  actual: number;
+  difference: number;
+  currency: string;
+  good: boolean;
+}) {
+  return (
+    <View style={styles.compareRow}>
+      <Text style={[styles.compareCell, styles.compareLabel]} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={styles.compareCell}>{planned}</Text>
+      <Text style={styles.compareCell}>{actual}</Text>
+      <Text
+        style={[styles.compareCell, { color: good ? colors.success : colors.warning }]}
+        numberOfLines={1}
+      >
+        {difference > 0 ? '+' : ''}
+        {difference} {currency}
+      </Text>
     </View>
   );
 }
@@ -448,6 +622,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   rowLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
+  compareHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  compareRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm },
+  compareCell: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'right',
+  },
+  compareLabel: { flex: 1.2, textAlign: 'left', color: colors.textSecondary },
   rowValue: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text },
   netRow: {
     flexDirection: 'row',
@@ -466,4 +655,10 @@ const styles = StyleSheet.create({
   entryMeta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   entryAmount: { fontSize: fontSize.sm, fontWeight: fontWeight.bold },
   empty: { fontSize: fontSize.sm, color: colors.textMuted },
+  sheetKind: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
+    lineHeight: 17,
+  },
 });

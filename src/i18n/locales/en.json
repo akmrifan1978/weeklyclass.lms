@@ -1942,6 +1942,17 @@
     "category_sponsorship": "Sponsorship",
     "category_other": "Other",
     "report": "Report",
-    "reportDone": "The accounts report has been saved."
+    "reportDone": "The accounts report has been saved.",
+    "budget": "Budget",
+    "addBudget": "Add budget line",
+    "planned": "Planned",
+    "actual": "Actual",
+    "difference": "Difference",
+    "noBudget": "No budget set for this event yet. Add what you expect it to take and to cost, and this will show the plan against the real figures.",
+    "budgetNote": "Planned figures are never counted as money received or spent. They sit here to be compared with the real ones.",
+    "budgetKind": "A planned figure — part of the budget, not money that has moved.",
+    "actualKind": "Money that has actually been received or paid.",
+    "budgetSpent": "Spent of budget",
+    "deleteBudget": "Remove this line from the budget? The real entries are not affected."
   }
 }
