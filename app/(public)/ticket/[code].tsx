@@ -42,11 +42,15 @@ export default function PublicTicketPage() {
   const verdictKey =
     status === 'confirmed'
       ? 'event.scanValid'
-      : status === 'pending'
-        ? 'event.scanPending'
-        : status === 'rejected'
-          ? 'event.scanRejected'
-          : 'event.scanCancelled';
+      : status === 'awaitingPayment'
+        ? // Approved and the seats are held, but no money has arrived, so this
+          // is not yet a ticket. The door needs that said plainly.
+          'event.scanAwaitingPayment'
+        : status === 'pending'
+          ? 'event.scanPending'
+          : status === 'rejected'
+            ? 'event.scanRejected'
+            : 'event.scanCancelled';
 
   return (
     <PublicPage

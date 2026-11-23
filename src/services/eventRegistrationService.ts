@@ -243,7 +243,20 @@ export async function book(
       //
       // An organiser who wants to see every booking before it counts turns
       // `requireBookingApproval` on, and then nothing self-confirms.
-      status: requireApproval || !roomFor ? 'pending' : 'confirmed',
+      /*
+       * Self-confirming still stops short of a ticket when there is a price.
+       *
+       * With approval switched off a booking with room used to become
+       * confirmed outright, which handed a valid QR code to somebody who had
+       * paid nothing - the same hole approval was added to close, left open
+       * whenever an organiser turned approval off. A free event is unaffected.
+       */
+      status:
+        requireApproval || !roomFor
+          ? 'pending'
+          : amount > 0
+            ? 'awaitingPayment'
+            : 'confirmed',
       paid: false,
       // Null, not absent: this is the queue the mail service reads, and a
       // missing field is not something Firestore can filter on.
@@ -321,7 +334,12 @@ export async function confirmBooking(
     }
 
     tx.update(bookingRef, {
-      status: 'confirmed',
+      /*
+       * Approved is not confirmed. The seats are held from this moment, but a
+       * paid event waits for the money before it becomes a ticket - see
+       * BookingStatus. A free event has nothing to wait for.
+       */
+      status: Number(registration.amount) > 0 ? 'awaitingPayment' : 'confirmed',
       // Re-queued on confirmation, which also picks up bookings made before
       // the field existed.
       confirmationEmailedAt: null,
@@ -344,13 +362,19 @@ export async function confirmBooking(
   // dead link.
   const joinLine = whatsappLink ? ` Join the event's WhatsApp group: ${whatsappLink}` : '';
 
+  const owing = Number(registration.amount) > 0;
+
   await notify(
     registration,
     actor,
-    'Booking confirmed',
-    `Your place at "${registration.eventTitle}" is confirmed. Ticket ${ticketCode(
-      registration.id
-    )}.${joinLine}`
+    owing ? 'Booking approved' : 'Booking confirmed',
+    owing
+      ? `Your place at "${registration.eventTitle}" is approved and your seats are held. ` +
+        `Your ticket is issued once the payment of ${registration.amount} ` +
+        `${registration.currency} is received.${joinLine}`
+      : `Your place at "${registration.eventTitle}" is confirmed. Ticket ${ticketCode(
+          registration.id
+        )}.${joinLine}`
   );
 
   void audit.log({
@@ -566,12 +590,40 @@ export async function setPaid(
   paid: boolean,
   actor: AppUser
 ): Promise<void> {
-  await updateDocById<EventRegistration>(
-    COLLECTIONS.eventRegistrations,
-    registration.id,
-    { paid }
-  );
+  /*
+   * Marking the money received is what issues the ticket.
+   *
+   * An approved booking is waiting for exactly this, so recording the payment
+   * confirms it in the same action - the admin does not have to remember a
+   * second step, and nobody is left holding an approved booking that never
+   * became a ticket. Unmarking it puts the booking back to waiting, which
+   * takes the ticket out of use again.
+   *
+   * A booking that was never approved is left where it is: paying does not
+   * jump the queue, and a cancelled or declined one is not revived by it.
+   */
+  const next: Partial<EventRegistration> = { paid };
+  if (paid && registration.status === 'awaitingPayment') {
+    next.status = 'confirmed';
+    next.confirmedAt = new Date();
+    next.confirmedBy = actor.uid;
+  } else if (!paid && registration.status === 'confirmed') {
+    next.status = 'awaitingPayment';
+  }
+
+  await updateDocById<EventRegistration>(COLLECTIONS.eventRegistrations, registration.id, next);
   await refreshPublicTicket(registration.id);
+
+  if (next.status === 'confirmed') {
+    await notify(
+      registration,
+      actor,
+      'Ticket ready',
+      `Payment received for "${registration.eventTitle}". Your ticket ${ticketCode(
+        registration.id
+      )} is ready - show its QR code at the entrance.`
+    ).catch(() => undefined);
+  }
   void audit.log({
     actor,
     action: 'UPDATE',

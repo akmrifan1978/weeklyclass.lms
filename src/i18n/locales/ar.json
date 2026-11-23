@@ -1401,7 +1401,7 @@
     "pricePerPerson": "{{price}} {{currency}} للفرد",
     "seatsLeft": "بقي {{count}} مكان فقط",
     "book": "احجز مكانًا",
-    "booked": "تم حجز مكانك.",
+    "booked": "تم إرسال طلبك. هو قيد الموافقة وسيتم تأكيده قريباً.",
     "yourBooking": "حجزت {{seats}} مكانًا",
     "seats": "كم مكانًا؟",
     "seatsHint": "احسب نفسك ومن يأتي معك.",
@@ -1496,7 +1496,16 @@
     "scanSeats": "المقاعد",
     "scanNotFound": "لا توجد تذكرة بهذا الرمز",
     "scanNotFoundHelp": "تحقق من الرمز المطبوع تحت رمز QR.",
-    "scanAtDoor": "اعرض هذه الشاشة عند الباب."
+    "scanAtDoor": "اعرض هذه الشاشة عند الباب.",
+    "bookingStatus_awaitingPayment": "تمت الموافقة — بانتظار الدفع",
+    "approveBooking": "موافقة",
+    "approved": "تمت الموافقة. تصدر التذكرة بمجرد تسجيل استلام الدفع.",
+    "ticketPendingTitle": "قيد الموافقة",
+    "ticketPendingBody": "تم إرسال طلبك، وسيوافق عليه المنظّم قريباً.",
+    "ticketAwaitingTitle": "تمت الموافقة — بانتظار الدفع",
+    "ticketAwaitingBody": "مقاعدك محجوزة. تظهر التذكرة ورمز QR هنا بمجرد استلام الدفع.",
+    "ticketReady": "تم استلام الدفع. التذكرة جاهزة.",
+    "scanAwaitingPayment": "تمت الموافقة — لم يُستلم الدفع، غير صالحة بعد"
   },
   "notes": {
     "new": "ملاحظة جديدة",

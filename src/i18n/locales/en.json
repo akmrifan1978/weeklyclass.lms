@@ -1401,7 +1401,7 @@
     "pricePerPerson": "{{price}} {{currency}}/person",
     "seatsLeft": "Only {{count}} place(s) left",
     "book": "Book a place",
-    "booked": "Your place is booked.",
+    "booked": "Your request is sent. It is under approval and will be confirmed shortly.",
     "yourBooking": "You have booked {{seats}} place(s)",
     "seats": "How many places?",
     "seatsHint": "Include yourself and anyone coming with you.",
@@ -1496,7 +1496,16 @@
     "scanSeats": "Seats",
     "scanNotFound": "No ticket with this code",
     "scanNotFoundHelp": "Check the code printed under the QR. A ticket cancelled long ago may also have been removed.",
-    "scanAtDoor": "Show this screen at the door."
+    "scanAtDoor": "Show this screen at the door.",
+    "bookingStatus_awaitingPayment": "Approved — awaiting payment",
+    "approveBooking": "Approve",
+    "approved": "Approved. The ticket is issued once the payment is marked received.",
+    "ticketPendingTitle": "Under approval",
+    "ticketPendingBody": "Your request has been sent. An organiser will approve it shortly.",
+    "ticketAwaitingTitle": "Approved — awaiting payment",
+    "ticketAwaitingBody": "Your seats are held. Your ticket and its QR code appear here once the payment is received.",
+    "ticketReady": "Payment received. The ticket is ready.",
+    "scanAwaitingPayment": "Approved — payment not received, not valid yet"
   },
   "notes": {
     "new": "New note",
