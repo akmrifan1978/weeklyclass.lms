@@ -511,6 +511,26 @@ service cloud.firestore {
       allow delete: if can('MANAGE_CALENDAR');
     }
 
+    /**
+     * One event's income and expenses.
+     *
+     * READ needs VIEW_EVENT_DASHBOARD, WRITE needs MANAGE_EVENT_FINANCE, and
+     * they are separate on purpose: the centre has an assistant who should be
+     * able to see what an event took and cost without being able to change a
+     * figure. Admins hold both, as they hold everything.
+     *
+     * Nothing here is public. A statement shown to somebody who paid is built
+     * from their OWN booking, which they may already read - never from these
+     * documents, which hold what the event cost the centre.
+     */
+    match /eventFinance/{entryId} {
+      allow read: if can('VIEW_EVENT_DASHBOARD');
+      allow create, update: if can('MANAGE_EVENT_FINANCE')
+                            && request.resource.data.eventId is string
+                            && request.resource.data.eventId.size() > 0;
+      allow delete: if can('MANAGE_EVENT_FINANCE');
+    }
+
     // Two more thin public copies, for the same reason and under the same rule
     // as publicSchedule above: a document is granted whole or not at all, so
     // anything a stranger may read has to be a document holding only that.

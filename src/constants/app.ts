@@ -19,6 +19,8 @@ export const COLLECTIONS = {
    * eventRegistrationService.syncPublicTicket for what it may and may not hold.
    */
   publicTickets: 'publicTickets',
+  /** One event's income and expenses. Never more than one event per row. */
+  eventFinance: 'eventFinance',
   passwordResets: 'passwordResets',
   passwordChanges: 'passwordChanges',
   branches: 'branches',

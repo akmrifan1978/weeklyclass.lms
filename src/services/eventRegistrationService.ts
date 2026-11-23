@@ -602,7 +602,9 @@ export async function setPaid(
    * A booking that was never approved is left where it is: paying does not
    * jump the queue, and a cancelled or declined one is not revived by it.
    */
-  const next: Partial<EventRegistration> = { paid };
+  // Dated here, not derived later, because this is the only moment that knows
+  // it. Cleared on unmarking so a withdrawn payment leaves no date behind.
+  const next: Partial<EventRegistration> = { paid, paidAt: paid ? new Date() : null };
   if (paid && registration.status === 'awaitingPayment') {
     next.status = 'confirmed';
     next.confirmedAt = new Date();

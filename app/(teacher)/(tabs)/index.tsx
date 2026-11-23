@@ -96,6 +96,9 @@ export default function TeacherHome() {
     { permission: 'MANAGE_CALENDAR', icon: 'calendar-outline', labelKey: 'nav.calendar', route: '/(teacher)/calendar', tint: brand.slate },
     { permission: 'MANAGE_CALENDAR', icon: 'videocam', labelKey: 'nav.onlineClasses', route: '/(teacher)/online-classes', tint: brand.red },
     { permission: 'MANAGE_CALENDAR', icon: 'ticket', labelKey: 'nav.events', route: '/(teacher)/events', tint: brand.orangeLight },
+    // The assistant's whole job, and often their only tile: an account granted
+    // VIEW_EVENT_DASHBOARD and nothing else lands here with one thing to press.
+    { permission: 'VIEW_EVENT_DASHBOARD', icon: 'wallet-outline', labelKey: 'eventDash.title', route: '/(teacher)/event-dashboard', tint: brand.navy },
     { permission: 'VIEW_STUDENTS', icon: 'chatbubbles', labelKey: 'nav.qa', route: '/(teacher)/qa', tint: brand.navy },
     { permission: 'VIEW_STUDENTS', icon: 'help-buoy', labelKey: 'nav.support', route: '/(teacher)/support', tint: brand.sand },
     // Every teacher can reach the admins, whatever else they have been granted.
