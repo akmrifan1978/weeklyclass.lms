@@ -346,6 +346,45 @@ export async function saveEvent(
   return newId;
 }
 
+/**
+ * Open or close one event's payment statement to the people who booked it.
+ *
+ * Deliberately NOT routed through `saveEvent`. That function fills in
+ * `targetAudience: 'all'` and `status: 'scheduled'` before spreading what it
+ * is given, which is right when a form supplies every field and wrong here:
+ * flipping a switch would quietly re-broadcast an event aimed at one class and
+ * un-cancel a cancelled one. One field in, one field out.
+ *
+ * The existing `registration` map is spread because Firestore replaces a map
+ * wholesale rather than merging into it — writing `{ statementVisible }` alone
+ * would take the price, the capacity and the WhatsApp link with it.
+ */
+export async function setStatementVisible(
+  event: CalendarEvent,
+  visible: boolean,
+  actor: AppUser
+): Promise<void> {
+  /*
+   * An event that takes no bookings has no statement to show, and must not be
+   * given a `registration` map just to hold this flag: the presence of that
+   * map is what marks an event as ticketed throughout the app, so inventing
+   * one here would turn a plain class into an event with a booking button, a
+   * price of nothing and no seats.
+   */
+  if (!event.registration) throw new Error('This event does not take bookings.');
+
+  await updateDocById<CalendarEvent>(COLLECTIONS.calendarEvents, event.id, {
+    registration: { ...event.registration, statementVisible: visible },
+  });
+  void audit.log({
+    actor,
+    action: 'UPDATE',
+    collection: COLLECTIONS.calendarEvents,
+    documentId: event.id,
+    summary: `${visible ? 'Opened' : 'Closed'} the payment statement for "${event.title}"`,
+  });
+}
+
 export async function deleteEvent(id: string, actor: AppUser): Promise<void> {
   const before = await getEvent(id);
   await softDelete(COLLECTIONS.calendarEvents, id, actor.uid);

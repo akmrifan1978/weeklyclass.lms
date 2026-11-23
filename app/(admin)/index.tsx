@@ -244,6 +244,12 @@ export default function AdminDashboard() {
             onPress={() => router.push('/(admin)/events')}
           />
           <QuickAccessTile
+            icon="wallet-outline"
+            label={t('eventDash.title')}
+            tint={brand.navy}
+            onPress={() => router.push('/(admin)/event-dashboard')}
+          />
+          <QuickAccessTile
             icon="chatbubble-ellipses-outline"
             label={chatUnread ? `${t('nav.liveChat')} (${chatUnread})` : t('nav.liveChat')}
             tint={brand.navy}

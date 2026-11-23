@@ -5,6 +5,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
+import { formatDate } from '@/utils/date';
 import * as bookings from '@/services/eventRegistrationService';
 import type { CalendarEvent, EventRegistration } from '@/types';
 import { FormSheet } from '@/components/ui';
@@ -33,11 +34,21 @@ export function TicketSheet({
   visible: boolean;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   if (!registration) return null;
 
   const code = bookings.ticketCode(registration.id);
   const paid = registration.paid === true;
+
+  /**
+   * Whether this event's organiser has opened the books to the people in them.
+   *
+   * Per event and off until switched on: the accounts of a trip are not the
+   * accounts of a dinner, and the two are run by different people. Compared
+   * against `true` rather than taken as truthy, so an older event with no
+   * such field keeps the statement closed.
+   */
+  const statement = event?.registration?.statementVisible === true;
 
   /*
    * A QR code is a ticket, so it waits until there is one.
@@ -178,6 +189,39 @@ export function TicketSheet({
             <Fact icon="card-outline" text={registration.reference} />
           ) : null}
 
+          {/* The statement, if the organiser of THIS event has allowed it.
+              Off by default, read from the event and not from the booking, so
+              one event's openness is not another's. It is the holder's own
+              payment and nobody else's: what was due, what came in, what is
+              left, and the day it was received. */}
+          {statement ? (
+            <View style={styles.statement}>
+              <Text style={styles.statementTitle}>{t('eventDash.statementTitle')}</Text>
+              <Line label={t('event.totalSeats')} value={String(registration.seats)} />
+              <Line
+                label={t('event.totalDue')}
+                value={`${registration.amount} ${registration.currency}`}
+              />
+              <Line
+                label={t('eventDash.received')}
+                value={`${paid ? registration.amount : 0} ${registration.currency}`}
+              />
+              <Line
+                label={t('eventDash.outstanding')}
+                value={`${paid ? 0 : registration.amount} ${registration.currency}`}
+                strong={!paid}
+              />
+              <Line
+                label={t('eventDash.statementPaidOn')}
+                value={
+                  paid && registration.paidAt
+                    ? formatDate(registration.paidAt, i18n.language)
+                    : t('eventDash.statementNotPaid')
+                }
+              />
+            </View>
+          ) : null}
+
           {/* Everyone admitted on this ticket. The door needs the list, not the
               number — a family arriving one at a time is checked off by name. */}
           <Text style={styles.holdersLabel}>{t('event.ticketHolders')}</Text>
@@ -221,6 +265,18 @@ function Fact({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: stri
     <View style={styles.factRow}>
       <Ionicons name={icon} size={13} color={colors.textSecondary} />
       <Text style={styles.factText}>{text}</Text>
+    </View>
+  );
+}
+
+/** One line of the statement: what it is on the left, the figure on the right. */
+function Line({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <View style={styles.lineRow}>
+      <Text style={styles.lineLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={[styles.lineValue, strong && styles.lineValueStrong]}>{value}</Text>
     </View>
   );
 }
@@ -342,6 +398,30 @@ const styles = StyleSheet.create({
   },
   paid: { color: colors.success },
   unpaid: { color: colors.warning },
+  statement: {
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+  },
+  statementTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  lineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingVertical: 3,
+  },
+  lineLabel: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted },
+  lineValue: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.text },
+  lineValueStrong: { color: colors.warning },
   holdersLabel: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,

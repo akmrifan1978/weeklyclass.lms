@@ -58,6 +58,16 @@ export const PERMISSIONS = [
   'MANAGE_ARTICLES',
   'MANAGE_ANNOUNCEMENTS',
   'SEND_NOTIFICATIONS',
+  /*
+   * Events: the dashboard, and the money in it.
+   *
+   * Two, not one, because the centre has an assistant who should see what an
+   * event took and cost without being able to change it - and because the
+   * accounts are the one place in this app where "who can look" and "who can
+   * write" are genuinely different questions.
+   */
+  'VIEW_EVENT_DASHBOARD',
+  'MANAGE_EVENT_FINANCE',
   // Administration
   'MANAGE_USERS',
   'MANAGE_SETTINGS',
@@ -85,6 +95,10 @@ export const PERMISSION_GROUPS: { group: string; permissions: Permission[] }[] =
   {
     group: 'Content & Communication',
     permissions: ['MANAGE_CALENDAR', 'MANAGE_ARTICLES', 'MANAGE_ANNOUNCEMENTS', 'SEND_NOTIFICATIONS'],
+  },
+  {
+    group: 'Events & finance',
+    permissions: ['VIEW_EVENT_DASHBOARD', 'MANAGE_EVENT_FINANCE'],
   },
   {
     group: 'Administration',

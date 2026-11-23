@@ -79,7 +79,8 @@
     "publishedToast": "Published. Everyone can see it now.",
     "unpublishedToast": "Moved back to draft. Hidden from everyone.",
     "blocked": "Blocked",
-    "notNow": "Not now"
+    "notNow": "Not now",
+    "notes": "Notes"
   },
   "auth": {
     "studentLogin": "Student Login",
@@ -942,7 +943,9 @@
     "MANAGE_USERS": "Manage users",
     "MANAGE_SETTINGS": "Manage settings",
     "MANAGE_BRANCHES": "Manage branches",
-    "MANAGE_LANGUAGES": "Manage languages"
+    "MANAGE_LANGUAGES": "Manage languages",
+    "VIEW_EVENT_DASHBOARD": "View the events dashboard",
+    "MANAGE_EVENT_FINANCE": "Record event income and expenses"
   },
   "prayer": {
     "fajr": "Fajr",
@@ -1890,5 +1893,55 @@
   "alerts": {
     "newRegistrationTitle": "New registration",
     "newRegistration": "{{name}} registered and is waiting for approval."
+  },
+  "eventDash": {
+    "title": "Events dashboard",
+    "lead": "Bookings and money, one event at a time.",
+    "noEvents": "No events yet",
+    "separateNote": "Each event is counted on its own. Nothing on this screen adds two events together, because they are paid for out of different pockets and answer to different people.",
+    "bookings": "Bookings",
+    "people": "People",
+    "seats": "Seats",
+    "received": "Received",
+    "outstanding": "Outstanding",
+    "net": "Net",
+    "netNote": "Money that has actually moved: received, plus other income, less expenses. Money still owed is not counted as income.",
+    "bookingsSection": "Bookings for this event",
+    "accounts": "Accounts for this event",
+    "bookingIncome": "Paid by attendees",
+    "otherIncome": "Other income",
+    "expenses": "Expenses",
+    "entries": "Income and expenses",
+    "addEntry": "Add entry",
+    "noEntries": "Nothing recorded for this event yet.",
+    "entryType": "Type",
+    "income": "Income",
+    "expense": "Expense",
+    "category": "Category",
+    "amount": "Amount",
+    "party": "Paid to / received from",
+    "partyHint": "Optional — the hall, the caterer, the donor.",
+    "receipt": "Receipt photo",
+    "amountRequired": "Enter an amount greater than zero.",
+    "deleteEntry": "Remove this entry from the event’s accounts? This cannot be undone.",
+    "statement": "Statement",
+    "statementToggle": "Show each attendee their payment statement",
+    "statementHelp": "Off until you turn it on, for this event only. When on, a person who booked sees a statement of their own payment — what they paid, for how many seats, and when. It never shows one family what another paid.",
+    "statementOn": "Attendees can now see their own payment statement.",
+    "statementOff": "The statement is hidden again.",
+    "statementTitle": "Payment statement",
+    "statementPaidOn": "Paid",
+    "statementNotPaid": "Not yet received",
+    "category_venue": "Venue",
+    "category_food": "Food",
+    "category_transport": "Transport",
+    "category_printing": "Printing",
+    "category_speaker": "Speaker",
+    "category_equipment": "Equipment",
+    "category_donation": "Donation",
+    "category_sponsorship": "Sponsorship",
+    "category_other": "Other",
+    "report": "Report",
+    "reportDone": "The accounts report has been saved."
   }
 }

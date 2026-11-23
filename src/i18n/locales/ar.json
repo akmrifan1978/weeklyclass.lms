@@ -79,7 +79,8 @@
     "publishedToast": "تم النشر. أصبح ظاهرًا للجميع.",
     "unpublishedToast": "أُعيد إلى المسودة. مخفي عن الجميع.",
     "blocked": "محظور",
-    "notNow": "ليس الآن"
+    "notNow": "ليس الآن",
+    "notes": "الملاحظات"
   },
   "auth": {
     "studentLogin": "دخول الطالب",
@@ -942,7 +943,9 @@
     "MANAGE_USERS": "إدارة المستخدمين",
     "MANAGE_SETTINGS": "إدارة الإعدادات",
     "MANAGE_BRANCHES": "إدارة الفروع",
-    "MANAGE_LANGUAGES": "إدارة اللغات"
+    "MANAGE_LANGUAGES": "إدارة اللغات",
+    "VIEW_EVENT_DASHBOARD": "عرض لوحة الفعاليات",
+    "MANAGE_EVENT_FINANCE": "تسجيل إيرادات الفعالية ومصروفاتها"
   },
   "prayer": {
     "fajr": "الفجر",
@@ -1890,5 +1893,55 @@
   "alerts": {
     "newRegistrationTitle": "تسجيل جديد",
     "newRegistration": "سجّل {{name}} وينتظر الموافقة."
+  },
+  "eventDash": {
+    "title": "لوحة الفعاليات",
+    "lead": "الحجوزات والمال، لكل فعالية على حدة.",
+    "noEvents": "لا توجد فعاليات بعد",
+    "separateNote": "كل فعالية تُحسب وحدها. لا تُجمع أرقام فعاليتين في هذه الشاشة.",
+    "bookings": "الحجوزات",
+    "people": "الأشخاص",
+    "seats": "المقاعد",
+    "received": "المستلم",
+    "outstanding": "المتبقي",
+    "net": "الصافي",
+    "netNote": "المال الذي انتقل فعلاً: المستلم مع الإيرادات الأخرى، ناقص المصروفات. المبالغ المستحقة غير محسوبة كإيراد.",
+    "bookingsSection": "حجوزات هذه الفعالية",
+    "accounts": "حساب هذه الفعالية",
+    "bookingIncome": "ما دفعه المشاركون",
+    "otherIncome": "إيرادات أخرى",
+    "expenses": "المصروفات",
+    "entries": "الإيرادات والمصروفات",
+    "addEntry": "إضافة قيد",
+    "noEntries": "لم يُسجّل شيء لهذه الفعالية بعد.",
+    "entryType": "النوع",
+    "income": "إيراد",
+    "expense": "مصروف",
+    "category": "التصنيف",
+    "amount": "المبلغ",
+    "party": "المدفوع له / المستلم منه",
+    "partyHint": "اختياري — القاعة، المطعم، المتبرع.",
+    "receipt": "صورة الإيصال",
+    "amountRequired": "أدخل مبلغاً أكبر من صفر.",
+    "deleteEntry": "حذف هذا القيد من حساب الفعالية؟ لا يمكن التراجع.",
+    "statement": "كشف الحساب",
+    "statementToggle": "إظهار كشف الدفع لكل مشارك",
+    "statementHelp": "مغلق حتى تفعّله، ولهذه الفعالية وحدها. عند تفعيله يرى من حجز كشف دفعه هو فقط — ولا يرى ما دفعه غيره أبداً.",
+    "statementOn": "يستطيع المشاركون الآن رؤية كشف دفعهم.",
+    "statementOff": "أُخفي الكشف مرة أخرى.",
+    "statementTitle": "كشف الدفع",
+    "statementPaidOn": "مدفوع",
+    "statementNotPaid": "لم يُستلم بعد",
+    "category_venue": "القاعة",
+    "category_food": "الطعام",
+    "category_transport": "النقل",
+    "category_printing": "الطباعة",
+    "category_speaker": "المحاضر",
+    "category_equipment": "المعدات",
+    "category_donation": "تبرع",
+    "category_sponsorship": "رعاية",
+    "category_other": "أخرى",
+    "report": "تقرير",
+    "reportDone": "تم حفظ تقرير الحساب."
   }
 }

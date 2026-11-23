@@ -488,6 +488,16 @@ export interface EventRegistrationSettings {
    * an invite link on a page a stranger can read would let anybody join.
    */
   whatsappLink?: string | null;
+  /**
+   * Whether the people who paid may see a statement for this event.
+   *
+   * Off until an admin turns it on, per event, because an event's accounts are
+   * the organisers' business until they decide otherwise. When it is on, each
+   * attendee sees a statement of their OWN payment - what they paid, for how
+   * many seats, and when - which is the receipt somebody asks for. It never
+   * shows one family what another paid.
+   */
+  statementVisible?: boolean;
 }
 
 /**
@@ -534,6 +544,33 @@ export interface PublicTicket extends BaseDoc {
   seats: number;
   status: BookingStatus;
   paid?: boolean;
+}
+
+/**
+ * One line of an event's accounts: money in that did not come from a booking,
+ * or money out.
+ *
+ * Booking income is deliberately absent - it lives on the bookings, frozen at
+ * booking time, and a copy here would be the same riyal in two places, free to
+ * disagree with itself.
+ */
+export interface EventFinanceEntry extends BaseDoc {
+  /** The event this belongs to. Every read is filtered by it. */
+  eventId: string;
+  eventTitle: string;
+  type: 'income' | 'expense';
+  /** What it was: "Hall and seating", "Donation from Br. Yusuf". */
+  title: string;
+  category: string;
+  amount: number;
+  currency: string;
+  /** ISO date of the payment itself, not of the record. */
+  date: string;
+  /** Who it was paid to, or received from. */
+  party?: string | null;
+  note?: string | null;
+  /** A photograph of the receipt, on the image service the app already uses. */
+  receiptUrl?: string | null;
 }
 
 export interface EventRegistration extends BaseDoc {
@@ -588,6 +625,15 @@ export interface EventRegistration extends BaseDoc {
   rejectionReason?: string | null;
   /** Set by an admin once payment is in hand. */
   paid?: boolean;
+  /**
+   * When the money was marked received.
+   *
+   * Kept so the attendee's statement can say *when* they paid rather than
+   * only that they did. `updatedAt` would have been wrong for this: it moves
+   * every time anything on the booking is edited, so a note added in March
+   * would re-date a payment made in January.
+   */
+  paidAt?: FireDate;
   notes?: string | null;
 }
 
