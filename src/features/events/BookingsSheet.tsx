@@ -10,6 +10,7 @@ import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme
 import { friendlyMessage } from '@/utils/errors';
 import { saveTextFile, safeFilename } from '@/utils/download';
 import * as bookings from '@/services/eventRegistrationService';
+import { BookingSheet } from './BookingSheet';
 import type { CalendarEvent, EventRegistration } from '@/types';
 import {
   Button,
@@ -55,6 +56,7 @@ export function BookingsSheet({
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [confirmDeleteOne, setConfirmDeleteOne] = useState<EventRegistration | null>(null);
+  const [editingBooking, setEditingBooking] = useState<EventRegistration | null>(null);
 
   const load = useCallback(async () => {
     if (!event) return [] as EventRegistration[];
@@ -300,6 +302,19 @@ export function BookingsSheet({
                     booking has no other button on its row, and that was the
                     one state somebody most wants to clear away. Admin only,
                     which is what the database enforces too. */}
+                {/* Correcting the booking itself — who is coming, which band
+                    they are in, the reference. Not offered on a cancelled one,
+                    which the database refuses to change at all. */}
+                {isAdmin && row.status !== 'cancelled' ? (
+                  <Button
+                    label={t('common.edit')}
+                    icon="create-outline"
+                    size="sm"
+                    variant="outline"
+                    onPress={() => setEditingBooking(row)}
+                  />
+                ) : null}
+
                 {isAdmin ? (
                   <Button
                     label={t('common.delete')}
@@ -427,6 +442,37 @@ export function BookingsSheet({
           containerStyle={{ marginBottom: 0 }}
         />
       </FormSheet>
+
+      {/* The same form the booking was made on, in edit mode.
+          Keyed on the booking so opening a second one starts from its own
+          party rather than keeping the last one's rows on screen. */}
+      {editingBooking ? (
+        <BookingSheet
+          key={editingBooking.id}
+          event={event}
+          visible
+          submitting={busyId === editingBooking.id}
+          onClose={() => setEditingBooking(null)}
+          editing={{
+            party: (editingBooking.participants ?? []).map((p) => ({
+              name: p.name,
+              gender: p.gender,
+              ageGroup: p.ageGroup,
+            })),
+            reference: editingBooking.reference ?? '',
+            bookerName: editingBooking.userName,
+          }}
+          onConfirm={async (party, reference) => {
+            const row = editingBooking;
+            if (!row || !user) return;
+            await run(row, async () => {
+              await bookings.updateBooking(row, party, reference, user);
+              toast.success(t('event.bookingUpdated'));
+            });
+            setEditingBooking(null);
+          }}
+        />
+      ) : null}
 
       <ConfirmDialog
         visible={Boolean(confirmDeleteOne)}

@@ -894,7 +894,36 @@ service cloud.firestore {
                         && !changedKeys().hasAny(['amount', 'userId', 'seats', 'participants'])
                         // A cancelled booking stays cancelled: reinstating it
                         // would hand back a seat the count has already released.
-                        && resource.data.status != 'cancelled');
+                        && resource.data.status != 'cancelled')
+
+                    // 3. An ADMIN corrects the booking itself.
+                    //
+                    // A family of five becomes four, a name is spelt wrong, a
+                    // child was booked in the adult band. Before this the only
+                    // remedy was to delete the booking and have the person
+                    // make it again, which loses the payment record and the
+                    // ticket with it.
+                    //
+                    // Narrower than it looks. `userId` stays locked under
+                    // every branch of this rule: a booking belongs to the
+                    // account that made it, and moving it to another person is
+                    // not an edit, it is impersonation. Seats must still be a
+                    // positive whole number and the amount cannot be negative,
+                    // so a correction cannot quietly turn into a credit. A
+                    // cancelled booking is still untouchable. And it is
+                    // admins only — a teacher with MANAGE_CALENDAR may run the
+                    // door but may not rewrite what somebody owes.
+                    //
+                    // Capacity is enforced by the app's transaction rather
+                    // than here, for the same reason the seat count is: it is
+                    // arithmetic across two documents, which a rule cannot do.
+                    || (isAdmin()
+                        && !changedKeys().hasAny(['userId'])
+                        && resource.data.status != 'cancelled'
+                        && request.resource.data.seats is int
+                        && request.resource.data.seats > 0
+                        && request.resource.data.amount is number
+                        && request.resource.data.amount >= 0);
       // Note: a rejected booking CAN still be edited by staff, on purpose. An
       // organiser who declined by mistake, or who found room later, should be
       // able to confirm it — and confirming goes through the transaction that

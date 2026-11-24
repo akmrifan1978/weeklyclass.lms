@@ -42,18 +42,39 @@ export function BookingSheet({
   submitting,
   onClose,
   onConfirm,
+  editing = null,
 }: {
   event: CalendarEvent | null;
   visible: boolean;
   submitting: boolean;
   onClose: () => void;
   onConfirm: (party: PartyMember[], reference: string) => void;
+  /**
+   * An existing booking being corrected, rather than a new one being made.
+   *
+   * The same form either way, because the questions are the same and two
+   * copies would drift apart. What changes is where the first participant
+   * comes from: when booking, it is the signed-in person, taken from their
+   * profile and not typed. When an admin edits somebody else's booking, the
+   * signed-in person is the admin — seeding from them would quietly rewrite
+   * whose booking it is. So in edit mode the party comes from the booking.
+   *
+   * The booker's NAME still cannot be typed over. Their age band can, because
+   * that decides the price and getting it wrong is the commonest thing an
+   * organiser needs to put right.
+   */
+  editing?: { party: PartyMember[]; reference: string; bookerName: string } | null;
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
 
-  const [family, setFamily] = useState<PartyMember[]>([]);
-  const [reference, setReference] = useState('');
+  const [family, setFamily] = useState<PartyMember[]>(() =>
+    editing ? editing.party.slice(1) : []
+  );
+  const [reference, setReference] = useState(editing?.reference ?? '');
+  const [editedSelfAge, setEditedSelfAge] = useState<AgeGroup>(
+    editing?.party[0]?.ageGroup ?? 'adult'
+  );
 
   const settings = event?.registration;
 
@@ -83,16 +104,19 @@ export function BookingSheet({
    * from their date of birth rather than chosen, which removes the only way
    * that price could be got wrong on purpose.
    */
-  const selfGender: Gender = (user?.gender as Gender) ?? 'male';
+  const selfGender: Gender = editing
+    ? (editing.party[0]?.gender ?? 'male')
+    : ((user?.gender as Gender) ?? 'male');
   const derivedAge = ageGroupFromDateOfBirth(user?.dateOfBirth);
   // No date of birth on file — teachers and admins have none — so the adult
   // band stands in. It charges rather than admits free, which is the safe
   // direction for a value nobody supplied.
-  const selfAge: AgeGroup = derivedAge ?? 'adult';
+  const selfAge: AgeGroup = editing ? editedSelfAge : (derivedAge ?? 'adult');
+  const selfName = editing ? editing.bookerName : (user?.fullName ?? '');
 
   // The booker is always the first participant; the family rows follow.
   const party: PartyMember[] = [
-    { name: user?.fullName ?? '', gender: selfGender, ageGroup: selfAge },
+    { name: selfName, gender: selfGender, ageGroup: selfAge },
     ...family,
   ];
   const named = party.filter((p) => p.name.trim().length > 0);
@@ -104,11 +128,11 @@ export function BookingSheet({
   return (
     <FormSheet
       visible={visible}
-      title={t('event.registration')}
+      title={editing ? t('event.editBooking') : t('event.registration')}
       onClose={onClose}
       onSubmit={() => onConfirm(party, reference)}
       submitting={submitting}
-      submitLabel={t('event.confirmBooking')}
+      submitLabel={editing ? t('common.save') : t('event.confirmBooking')}
     >
       {event ? (
         <View style={styles.summary}>
@@ -142,16 +166,27 @@ export function BookingSheet({
       <Text style={styles.label}>{t('event.mainParticipant')}</Text>
       <View style={styles.selfRow}>
         <Text style={styles.selfName} numberOfLines={1}>
-          {user?.fullName}
+          {selfName}
         </Text>
-        {/* A chip rather than a disabled dropdown: a control that looks like it
-            opens and does not is worse than something that never claimed to. */}
-        <View style={styles.ageChip}>
-          <Text style={styles.ageText}>{t(`event.age_${selfAge}`)}</Text>
-          <Text style={styles.agePrice}>{priceLabel(selfAge)}</Text>
-        </View>
+        {editing ? (
+          // Editing: the band is a real choice, because correcting it is the
+          // commonest fix an organiser needs and it decides the price.
+          <Select<AgeGroup>
+            value={selfAge}
+            options={ageOptions}
+            onChange={(v) => setEditedSelfAge(v ?? 'adult')}
+            containerStyle={{ flex: 1, marginBottom: 0 }}
+          />
+        ) : (
+          /* A chip rather than a disabled dropdown: a control that looks like it
+             opens and does not is worse than something that never claimed to. */
+          <View style={styles.ageChip}>
+            <Text style={styles.ageText}>{t(`event.age_${selfAge}`)}</Text>
+            <Text style={styles.agePrice}>{priceLabel(selfAge)}</Text>
+          </View>
+        )}
       </View>
-      {derivedAge ? null : (
+      {derivedAge || editing ? null : (
         <Text style={styles.ageNote}>{t('event.ageAssumed')}</Text>
       )}
 
