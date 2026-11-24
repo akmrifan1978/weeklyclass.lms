@@ -1524,7 +1524,10 @@
     "refundHint": "Leave 0 to cancel without refunding. This is recorded with the cancellation and cannot be changed afterwards.",
     "refundHelp": "{{name}}'s booking is cancelled by this, and {{held}} has been received. How much is being given back?",
     "refunded": "Cancelled, and {{amount}} recorded as refunded.",
-    "refundedChip": "Refunded {{amount}} {{currency}}"
+    "refundedChip": "Refunded {{amount}} {{currency}}",
+    "awaitingPaymentLine": "Approved — pay {{amount}} {{currency}} to receive your ticket",
+    "paidAwaitingTicket": "Paid. Your ticket is being issued.",
+    "issueTicket": "Issue ticket"
   },
   "notes": {
     "new": "New note",

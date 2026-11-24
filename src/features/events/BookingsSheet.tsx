@@ -212,6 +212,27 @@ export function BookingsSheet({
 
                 {row.status !== 'cancelled' && row.status !== 'rejected' ? (
                   <>
+                    {/* Paid in full, approved, and still not a ticket.
+                        This state should no longer be reachable — approving a
+                        booking already paid for now confirms it outright — but
+                        bookings that reached it before the fix are stuck in a
+                        corner with no way out, since Approve is offered only
+                        for a pending booking. One press settles it, and the
+                        button is its own explanation of what is wrong. */}
+                    {row.status === 'awaitingPayment' && bookings.outstandingOn(row) <= 0 ? (
+                      <Button
+                        label={t('event.issueTicket')}
+                        icon="ticket-outline"
+                        size="sm"
+                        loading={busyId === row.id}
+                        onPress={() =>
+                          void run(row, async () => {
+                            await bookings.setPaidAmount(row, Number(row.amount) || 0, user!);
+                            toast.success(t('event.ticketReady'));
+                          })
+                        }
+                      />
+                    ) : null}
                     <Button
                       label={t(row.paid ? 'event.markUnpaid' : 'event.markPaid')}
                       icon="cash-outline"

@@ -233,6 +233,21 @@ export function EventsScreen({ basePath }: { basePath: string }) {
                         <Text style={styles.blocked}>
                           {mine.rejectionReason || t('event.bookingRejected')}
                         </Text>
+                      ) : mine.status === 'awaitingPayment' ? (
+                        /* Approved is not the same as waiting to be looked at,
+                           and saying "waiting for the organiser" to somebody
+                           whose place is already held tells them to sit still
+                           when the next move is theirs. This says what is owed
+                           — the balance, so a deposit is counted — or, when
+                           nothing is owed, that the ticket is on its way. */
+                        <Text style={styles.awaiting}>
+                          {bookings.outstandingOn(mine) > 0
+                            ? t('event.awaitingPaymentLine', {
+                                amount: bookings.outstandingOn(mine),
+                                currency: mine.currency,
+                              })
+                            : t('event.paidAwaitingTicket')}
+                        </Text>
                       ) : (
                         <Text style={styles.awaiting}>
                           {t('event.awaitingDecision', { seats: mine.seats })}
