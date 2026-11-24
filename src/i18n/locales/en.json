@@ -1982,6 +1982,7 @@
     "reportBudget": "Budget against actual",
     "reportBudgetHint": "Category by category, what was planned and what it came to.",
     "reportIncome": "Income and expenses",
-    "reportIncomeHint": "Everything in and out, with the per-person figures and every entry."
+    "reportIncomeHint": "Everything in and out, with the per-person figures and every entry.",
+    "manageBookingsHint": "Press Bookings above to see who has booked, approve or decline them, and record payments."
   }
 }
