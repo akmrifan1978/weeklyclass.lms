@@ -10,6 +10,7 @@ import type {
   EventParticipant,
   EventRegistration,
   EventRegistrationSettings,
+  Gender,
   PublicTicket,
 } from '@/types';
 
@@ -754,6 +755,96 @@ export function setPaid(
   actor: AppUser
 ): Promise<void> {
   return setPaidAmount(registration, paid ? Number(registration.amount) || 0 : 0, actor);
+}
+
+/**
+ * Corrects a booking: who is coming, what band they are in, the reference.
+ *
+ * ADMIN ONLY, matching the rule. The alternative was deleting the booking and
+ * asking the person to make it again, which throws away the payment record
+ * and the ticket to fix a misspelt name.
+ *
+ * REPRICED FROM THE EVENT, not from what the screen believes. A party of five
+ * becoming four pays four people's prices at the event's CURRENT bands, worked
+ * out here the same way `book()` works them out, so an organiser cannot set a
+ * price by typing one and the two paths cannot drift apart.
+ *
+ * The seat count moves by the difference, and only when this booking is
+ * actually holding seats. Growing a booking is checked against capacity for
+ * the same reason booking is: the hall does not get bigger because the edit
+ * came from an admin.
+ */
+export async function updateBooking(
+  registration: EventRegistration,
+  party: { name: string; gender: Gender; ageGroup: AgeGroup }[],
+  reference: string,
+  actor: AppUser
+): Promise<void> {
+  const named = party.filter((p) => p.name.trim().length > 0);
+  if (named.length === 0) throw new AppError('event.nobodyNamed', 'failed-precondition');
+
+  const eventRef = doc(db, COLLECTIONS.calendarEvents, registration.eventId);
+  const bookingRef = doc(db, COLLECTIONS.eventRegistrations, registration.id);
+
+  await runTransaction(db, async (tx) => {
+    const eventSnap = await tx.get(eventRef);
+    const bookingSnap = await tx.get(bookingRef);
+    if (!eventSnap.exists() || !bookingSnap.exists()) {
+      throw new AppError('errors.notFound', 'not-found');
+    }
+
+    const event = eventSnap.data() as CalendarEvent;
+    const live = bookingSnap.data() as EventRegistration;
+    if (live.status === 'cancelled') {
+      throw new AppError('event.cannotEditCancelled', 'failed-precondition');
+    }
+
+    const settings = event.registration;
+    if (!settings) throw new AppError('event.notBookable', 'failed-precondition');
+
+    const participants: EventParticipant[] = named.map((p) => ({
+      name: p.name.trim(),
+      gender: p.gender,
+      ageGroup: p.ageGroup,
+      price: priceFor(settings, p.ageGroup),
+    }));
+    const amount = participants.reduce((sum, p) => sum + p.price, 0);
+
+    // Holding seats, so a change in party size changes the event's count.
+    const holds = live.status === 'confirmed' || live.status === 'awaitingPayment';
+    const delta = participants.length - (Number(live.seats) || 0);
+    const taken = event.registeredCount ?? 0;
+    const capacity = settings.capacity ?? null;
+
+    if (holds && delta > 0 && capacity != null && taken + delta > capacity) {
+      throw new AppError('event.notEnoughSeats', 'failed-precondition');
+    }
+
+    tx.update(bookingRef, {
+      participants,
+      seats: participants.length,
+      amount,
+      reference: reference.trim() || null,
+      updatedAt: serverTimestamp(),
+    });
+
+    if (holds && delta !== 0) {
+      tx.update(eventRef, { registeredCount: Math.max(0, taken + delta) });
+    }
+  });
+
+  forgetBookings();
+  forgetCollection(COLLECTIONS.calendarEvents);
+  // The public copy carries the seat count a steward reads at the door.
+  await refreshPublicTicket(registration.id);
+
+  void audit.log({
+    actor,
+    action: 'UPDATE',
+    collection: COLLECTIONS.eventRegistrations,
+    documentId: registration.id,
+    summary: `Edited ${registration.userName}'s booking for "${registration.eventTitle}" (${named.length} place(s))`,
+  });
 }
 
 /**

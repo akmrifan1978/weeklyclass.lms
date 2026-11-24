@@ -1532,7 +1532,11 @@
     "deleteAllWarning": "Permanently delete all {{count}} booking(s) for this event, including {{received}} recorded as received? The tickets stop working, the seat count returns to zero, and the event’s accounts lose what attendees paid. This cannot be undone.",
     "deleteAllDone": "{{count}} booking(s) deleted.",
     "deleteOneWarning": "Permanently delete {{name}}’s booking for {{count}} place(s)? Their ticket stops working and the record of what they paid is removed from the event’s accounts. This cannot be undone.",
-    "deleteOneDone": "Booking deleted."
+    "deleteOneDone": "Booking deleted.",
+    "editBooking": "Edit booking",
+    "bookingUpdated": "Booking updated.",
+    "nobodyNamed": "Enter at least one name.",
+    "cannotEditCancelled": "A cancelled booking cannot be edited."
   },
   "notes": {
     "new": "New note",
