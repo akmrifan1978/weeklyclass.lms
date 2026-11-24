@@ -1527,7 +1527,10 @@
     "refundedChip": "Refunded {{amount}} {{currency}}",
     "awaitingPaymentLine": "Approved — pay {{amount}} {{currency}} to receive your ticket",
     "paidAwaitingTicket": "Paid. Your ticket is being issued.",
-    "issueTicket": "Issue ticket"
+    "issueTicket": "Issue ticket",
+    "deleteAll": "Delete all bookings",
+    "deleteAllWarning": "Permanently delete all {{count}} booking(s) for this event, including {{received}} recorded as received? The tickets stop working, the seat count returns to zero, and the event’s accounts lose what attendees paid. This cannot be undone.",
+    "deleteAllDone": "{{count}} booking(s) deleted."
   },
   "notes": {
     "new": "New note",
