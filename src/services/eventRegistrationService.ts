@@ -314,6 +314,16 @@ export async function confirmBooking(
   }
   if (registration.status === 'confirmed') return;
 
+  /**
+   * Is the money already in?
+   *
+   * Read through `outstandingOn`, so a deposit counts for what it is: a
+   * booking half paid is still awaiting payment, and only one settled in full
+   * becomes a ticket on approval. A free event owes nothing and so settles
+   * trivially, which is the behaviour it already had.
+   */
+  const settledAlready = outstandingOn(registration) <= 0;
+
   // A transaction, because confirming is the moment the seats are actually
   // taken. Between the organiser opening this list and pressing the button,
   // other people have been booking — so availability is checked again here,
@@ -346,8 +356,17 @@ export async function confirmBooking(
        * Approved is not confirmed. The seats are held from this moment, but a
        * paid event waits for the money before it becomes a ticket - see
        * BookingStatus. A free event has nothing to wait for.
+       *
+       * AND NEITHER DOES ONE ALREADY PAID FOR. An organiser is as likely to
+       * take the money first and approve afterwards - somebody pays at the
+       * desk, then the booking is let in - and this used to send that booking
+       * to "awaiting payment" for money already in hand. The ticket could then
+       * never be issued: approval had happened, payment had happened, and the
+       * one state that produces a ticket was unreachable from there. Asking
+       * what is still owed rather than what the event costs answers both
+       * orders the same way.
        */
-      status: Number(registration.amount) > 0 ? 'awaitingPayment' : 'confirmed',
+      status: settledAlready ? 'confirmed' : Number(registration.amount) > 0 ? 'awaitingPayment' : 'confirmed',
       // Re-queued on confirmation, which also picks up bookings made before
       // the field existed.
       confirmationEmailedAt: null,
@@ -370,7 +389,9 @@ export async function confirmBooking(
   // dead link.
   const joinLine = whatsappLink ? ` Join the event's WhatsApp group: ${whatsappLink}` : '';
 
-  const owing = Number(registration.amount) > 0;
+  // What is STILL owed, not what the event costs: a booking already paid for
+  // must not be told its ticket is waiting on money that has arrived.
+  const owing = !settledAlready;
 
   await notify(
     registration,
