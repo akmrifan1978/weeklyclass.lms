@@ -369,6 +369,19 @@ function SettingsScreen() {
             value={form.requireClassId === true}
             onValueChange={(v) => set('requireClassId', v)}
           />
+          <Divider />
+          {/* Event bookings, which are a separate question from accounts.
+              The setting has existed since bookings did - the security rules
+              read it on every booking - but nothing in the app could switch
+              it on, so an organiser who wanted to vet each request had no way
+              to say so and every booking with room confirmed itself. Asked in
+              the centre's own words: ON means each one waits for you. */}
+          <ToggleRow
+            label={t('settings.requireBookingApproval')}
+            description={t('settings.requireBookingApprovalHelp')}
+            value={form.requireBookingApproval === true}
+            onValueChange={(v) => set('requireBookingApproval', v)}
+          />
         </Card>
 
         <Spacer />
