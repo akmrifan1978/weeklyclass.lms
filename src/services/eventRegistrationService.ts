@@ -438,16 +438,27 @@ export async function cancel(
 ): Promise<void> {
   const eventRef = doc(db, COLLECTIONS.calendarEvents, registration.eventId);
   const bookingRef = doc(db, COLLECTIONS.eventRegistrations, registration.id);
-  // Never more than was taken: a refund is money going back, not a payment in
-  // the other direction.
-  const given = Math.max(0, Math.min(Number(refund) || 0, receivedOn(registration)));
+  /**
+   * Set inside the transaction, from the document as it really is.
+   *
+   * It used to be clamped against the copy the screen was holding, which can
+   * be minutes old. An organiser who corrected a payment to zero and then
+   * cancelled had 120 refunded against a booking showing nothing received —
+   * leaving the event reporting MINUS 120 of income, money that had gone out
+   * without ever having come in.
+   */
+  let given = 0;
 
   await runTransaction(db, async (tx) => {
     const fresh = await tx.get(eventRef);
     const booking = await tx.get(bookingRef);
     if (!booking.exists()) return;
-    const before = (booking.data() as EventRegistration).status;
+    const live = booking.data() as EventRegistration;
+    const before = live.status;
     if (before === 'cancelled') return;
+
+    // Against the document, not the screen's copy of it.
+    given = Math.max(0, Math.min(Number(refund) || 0, receivedOn(live)));
 
     tx.update(bookingRef, {
       status: 'cancelled',
@@ -455,15 +466,26 @@ export async function cancel(
       ...(given > 0 ? { refundedAmount: given, refundedAt: serverTimestamp() } : {}),
     });
 
-    // Only a CONFIRMED booking was holding seats, so only a confirmed one gives
-    // any back. Decrementing for a waitlisted request would hand the event free
-    // capacity it never allocated, and the count would drift further from the
-    // truth with every cancelled request.
-    if (fresh.exists() && before === 'confirmed') {
+    /*
+     * Every booking that was HOLDING seats gives them back.
+     *
+     * This used to release them only from `confirmed`, which was true when
+     * confirming was the step that took them. It is not any more: approval
+     * takes the seats and leaves the booking at `awaitingPayment` until the
+     * money arrives. So a booking approved and then cancelled kept its seats
+     * for ever — an event filling up with places nobody holds, and a "places
+     * left" that only ever falls. A pending request still releases nothing,
+     * because it was never given anything.
+     *
+     * The seat count comes from the fresh event read, and the seat NUMBER
+     * from the booking as it stands, not from the copy passed in.
+     */
+    const heldSeats = before === 'confirmed' || before === 'awaitingPayment';
+    if (fresh.exists() && heldSeats) {
       const taken = (fresh.data() as CalendarEvent).registeredCount ?? 0;
       // Clamped at zero: a count that has drifted must not be driven negative
       // by a cancellation, which would then let the event oversell.
-      tx.update(eventRef, { registeredCount: Math.max(0, taken - registration.seats) });
+      tx.update(eventRef, { registeredCount: Math.max(0, taken - (Number(live.seats) || 0)) });
     }
   });
   forgetBookings();
@@ -732,6 +754,49 @@ export function setPaid(
   actor: AppUser
 ): Promise<void> {
   return setPaidAmount(registration, paid ? Number(registration.amount) || 0 : 0, actor);
+}
+
+/**
+ * Removes ONE booking, for good.
+ *
+ * Admin only, like the bulk version, and offered for every status — a
+ * cancelled booking has no other button on its row, so without this the only
+ * way to clear one was to delete every booking on the event.
+ *
+ * Releases the seats if that booking was still holding them, which a
+ * cancelled one is not: cancelling gave them back already, and taking them
+ * off twice would let the event oversell.
+ */
+export async function deleteBooking(
+  registration: EventRegistration,
+  actor: AppUser
+): Promise<void> {
+  // The public copy first — a copy outliving its booking is a QR code that
+  // still opens the door.
+  await deleteDoc(doc(db, COLLECTIONS.publicTickets, ticketCode(registration.id))).catch(
+    () => undefined
+  );
+  await deleteDoc(doc(db, COLLECTIONS.eventRegistrations, registration.id));
+
+  if (registration.status === 'confirmed' || registration.status === 'awaitingPayment') {
+    const event = await getById<CalendarEvent>(COLLECTIONS.calendarEvents, registration.eventId);
+    if (event) {
+      await updateDocById<CalendarEvent>(COLLECTIONS.calendarEvents, registration.eventId, {
+        registeredCount: Math.max(0, (event.registeredCount ?? 0) - (registration.seats || 0)),
+      } as Partial<CalendarEvent>);
+    }
+  }
+
+  forgetBookings();
+  forgetCollection(COLLECTIONS.calendarEvents);
+
+  void audit.log({
+    actor,
+    action: 'DELETE',
+    collection: COLLECTIONS.eventRegistrations,
+    documentId: registration.id,
+    summary: `Deleted ${registration.userName}'s booking for "${registration.eventTitle}"`,
+  });
 }
 
 /**
