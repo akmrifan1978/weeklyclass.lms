@@ -1524,7 +1524,10 @@
     "refundHint": "ආපසු නොගෙවා අවලංගු කිරීමට 0 තබන්න. මෙය අවලංගු කිරීම සමඟ සටහන් වන අතර පසුව වෙනස් කළ නොහැක.",
     "refundHelp": "මෙයින් {{name}} ගේ වෙන් කිරීම අවලංගු වේ; {{held}} ලැබී ඇත. ආපසු ගෙවන්නේ කොපමණද?",
     "refunded": "අවලංගු විය; {{amount}} ආපසු ගෙවූ ලෙස සටහන් විය.",
-    "refundedChip": "{{amount}} {{currency}} ආපසු ගෙවා ඇත"
+    "refundedChip": "{{amount}} {{currency}} ආපසු ගෙවා ඇත",
+    "awaitingPaymentLine": "අනුමතයි — ටිකට් ලබා ගැනීමට {{amount}} {{currency}} ගෙවන්න",
+    "paidAwaitingTicket": "ගෙවා ඇත. ඔබේ ටිකට් නිකුත් වෙමින් පවතී.",
+    "issueTicket": "ටිකට් නිකුත් කරන්න"
   },
   "notes": {
     "new": "නව සටහන",

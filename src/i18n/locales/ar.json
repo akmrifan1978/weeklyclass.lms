@@ -1524,7 +1524,10 @@
     "refundHint": "اترك 0 للإلغاء دون استرداد. يُسجل هذا مع الإلغاء ولا يمكن تغييره بعده.",
     "refundHelp": "هذا يلغي حجز {{name}}، وقد استُلم {{held}}. كم المبلغ الذي سيُعاد؟",
     "refunded": "أُلغي الحجز، وسُجل استرداد {{amount}}.",
-    "refundedChip": "استُرد {{amount}} {{currency}}"
+    "refundedChip": "استُرد {{amount}} {{currency}}",
+    "awaitingPaymentLine": "مُعتمد — ادفع {{amount}} {{currency}} لاستلام تذكرتك",
+    "paidAwaitingTicket": "مدفوع. تذكرتك قيد الإصدار.",
+    "issueTicket": "إصدار التذكرة"
   },
   "notes": {
     "new": "ملاحظة جديدة",
