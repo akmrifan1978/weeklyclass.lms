@@ -11,6 +11,7 @@ import { saveTextFile, safeFilename } from '@/utils/download';
 import * as calendar from '@/services/calendarService';
 import * as bookings from '@/services/eventRegistrationService';
 import type { CalendarEvent, EventRegistration } from '@/types';
+import { CrashBoundary } from '@/components/shared/CrashBoundary';
 import { EventCard } from './EventCard';
 import { BookingSheet, type PartyMember } from './BookingSheet';
 import { BookingsSheet } from './BookingsSheet';
@@ -247,20 +248,29 @@ export function EventsScreen({ basePath }: { basePath: string }) {
         onConfirm={submitBooking}
       />
 
-      <BookingsSheet
-        key={manage?.id ?? 'no-manage'}
-        event={manage}
-        visible={Boolean(manage)}
-        onClose={() => setManage(null)}
-        onChanged={() => void reload()}
-      />
+      {/* Each sheet in its own boundary, named.
+          A sheet that throws while drawing took the whole screen down with it
+          and left a blank page — the bookings list and the ticket are the two
+          most involved things here, and the two most worth being told about by
+          name rather than by silence. */}
+      <CrashBoundary where="bookings list">
+        <BookingsSheet
+          key={manage?.id ?? 'no-manage'}
+          event={manage}
+          visible={Boolean(manage)}
+          onClose={() => setManage(null)}
+          onChanged={() => void reload()}
+        />
+      </CrashBoundary>
 
-      <TicketSheet
-        registration={ticket}
-        event={data?.events.find((e) => e.id === ticket?.eventId) ?? null}
-        visible={Boolean(ticket)}
-        onClose={() => setTicket(null)}
-      />
+      <CrashBoundary where="ticket">
+        <TicketSheet
+          registration={ticket}
+          event={data?.events.find((e) => e.id === ticket?.eventId) ?? null}
+          visible={Boolean(ticket)}
+          onClose={() => setTicket(null)}
+        />
+      </CrashBoundary>
 
       <ConfirmDialog
         visible={Boolean(confirmDelete)}
