@@ -1527,7 +1527,10 @@
     "refundedChip": "استُرد {{amount}} {{currency}}",
     "awaitingPaymentLine": "مُعتمد — ادفع {{amount}} {{currency}} لاستلام تذكرتك",
     "paidAwaitingTicket": "مدفوع. تذكرتك قيد الإصدار.",
-    "issueTicket": "إصدار التذكرة"
+    "issueTicket": "إصدار التذكرة",
+    "deleteAll": "حذف كل الحجوزات",
+    "deleteAllWarning": "حذف كل حجوزات هذه الفعالية نهائياً وعددها {{count}}، بما فيها {{received}} مسجلة كمستلمة؟ ستتوقف التذاكر، ويعود عدد المقاعد إلى صفر، ويفقد حساب الفعالية ما دفعه المشاركون. لا يمكن التراجع عن هذا.",
+    "deleteAllDone": "حُذف {{count}} حجز/حجوزات."
   },
   "notes": {
     "new": "ملاحظة جديدة",

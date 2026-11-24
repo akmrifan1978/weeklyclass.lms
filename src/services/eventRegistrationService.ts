@@ -1,4 +1,4 @@
-import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { deleteDoc, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 
 import { db } from '@/firebase/config';
 import { COLLECTIONS, PUBLIC_SITE_URL } from '@/constants/app';
@@ -732,6 +732,72 @@ export function setPaid(
   actor: AppUser
 ): Promise<void> {
   return setPaidAmount(registration, paid ? Number(registration.amount) || 0 : 0, actor);
+}
+
+/**
+ * Removes every booking for one event, for good.
+ *
+ * ADMIN ONLY, and the security rules agree: `allow delete: if isAdmin()`. This
+ * is the one genuinely destructive action in the booking screens, and it is a
+ * HARD delete rather than the soft one used everywhere else — partly because
+ * the rules refuse to update a cancelled booking at all, so a soft delete
+ * could not touch those, and partly because the thing it exists for is
+ * clearing test bookings off a real event, where a row that is merely hidden
+ * is not actually gone.
+ *
+ * WHAT IT TAKES WITH IT, deliberately:
+ *   - the public ticket copies, because those are what a scanned QR reads. A
+ *     deleted booking whose public copy survived would go on admitting people
+ *     at the door, which is the worst possible leftover.
+ *   - the event's seat count, reset to zero, since every seat those bookings
+ *     held has just been given back.
+ *
+ * WHAT IT DESTROYS, which is why the screen asks twice: the record of money
+ * received. An event's accounts read the bookings, so deleting them erases
+ * what attendees paid. On an event with real payments that is a decision for
+ * the person who took the money, not a tidy-up.
+ */
+export async function deleteAllForEvent(
+  event: CalendarEvent,
+  actor: AppUser
+): Promise<number> {
+  // Soft-deleted ones included: "all" has to mean all, or a second press
+  // would find rows the first one left behind.
+  const page = await listPage<EventRegistration>(COLLECTIONS.eventRegistrations, {
+    filters: [['eventId', '==', event.id]],
+    excludeDeleted: false,
+    orderByField: 'createdAt',
+    pageSize: 500,
+  });
+
+  for (const row of page.items) {
+    // The copy first. If the run stops half way, a booking without its public
+    // copy is a ticket that stops working — the safe direction — while a
+    // public copy without its booking is one that still opens the door.
+    await deleteDoc(doc(db, COLLECTIONS.publicTickets, ticketCode(row.id))).catch(
+      () => undefined
+    );
+    await deleteDoc(doc(db, COLLECTIONS.eventRegistrations, row.id));
+  }
+
+  if (page.items.length > 0) {
+    await updateDocById<CalendarEvent>(COLLECTIONS.calendarEvents, event.id, {
+      registeredCount: 0,
+    } as Partial<CalendarEvent>);
+  }
+
+  forgetBookings();
+  forgetCollection(COLLECTIONS.calendarEvents);
+
+  void audit.log({
+    actor,
+    action: 'DELETE',
+    collection: COLLECTIONS.eventRegistrations,
+    documentId: event.id,
+    summary: `Deleted all ${page.items.length} booking(s) for "${event.title}"`,
+  });
+
+  return page.items.length;
 }
 
 /**

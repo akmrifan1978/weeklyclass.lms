@@ -42,7 +42,7 @@ export function BookingsSheet({
 }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<EventRegistration | null>(null);
@@ -52,6 +52,8 @@ export function BookingsSheet({
   const [partAmount, setPartAmount] = useState('');
   const [refunding, setRefunding] = useState<EventRegistration | null>(null);
   const [refundAmount, setRefundAmount] = useState('');
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   const load = useCallback(async () => {
     if (!event) return [] as EventRegistration[];
@@ -109,6 +111,18 @@ export function BookingsSheet({
             variant="outline"
             onPress={() => void exportSheet()}
           />
+          {/* Admin only, matching the rule the database enforces, and never
+              offered on an empty list — there is nothing to delete, and a
+              destructive button with nothing to destroy is just a trap. */}
+          {isAdmin && rows.length > 0 ? (
+            <Button
+              label={t('event.deleteAll')}
+              icon="trash-outline"
+              size="sm"
+              variant="ghost"
+              onPress={() => setConfirmDeleteAll(true)}
+            />
+          ) : null}
         </View>
 
         {pending > 0 ? (
@@ -398,6 +412,39 @@ export function BookingsSheet({
           containerStyle={{ marginBottom: 0 }}
         />
       </FormSheet>
+
+      {/* The warning names the number and the money, because "are you sure"
+          is not information. An event's accounts are built from its bookings,
+          so this erases what attendees paid as well as who was coming. */}
+      <ConfirmDialog
+        visible={confirmDeleteAll}
+        title={t('event.deleteAll')}
+        message={t('event.deleteAllWarning', {
+          count: rows.length,
+          received: `${rows.reduce((sum, r) => sum + bookings.netReceivedOn(r), 0)} ${
+            rows[0]?.currency ?? ''
+          }`,
+        })}
+        confirmLabel={t('event.deleteAll')}
+        destructive
+        loading={deletingAll}
+        onCancel={() => setConfirmDeleteAll(false)}
+        onConfirm={async () => {
+          if (!event || !user) return;
+          setDeletingAll(true);
+          try {
+            const removed = await bookings.deleteAllForEvent(event, user);
+            toast.success(t('event.deleteAllDone', { count: removed }));
+            await reload();
+            onChanged();
+          } catch (err) {
+            toast.error(friendlyMessage(err, t));
+          } finally {
+            setDeletingAll(false);
+            setConfirmDeleteAll(false);
+          }
+        }}
+      />
 
       <ConfirmDialog
         visible={Boolean(confirmCancel)}
