@@ -21,6 +21,8 @@ import {
 import { safeFilename, saveTextFile } from '@/utils/download';
 import type { EventFinanceEntry } from '@/types';
 import { ImageField } from '@/components/shared/ImageField';
+import { CrashBoundary } from '@/components/shared/CrashBoundary';
+import { BookingsSheet } from './BookingsSheet';
 import {
   AppHeader,
   AsyncBoundary,
@@ -58,6 +60,16 @@ export function EventAccounts({ eventId }: { eventId: string }) {
   const mayWrite = can('MANAGE_EVENT_FINANCE');
   /** The statement lives on the event, so changing it is editing the event. */
   const mayDecide = can('MANAGE_CALENDAR');
+  /**
+   * Approving, declining and taking payment are organiser's work.
+   *
+   * Gated on the same permission the security rules check, so an assistant who
+   * may read the accounts is not shown an Approve button that the database
+   * would refuse — a control that appears to work and does nothing is worse
+   * than no control.
+   */
+  const mayManageBookings = can('MANAGE_CALENDAR');
+  const [managing, setManaging] = useState(false);
 
   const load = useCallback(async () => {
     // Two calls, not three: `detailsFor` returns the entries it added up, so
@@ -221,14 +233,28 @@ export function EventAccounts({ eventId }: { eventId: string }) {
           onRetry={reload}
           skeleton={<SkeletonList count={4} />}
         >
-          {/* Bookings for this event */}
-          <SectionHeader title={t('eventDash.bookingsSection')} icon="people-outline" />
+          {/* Bookings for this event.
+              The figures alone were a dead end: an organiser who opens an
+              event from the dashboard, sees "Bookings 1", and wants to
+              approve that one booking had nowhere to go from here — the list
+              and its actions lived only on the Events screen, which is a
+              different route reached a different way. The count now opens the
+              list it is counting. */}
+          <SectionHeader
+            title={t('eventDash.bookingsSection')}
+            icon="people-outline"
+            actionLabel={mayManageBookings && data?.event ? t('event.bookings') : undefined}
+            onAction={mayManageBookings && data?.event ? () => setManaging(true) : undefined}
+          />
           <Card>
             <View style={styles.grid}>
               <Figure label={t('eventDash.bookings')} value={String(totals?.bookings ?? 0)} />
               <Figure label={t('eventDash.people')} value={String(totals?.participants ?? 0)} />
               <Figure label={t('eventDash.seats')} value={String(totals?.seats ?? 0)} />
             </View>
+            {mayManageBookings ? (
+              <Text style={styles.netNote}>{t('eventDash.manageBookingsHint')}</Text>
+            ) : null}
           </Card>
 
           <Spacer />
@@ -595,6 +621,18 @@ export function EventAccounts({ eventId }: { eventId: string }) {
           />
         ) : null}
       </FormSheet>
+
+      {/* The same bookings sheet the Events screen opens — the one place
+          approvals, payments and refunds are handled, rather than a second
+          copy of it that would drift out of step. */}
+      <CrashBoundary where="bookings list (from the accounts screen)">
+        <BookingsSheet
+          event={data?.event ?? null}
+          visible={managing}
+          onClose={() => setManaging(false)}
+          onChanged={() => void reload()}
+        />
+      </CrashBoundary>
 
       <ConfirmDialog
         visible={Boolean(confirmDelete)}

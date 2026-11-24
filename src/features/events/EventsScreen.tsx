@@ -53,10 +53,30 @@ export function EventsScreen({ basePath }: { basePath: string }) {
     // full events would be refused, and they carry the meeting links that
     // list deliberately leaves out.
     if (isGuest) return { events: [] as CalendarEvent[], mine: [] as EventRegistration[] };
-    const page = await calendar.listUpcoming({ pageSize: 50 });
+
+    /*
+     * An organiser is shown events that have ALREADY HAPPENED too.
+     *
+     * This screen is the only way to reach a booking: the attendee list, the
+     * approvals, the payments and the refunds all live behind its Bookings
+     * button. Loading only upcoming events meant that the day after a
+     * gathering, every one of those became unreachable — money still owed
+     * could never be marked received, and nobody could look up who actually
+     * came. An organiser's work on an event starts when it is announced and
+     * does not finish when it ends.
+     *
+     * Attendees still see only what is coming: a finished event is not
+     * something to book.
+     */
+    const [soon, gone] = await Promise.all([
+      calendar.listUpcoming({ pageSize: 50 }),
+      isOrganiser
+        ? calendar.listPast({ pageSize: 25 }).catch(() => ({ items: [] as CalendarEvent[] }))
+        : Promise.resolve({ items: [] as CalendarEvent[] }),
+    ]);
     // Only events that actually take bookings. A class reminder lives in the
     // same collection and has no business on a page about tickets.
-    const events = page.items.filter((event) => Boolean(event.registration));
+    const events = [...soon.items, ...gone.items].filter((event) => Boolean(event.registration));
 
     const mine = user
       ? await bookings
@@ -66,7 +86,10 @@ export function EventsScreen({ basePath }: { basePath: string }) {
       : [];
 
     return { events, mine };
-  }, [user?.uid, isGuest]);
+    // isOrganiser decides whether past events are fetched at all, so a change
+    // of role or permission has to reload the list rather than keep showing
+    // the previous answer.
+  }, [user?.uid, isGuest, isOrganiser]);
 
   const { data, loading, refreshing, error, reload, refresh } = useAsync(load, [load]);
 
