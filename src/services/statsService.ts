@@ -1,4 +1,5 @@
 import { COLLECTIONS } from '@/constants/app';
+import { startOfToday } from '@/utils/date';
 import type { DashboardStats } from '@/types';
 import { countWhere } from './firestore';
 
@@ -61,7 +62,10 @@ export async function loadDashboardStats(
     countWhere(COLLECTIONS.lessons),
     countWhere(COLLECTIONS.videos),
     countWhere(COLLECTIONS.articles),
-    countWhere(COLLECTIONS.calendarEvents, [['startsAt', '>=', new Date()]]),
+    // From midnight, matching every other "upcoming" list in the app: today's
+    // event is still an upcoming event at noon, and a dashboard that stops
+    // counting it mid-morning disagrees with the calendar beside it.
+    countWhere(COLLECTIONS.calendarEvents, [['startsAt', '>=', startOfToday()]]),
     countWhere(COLLECTIONS.users, [['status', '==', 'pending']]),
     countWhere(COLLECTIONS.notifications, [['status', '==', 'sent']]),
   ]);

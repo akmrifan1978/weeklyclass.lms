@@ -1,5 +1,5 @@
 import { COLLECTIONS } from '@/constants/app';
-import { combineDateTime, toISODate } from '@/utils/date';
+import { combineDateTime, startOfToday, toISODate } from '@/utils/date';
 import type {
   AppUser,
   CalendarEvent,
@@ -40,11 +40,30 @@ export interface EventQuery {
   pageSize?: number;
 }
 
-/** Events that have not started yet, soonest first. */
+/**
+ * WHERE "UPCOMING" BEGINS: this morning, not this minute.
+ *
+ * Every list of coming events used `new Date()`, so an event vanished from all
+ * of them the moment its start time passed. A gathering at eight in the
+ * morning was gone from the organiser's Events screen, from the students'
+ * calendars and from the public website by one minute past eight — while it
+ * was happening, while people were still arriving, and on the one day anybody
+ * needed to look it up. The organiser reported it as the event disappearing,
+ * which is exactly what it was.
+ *
+ * An event belongs to its day. It is upcoming until that day is over, and past
+ * from the next midnight. Both halves move together, so nothing can fall into
+ * both lists and show twice, or into neither and disappear.
+ */
+function fromTodayStart(): Date {
+  return startOfToday();
+}
+
+/** Events today or later, soonest first. */
 export function listUpcoming(options: EventQuery = {}): Promise<Page<CalendarEvent>> {
   return listPage<CalendarEvent>(COLLECTIONS.calendarEvents, {
     filters: [
-      ['startsAt', '>=', new Date()],
+      ['startsAt', '>=', fromTodayStart()],
       options.branchId ? ['branchId', '==', options.branchId] : null,
       options.classId ? ['classId', '==', options.classId] : null,
     ],
@@ -79,11 +98,11 @@ export async function listUpcomingForUser(
   options: { classId?: string | null; role?: AppUser['role']; pageSize?: number } = {}
 ): Promise<CalendarEvent[]> {
   const pageSize = options.pageSize ?? 20;
-  const now = new Date();
+  const from = fromTodayStart();
 
   const everyones = listAll<CalendarEvent>(COLLECTIONS.calendarEvents, {
     filters: [
-      ['startsAt', '>=', now],
+      ['startsAt', '>=', from],
       ['classId', '==', null],
     ],
     orderByField: 'startsAt',
@@ -94,7 +113,7 @@ export async function listUpcomingForUser(
   const mine = options.classId
     ? listAll<CalendarEvent>(COLLECTIONS.calendarEvents, {
         filters: [
-          ['startsAt', '>=', now],
+          ['startsAt', '>=', from],
           ['classId', '==', options.classId],
         ],
         orderByField: 'startsAt',
@@ -124,7 +143,7 @@ export async function listUpcomingForUser(
 export function listPast(options: EventQuery = {}): Promise<Page<CalendarEvent>> {
   return listPage<CalendarEvent>(COLLECTIONS.calendarEvents, {
     filters: [
-      ['startsAt', '<', new Date()],
+      ['startsAt', '<', fromTodayStart()],
       options.branchId ? ['branchId', '==', options.branchId] : null,
       options.classId ? ['classId', '==', options.classId] : null,
     ],
@@ -146,7 +165,7 @@ export async function nextEventFor(user: {
   classId?: string | null;
   branchId?: string | null;
 }): Promise<CalendarEvent | null> {
-  const now = new Date();
+  const from = fromTodayStart();
   const audience = user.role === 'teacher' ? 'teachers' : 'students';
 
   const base = {
@@ -159,7 +178,7 @@ export async function nextEventFor(user: {
     listAll<CalendarEvent>(COLLECTIONS.calendarEvents, {
       ...base,
       filters: [
-        ['startsAt', '>=', now],
+        ['startsAt', '>=', from],
         ['classId', '==', null],
         ['targetAudience', 'in', ['all', audience]],
       ],
@@ -168,7 +187,7 @@ export async function nextEventFor(user: {
       ? listAll<CalendarEvent>(COLLECTIONS.calendarEvents, {
           ...base,
           filters: [
-            ['startsAt', '>=', now],
+            ['startsAt', '>=', from],
             ['classId', '==', user.classId],
           ],
         })
@@ -439,7 +458,7 @@ export async function listPublicClasses(limit = 6): Promise<PublicClass[]> {
   const rows = await listAll<PublicClass & { startsAt?: unknown }>(
     COLLECTIONS.publicSchedule,
     {
-      filters: [['startsAt', '>=', new Date()]],
+      filters: [['startsAt', '>=', fromTodayStart()]],
       orderByField: 'startsAt',
       direction: 'asc',
       pageSize: limit,
@@ -472,7 +491,7 @@ export function watchPublicSchedule(
   return watchList<PublicClass & { deleted?: boolean }>(
     COLLECTIONS.publicSchedule,
     {
-      filters: [['startsAt', '>=', new Date()]],
+      filters: [['startsAt', '>=', fromTodayStart()]],
       orderByField: 'startsAt',
       direction: 'asc',
       pageSize: limit,
