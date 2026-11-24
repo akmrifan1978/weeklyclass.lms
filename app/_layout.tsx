@@ -23,6 +23,7 @@ import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { PasswordChangeGate } from '@/components/shared/PasswordChangeGate';
 import { NoticePopup } from '@/components/shared/NoticePopup';
 import { NotificationTapHandler } from '@/components/shared/NotificationTapHandler';
+import { CrashBoundary } from '@/components/shared/CrashBoundary';
 import { brand } from '@/constants/theme';
 import { useCalendarSystem } from '@/hooks/useCalendarSystem';
 import { LoadingState } from '@/components/ui';
@@ -222,14 +223,19 @@ function RootNavigator() {
           owes a new password must not be able to reach any route at all, and
           a gate inside one screen is a gate with a way around it. */}
       <PasswordChangeGate>
-        <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(public)" />
-          <Stack.Screen name="(student)" />
-          <Stack.Screen name="(teacher)" />
-          <Stack.Screen name="(admin)" />
-        </Stack>
+        {/* Around the navigator, so a screen that throws while drawing says so
+            instead of leaving a blank page. Inside the gate rather than outside
+            it, because a crash must not become a way past the gate. */}
+        <CrashBoundary where="app">
+          <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(public)" />
+            <Stack.Screen name="(student)" />
+            <Stack.Screen name="(teacher)" />
+            <Stack.Screen name="(admin)" />
+          </Stack>
+        </CrashBoundary>
 
         {/* Over whatever screen is showing. An admin marks an
             announcement as a notice and it interrupts once, then never

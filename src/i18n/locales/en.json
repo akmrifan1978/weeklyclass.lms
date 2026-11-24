@@ -245,7 +245,10 @@
     "organizationInUse": "Branches still belong to this organisation. Move or remove them first.",
     "permissionDeniedAt": "You do not have permission to do that. (Refused: {{detail}})",
     "emailOrMobileNeeded": "An email address or a mobile number is needed to create this account.",
-    "videoUploadUnavailable": "Video uploading is not set up for this app yet. Ask an admin to add the Cloudinary details in Settings."
+    "videoUploadUnavailable": "Video uploading is not set up for this app yet. Ask an admin to add the Cloudinary details in Settings.",
+    "wrongSection": "This page belongs to another part of the app",
+    "wrongSectionHelp": "You opened a page meant for a different kind of account. Nothing is wrong with your own pages.",
+    "takeMeBack": "Take me back"
   },
   "nav": {
     "home": "Home",

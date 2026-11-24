@@ -2,6 +2,7 @@ import React from 'react';
 
 import { EventDashboard } from '@/features/events/EventDashboard';
 import { PermissionGuard } from '@/components/shared/RoleGuard';
+import { CrashBoundary } from '@/components/shared/CrashBoundary';
 
 /**
  * The same dashboard, for the assistant.
@@ -13,7 +14,9 @@ import { PermissionGuard } from '@/components/shared/RoleGuard';
 export default function TeacherEventDashboard() {
   return (
     <PermissionGuard permission="VIEW_EVENT_DASHBOARD">
-      <EventDashboard route="(teacher)" />
+      <CrashBoundary where="events dashboard (assistant)">
+        <EventDashboard route="(teacher)" />
+      </CrashBoundary>
     </PermissionGuard>
   );
 }
