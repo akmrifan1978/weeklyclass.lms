@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -12,8 +12,9 @@ import { formatShortDate, toISODate } from '@/utils/date';
 import { getEvent, setStatementVisible } from '@/services/calendarService';
 import {
   FINANCE_CATEGORIES,
-  accountsCsv,
+  budgetReportCsv,
   detailsFor,
+  incomeExpenseCsv,
   removeEntry,
   saveEntry,
 } from '@/services/eventFinanceService';
@@ -171,13 +172,22 @@ export function EventAccounts({ eventId }: { eventId: string }) {
     }
   };
 
-  /** The accounts as a file: the summary, then every entry behind it. */
-  const exportReport = async () => {
+  /**
+   * The two reports, as files.
+   *
+   * Both are built from what is already on screen, so neither costs a further
+   * read. Two rather than one because they answer different questions: did we
+   * keep to the plan, and where did the money go.
+   */
+  const exportReport = async (kind: 'budget' | 'income') => {
     if (!data?.event || !data.totals) return;
     try {
+      const { title, date } = data.event;
       await saveTextFile(
-        safeFilename(`${data.event.title}-accounts`, 'csv'),
-        accountsCsv(data.event.title, data.event.date, data.totals, data.entries, data.budget)
+        safeFilename(`${title}-${kind === 'budget' ? 'budget-vs-actual' : 'income-expenses'}`, 'csv'),
+        kind === 'budget'
+          ? budgetReportCsv(title, date, data.totals, data.entries, data.budget)
+          : incomeExpenseCsv(title, date, data.totals, data.entries)
       );
       toast.success(t('eventDash.reportDone'));
     } catch (err) {
@@ -315,14 +325,18 @@ export function EventAccounts({ eventId }: { eventId: string }) {
           {/* Money for this event, with the report that files it.
               Built from what is already on screen, so pressing it costs no
               further reads. */}
-          <SectionHeader
-            title={t('eventDash.accounts')}
-            icon="cash-outline"
-            actionLabel={data?.totals ? t('eventDash.report') : undefined}
-            onAction={data?.totals ? exportReport : undefined}
-          />
+          <SectionHeader title={t('eventDash.accounts')} icon="cash-outline" />
           <Card>
             <Row label={t('eventDash.bookingIncome')} value={`${totals?.bookedReceived ?? 0} ${currency}`} />
+            {/* Only when money has actually gone back out. A permanent
+                "Refunded 0" line invites the question it answers. */}
+            {(totals?.refunds ?? 0) > 0 ? (
+              <Row
+                label={t('eventDash.refunded')}
+                value={`− ${totals?.refunds ?? 0} ${currency}`}
+                tone={colors.warning}
+              />
+            ) : null}
             <Row
               label={t('eventDash.outstanding')}
               value={`${outstanding} ${currency}`}
@@ -335,6 +349,71 @@ export function EventAccounts({ eventId }: { eventId: string }) {
               <Text style={styles.netValue}>{`${totals?.net ?? 0} ${currency}`}</Text>
             </View>
             <Text style={styles.netNote}>{t('eventDash.netNote')}</Text>
+          </Card>
+
+          <Spacer />
+
+          {/* What it comes to per head — the figure that sets a price.
+              Based on people, not bookings: a family of five is five people
+              eating, and pricing off four bookings would underprice it. */}
+          <SectionHeader title={t('eventDash.perPerson')} icon="person-outline" />
+          <Card>
+            <Row
+              label={t('eventDash.peopleCounted')}
+              value={String(totals?.participants ?? 0)}
+            />
+            <Row
+              label={t('eventDash.costPerPerson')}
+              value={`${totals?.costPerPerson ?? 0} ${currency}`}
+            />
+            <Row
+              label={t('eventDash.breakEvenPerPerson')}
+              value={`${totals?.breakEvenPerPerson ?? 0} ${currency}`}
+            />
+            {(totals?.plannedCostPerPerson ?? 0) > 0 ? (
+              <Row
+                label={t('eventDash.plannedCostPerPerson')}
+                value={`${totals?.plannedCostPerPerson ?? 0} ${currency}`}
+              />
+            ) : null}
+            <Text style={styles.netNote}>
+              {(totals?.participants ?? 0) === 0
+                ? t('eventDash.perPersonNobody')
+                : t('eventDash.perPersonNote')}
+            </Text>
+          </Card>
+
+          <Spacer />
+
+          {/* The two reports. */}
+          <SectionHeader title={t('eventDash.reports')} icon="document-attach-outline" />
+          <Card>
+            <Pressable
+              onPress={() => exportReport('budget')}
+              accessibilityRole="button"
+              accessibilityLabel={t('eventDash.reportBudget')}
+              style={({ pressed }) => [styles.reportRow, { opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reportTitle}>{t('eventDash.reportBudget')}</Text>
+                <Text style={styles.reportHint}>{t('eventDash.reportBudgetHint')}</Text>
+              </View>
+              <Ionicons name="download-outline" size={18} color={colors.textMuted} />
+            </Pressable>
+            <Pressable
+              onPress={() => exportReport('income')}
+              accessibilityRole="button"
+              accessibilityLabel={t('eventDash.reportIncome')}
+              style={({ pressed }) => [styles.reportRow, { opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Ionicons name="cash-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reportTitle}>{t('eventDash.reportIncome')}</Text>
+                <Text style={styles.reportHint}>{t('eventDash.reportIncomeHint')}</Text>
+              </View>
+              <Ionicons name="download-outline" size={18} color={colors.textMuted} />
+            </Pressable>
           </Card>
 
           <Spacer />
@@ -655,6 +734,15 @@ const styles = StyleSheet.create({
   entryMeta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   entryAmount: { fontSize: fontSize.sm, fontWeight: fontWeight.bold },
   empty: { fontSize: fontSize.sm, color: colors.textMuted },
+  reportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 48,
+  },
+  reportTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text },
+  reportHint: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2, lineHeight: 16 },
   sheetKind: {
     fontSize: fontSize.xs,
     color: colors.textMuted,

@@ -638,8 +638,32 @@ export interface EventRegistration extends BaseDoc {
    * conveyed by the word "rejected" on its own.
    */
   rejectionReason?: string | null;
-  /** Set by an admin once payment is in hand. */
+  /** Set by an admin once payment is in hand IN FULL. */
   paid?: boolean;
+  /**
+   * How much has actually been received, which may be part of the total.
+   *
+   * People pay a deposit and settle later — for a trip, most do. Before this
+   * existed the only answer was yes or no, so a family who had paid half were
+   * recorded as unpaid and the event's income was understated by everything
+   * already in hand.
+   *
+   * Absent means the old yes/no answer still applies, so every booking taken
+   * before today reads correctly: `paid` true means the whole amount, false
+   * means nothing. Read it through `receivedOn()` rather than directly.
+   */
+  paidAmount?: number;
+  /**
+   * How much has been given back, and when.
+   *
+   * A cancelled booking that was paid for leaves money owed to a person, and
+   * an event's accounts have to show it leaving again — otherwise the income
+   * stays on the books for a seat nobody used. Written in the same action as
+   * the cancellation, because the rules refuse to touch a cancelled booking
+   * afterwards.
+   */
+  refundedAmount?: number;
+  refundedAt?: FireDate;
   /**
    * When the money was marked received.
    *

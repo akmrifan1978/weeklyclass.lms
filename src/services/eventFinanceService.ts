@@ -1,4 +1,5 @@
 import { COLLECTIONS } from '@/constants/app';
+import { money, netReceivedOn, refundedOn } from '@/utils/bookingMoney';
 import type { AppUser, EventFinanceEntry, EventRegistration } from '@/types';
 import { createDoc, listAll, softDelete, updateDocById } from './firestore';
 import * as audit from './auditService';
@@ -40,8 +41,10 @@ export type FinanceCategory = (typeof FINANCE_CATEGORIES)[number];
 export interface EventTotals {
   /** Owed by everyone who has booked, whether or not they have paid. */
   bookedDue: number;
-  /** Of that, what has been marked received. */
+  /** Of that, what has been received and KEPT — part payments less refunds. */
   bookedReceived: number;
+  /** Money handed back on cancelled bookings. Already deducted above. */
+  refunds: number;
   /** Money in that did not come from a booking: donations, sponsorship. */
   otherIncome: number;
   expenses: number;
@@ -54,6 +57,16 @@ export interface EventTotals {
   participants: number;
   bookings: number;
   currency: string;
+  /**
+   * What the event costs for each person coming, and what each must pay to
+   * cover it. Zero when nobody has booked yet — dividing by no people would
+   * report an infinite cost per head, which is both wrong and alarming.
+   */
+  costPerPerson: number;
+  /** Expenses less income that did not come from attendees, per person. */
+  breakEvenPerPerson: number;
+  /** The budget's cost per person, for comparison while planning. */
+  plannedCostPerPerson: number;
 }
 
 /** Every entry for one event, newest first. Never more than one event. */
@@ -158,9 +171,20 @@ function summarise(
   const live = bookings.filter((b) => b.status !== 'cancelled' && b.status !== 'rejected');
 
   const bookedDue = live.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
-  const bookedReceived = live
-    .filter((b) => b.paid === true)
-    .reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+
+  /*
+   * Received counts PART PAYMENTS, and every booking, cancelled ones included.
+   *
+   * Two things that look like details and are not. A deposit is money the
+   * event is holding, so it counts towards income from the day it arrives
+   * rather than the day the balance clears. And a cancelled booking is read
+   * for money even though it is excluded from everything else: somebody who
+   * paid and then cancelled may have been refunded in part or not at all, and
+   * whatever the centre kept is income it has to account for. `netReceivedOn`
+   * handles all three shapes a payment can take, old and new.
+   */
+  const bookedReceived = bookings.reduce((total, b) => total + netReceivedOn(b), 0);
+  const refunds = bookings.reduce((total, b) => total + refundedOn(b), 0);
 
   /*
    * Planned and real are added up apart, and never mixed.
@@ -178,53 +202,161 @@ function summarise(
   const otherIncome = sum(real.filter((e) => e.type === 'income'));
   const expenses = sum(real.filter((e) => e.type === 'expense'));
 
+  const plannedIncome = sum(planned.filter((e) => e.type === 'income'));
+  const plannedExpenses = sum(planned.filter((e) => e.type === 'expense'));
+  const participants = live.reduce((total, b) => total + (b.participants?.length || 0), 0);
+
+  /*
+   * Per head, and only once there are heads to divide by.
+   *
+   * `costPerPerson` is what the event is costing for each person coming.
+   * `breakEvenPerPerson` is what each must pay for it to cost the centre
+   * nothing: the costs less the money that did not come from attendees, since
+   * a donation covering half the hall genuinely lowers what the rest must pay.
+   * Both are zero with nobody booked, rather than infinite.
+   */
+  const perHead = (value: number) => (participants > 0 ? money(value / participants) : 0);
+
   return {
     bookedDue,
     bookedReceived,
+    refunds,
     otherIncome,
     expenses,
-    plannedIncome: sum(planned.filter((e) => e.type === 'income')),
-    plannedExpenses: sum(planned.filter((e) => e.type === 'expense')),
+    plannedIncome,
+    plannedExpenses,
     // Received, not due: a net flattered by money that has not arrived is the
     // number that gets a centre into trouble.
     net: bookedReceived + otherIncome - expenses,
-    seats: live.reduce((sum, b) => sum + (Number(b.seats) || 0), 0),
-    participants: live.reduce((sum, b) => sum + (b.participants?.length || 0), 0),
+    seats: live.reduce((total, b) => total + (Number(b.seats) || 0), 0),
+    participants,
     bookings: live.length,
     currency: live[0]?.currency || entries[0]?.currency || fallbackCurrency,
+    costPerPerson: perHead(expenses),
+    breakEvenPerPerson: perHead(Math.max(0, expenses - otherIncome)),
+    plannedCostPerPerson: perHead(plannedExpenses),
   };
 }
 
 /**
- * The event's accounts as a CSV an organiser can file, print or send on.
+ * The shared plumbing of the reports below.
  *
- * Four blocks in one sheet: the summary a treasurer reads first, the budget
- * against what was actually spent, the budget's own lines, then every real
- * entry. The headers are in English on purpose, matching the attendee sheet -
- * this file is opened in Excel months later, often by somebody auditing rather
- * than the person who made it.
+ * Quote everything and double any inner quote, exactly as the attendee sheet
+ * does: a venue called "Al Khair, Jeddah" must not become two columns. The
+ * headers are in English on purpose, matching that sheet - these files are
+ * opened in Excel months later, often by somebody auditing rather than the
+ * person who made them.
+ */
+function sheet(lines: string[]): string {
+  return lines.join('\n');
+}
+
+const cell = (value: unknown): string => `"${String(value ?? '').replace(/"/g, '""')}"`;
+const row = (...values: unknown[]) => values.map(cell).join(',');
+
+/** Every category either side has used, so nothing is left out of a comparison. */
+function categoriesIn(rows: EventFinanceEntry[]): string[] {
+  const seen: string[] = [];
+  for (const entry of rows) if (!seen.includes(entry.category)) seen.push(entry.category);
+  return seen.sort();
+}
+
+function totalFor(
+  rows: EventFinanceEntry[],
+  type: 'income' | 'expense',
+  category?: string
+): number {
+  return rows
+    .filter((e) => e.type === type && (category === undefined || e.category === category))
+    .reduce((total, e) => total + (Number(e.amount) || 0), 0);
+}
+
+/**
+ * REPORT ONE: the budget against what actually happened, category by category.
  *
- * ONE EVENT. The event is named in the first row so a printed page found on a
+ * The question this answers is "where did we go over, and by how much", which
+ * a single pair of totals cannot answer. Every category appearing in either
+ * the plan or the accounts gets a line, so a cost nobody budgeted for shows up
+ * as planned nothing, spent something, rather than quietly vanishing.
+ *
+ * ONE EVENT. The event is named in the first rows so a printed page found on a
  * desk says which gathering it accounts for.
  */
-export function accountsCsv(
+export function budgetReportCsv(
   eventTitle: string,
   eventDate: string,
   totals: EventTotals,
   entries: EventFinanceEntry[],
-  budget: EventFinanceEntry[] = []
+  budget: EventFinanceEntry[]
 ): string {
-  // Quote everything and double any inner quote, exactly as the attendee sheet
-  // does: a venue called "Al Khair, Jeddah" must not become two columns.
-  const cell = (value: unknown): string => `"${String(value ?? '').replace(/"/g, '""')}"`;
-  const row = (...values: unknown[]) => values.map(cell).join(',');
-
-  const outstanding = totals.bookedDue - totals.bookedReceived;
-  /* Everything that actually came in, which is what a budget for income is
-     compared against: the attendees' payments plus donations and sponsorship. */
+  /* What a budget for income is compared against: what attendees paid, less
+     anything refunded, plus donations and sponsorship. */
   const income = totals.bookedReceived + totals.otherIncome;
+  const categories = categoriesIn([...budget, ...entries]);
 
-  const lines = [
+  // Costs: under the plan is the good direction, so the difference reads
+  // planned less actual. Income is the other way round.
+  const compare = (label: string, planned: number, actual: number, costs: boolean) =>
+    row(label, planned, actual, costs ? planned - actual : actual - planned);
+
+  return sheet([
+    row('BUDGET AGAINST ACTUAL'),
+    row('Event', eventTitle),
+    row('Date', eventDate),
+    row('Currency', totals.currency),
+    '',
+    row('', 'Planned', 'Actual', 'Difference'),
+    compare('Income (total)', totals.plannedIncome, income, false),
+    compare('Expenses (total)', totals.plannedExpenses, totals.expenses, true),
+    '',
+    row('EXPENSES BY CATEGORY', 'Planned', 'Actual', 'Difference'),
+    ...categories
+      .filter(
+        (c) => totalFor(budget, 'expense', c) > 0 || totalFor(entries, 'expense', c) > 0
+      )
+      .map((c) =>
+        compare(c, totalFor(budget, 'expense', c), totalFor(entries, 'expense', c), true)
+      ),
+    '',
+    row('INCOME BY CATEGORY', 'Planned', 'Actual', 'Difference'),
+    ...categories
+      .filter((c) => totalFor(budget, 'income', c) > 0 || totalFor(entries, 'income', c) > 0)
+      .map((c) =>
+        compare(c, totalFor(budget, 'income', c), totalFor(entries, 'income', c), false)
+      ),
+    '',
+    row('PER PERSON', 'Planned', 'Actual'),
+    row('People', totals.participants, totals.participants),
+    row('Cost per person', totals.plannedCostPerPerson, totals.costPerPerson),
+    '',
+    row('BUDGET LINES'),
+    row('Line', 'Type', 'Category', 'Planned', 'Currency', 'Note'),
+    ...budget.map((line) =>
+      row(line.title, line.type, line.category, line.amount, line.currency, line.note ?? '')
+    ),
+  ]);
+}
+
+/**
+ * REPORT TWO: the full income and expense account.
+ *
+ * Everything that moved, in one sheet: what attendees paid, what went back out
+ * as refunds, every other riyal in, every riyal out, the per-person figures,
+ * and then each entry behind them. This is the one handed to somebody who asks
+ * where the money went.
+ */
+export function incomeExpenseCsv(
+  eventTitle: string,
+  eventDate: string,
+  totals: EventTotals,
+  entries: EventFinanceEntry[]
+): string {
+  const outstanding = totals.bookedDue - totals.bookedReceived;
+  const income = totals.bookedReceived + totals.otherIncome;
+  const categories = categoriesIn(entries);
+
+  return sheet([
+    row('INCOME AND EXPENSES'),
     row('Event', eventTitle),
     row('Date', eventDate),
     row('Currency', totals.currency),
@@ -233,30 +365,38 @@ export function accountsCsv(
     row('People', totals.participants),
     row('Seats', totals.seats),
     '',
+    row('INCOME'),
     row('Due from attendees', totals.bookedDue),
-    row('Paid by attendees', totals.bookedReceived),
-    row('Outstanding', outstanding),
-    row('Other income', totals.otherIncome),
-    row('Expenses', totals.expenses),
+    row('Received from attendees, net of refunds', totals.bookedReceived),
+    row('Refunded', totals.refunds),
+    row('Still outstanding', outstanding),
+    row('Other income (donations, sponsorship)', totals.otherIncome),
+    row('Total income', income),
+    '',
+    row('EXPENSES BY CATEGORY'),
+    ...categories
+      .filter((c) => totalFor(entries, 'expense', c) > 0)
+      .map((c) => row(c, totalFor(entries, 'expense', c))),
+    row('Total expenses', totals.expenses),
+    '',
     row('Net (money actually moved)', totals.net),
     '',
-    row('BUDGET', 'Planned', 'Actual', 'Difference'),
+    row('PER PERSON'),
+    row('People counted', totals.participants),
+    row('Cost per person', totals.costPerPerson),
+    row('Needed per person to break even', totals.breakEvenPerPerson),
+    '',
+    row('EVERY ENTRY'),
     row(
-      'Income',
-      totals.plannedIncome,
-      income,
-      // Income: over the plan is good, so the difference reads actual less
-      // planned. Expenses are the other way round, below.
-      income - totals.plannedIncome
+      'Date',
+      'Type',
+      'Category',
+      'Title',
+      'Paid to / received from',
+      'Amount',
+      'Currency',
+      'Note'
     ),
-    row('Expenses', totals.plannedExpenses, totals.expenses, totals.plannedExpenses - totals.expenses),
-    '',
-    row('Budget line', 'Type', 'Category', 'Planned', 'Currency', 'Note'),
-    ...budget.map((line) =>
-      row(line.title, line.type, line.category, line.amount, line.currency, line.note ?? '')
-    ),
-    '',
-    row('Date', 'Type', 'Category', 'Title', 'Paid to / received from', 'Amount', 'Currency', 'Note'),
     ...entries.map((entry) =>
       row(
         entry.date,
@@ -269,7 +409,5 @@ export function accountsCsv(
         entry.note ?? ''
       )
     ),
-  ];
-
-  return lines.join('\n');
+  ]);
 }
