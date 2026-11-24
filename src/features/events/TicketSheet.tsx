@@ -6,6 +6,12 @@ import { useTranslation } from 'react-i18next';
 
 import { colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { formatDate } from '@/utils/date';
+import {
+  outstandingOn,
+  paymentStateOf,
+  receivedOn,
+  refundedOn,
+} from '@/utils/bookingMoney';
 import * as bookings from '@/services/eventRegistrationService';
 import type { CalendarEvent, EventRegistration } from '@/types';
 import { FormSheet } from '@/components/ui';
@@ -38,7 +44,18 @@ export function TicketSheet({
   if (!registration) return null;
 
   const code = bookings.ticketCode(registration.id);
+  /*
+   * What has actually been received, which may be a deposit.
+   *
+   * `paid` alone would tell the holder of a half-settled booking that they
+   * have paid nothing, while their own statement showed the deposit - two
+   * different answers on one card.
+   */
+  const received = receivedOn(registration);
+  const refunded = refundedOn(registration);
+  const owing = outstandingOn(registration);
   const paid = registration.paid === true;
+  const state = paymentStateOf(registration);
 
   /**
    * Whether this event's organiser has opened the books to the people in them.
@@ -179,7 +196,9 @@ export function TicketSheet({
             </View>
             <View style={styles.count}>
               <Text style={[styles.countValue, paid ? styles.paid : styles.unpaid]}>
-                {t(paid ? 'event.paidYes' : 'event.paidNo')}
+                {state === 'partial'
+                  ? `${received} / ${registration.amount}`
+                  : t(paid ? 'event.paidYes' : 'event.paidNo')}
               </Text>
               <Text style={styles.countLabel}>{t('event.payment')}</Text>
             </View>
@@ -204,17 +223,24 @@ export function TicketSheet({
               />
               <Line
                 label={t('eventDash.received')}
-                value={`${paid ? registration.amount : 0} ${registration.currency}`}
+                value={`${received} ${registration.currency}`}
               />
+              {refunded > 0 ? (
+                <Line
+                  label={t('eventDash.refunded')}
+                  value={`− ${refunded} ${registration.currency}`}
+                  strong
+                />
+              ) : null}
               <Line
                 label={t('eventDash.outstanding')}
-                value={`${paid ? 0 : registration.amount} ${registration.currency}`}
-                strong={!paid}
+                value={`${owing} ${registration.currency}`}
+                strong={owing > 0}
               />
               <Line
                 label={t('eventDash.statementPaidOn')}
                 value={
-                  paid && registration.paidAt
+                  received > 0 && registration.paidAt
                     ? formatDate(registration.paidAt, i18n.language)
                     : t('eventDash.statementNotPaid')
                 }

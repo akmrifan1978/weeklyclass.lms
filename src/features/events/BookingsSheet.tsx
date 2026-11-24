@@ -48,6 +48,10 @@ export function BookingsSheet({
   const [confirmCancel, setConfirmCancel] = useState<EventRegistration | null>(null);
   const [rejecting, setRejecting] = useState<EventRegistration | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [partPaying, setPartPaying] = useState<EventRegistration | null>(null);
+  const [partAmount, setPartAmount] = useState('');
+  const [refunding, setRefunding] = useState<EventRegistration | null>(null);
+  const [refundAmount, setRefundAmount] = useState('');
 
   const load = useCallback(async () => {
     if (!event) return [] as EventRegistration[];
@@ -147,9 +151,20 @@ export function BookingsSheet({
                 />
                 <Chip label={t('event.seatsCount', { count: row.seats })} tone="muted" />
                 <Chip label={`${row.amount} ${row.currency}`} tone="muted" />
+                {/* What has actually been received, which is no longer a yes
+                    or a no: a deposit says how much and what is left, and a
+                    refund says money went back out. */}
                 <Chip
-                  label={t(row.paid ? 'event.paidYes' : 'event.paidNo')}
-                  tone={row.paid ? 'success' : 'muted'}
+                  label={paymentLabel(row, t)}
+                  tone={
+                    bookings.paymentStateOf(row) === 'paid'
+                      ? 'success'
+                      : bookings.paymentStateOf(row) === 'refunded'
+                        ? 'danger'
+                        : bookings.paymentStateOf(row) === 'partial'
+                          ? 'warning'
+                          : 'muted'
+                  }
                 />
               </View>
 
@@ -209,12 +224,38 @@ export function BookingsSheet({
                         })
                       }
                     />
+                    {/* Part payment, for the deposit people actually pay.
+                        Offered only where there is a bill to pay part of. */}
+                    {Number(row.amount) > 0 ? (
+                      <Button
+                        label={t('event.partPayment')}
+                        icon="wallet-outline"
+                        size="sm"
+                        variant="outline"
+                        onPress={() => {
+                          setPartAmount(String(bookings.receivedOn(row) || ''));
+                          setPartPaying(row);
+                        }}
+                      />
+                    ) : null}
                     <Button
                       label={t('event.cancelBooking')}
                       icon="close-circle-outline"
                       size="sm"
                       variant="ghost"
-                      onPress={() => setConfirmCancel(row)}
+                      onPress={() => {
+                        /* A cancellation with money in hand is a refund
+                           decision, not a yes-or-no: the amount is asked for
+                           in its own sheet, prefilled with everything taken.
+                           With nothing received there is nothing to decide. */
+                        const held = bookings.netReceivedOn(row);
+                        if (held > 0) {
+                          setRefundAmount(String(held));
+                          setRefunding(row);
+                        } else {
+                          setConfirmCancel(row);
+                        }
+                      }}
                     />
                   </>
                 ) : null}
@@ -250,6 +291,93 @@ export function BookingsSheet({
         />
       </FormSheet>
 
+      {/* Recording part of the money.
+          The total and what is already in are both on screen, because the
+          question "how much came in" is usually answered by looking at what
+          is still owed. */}
+      <FormSheet
+        visible={Boolean(partPaying)}
+        title={t('event.partPayment')}
+        onClose={() => setPartPaying(null)}
+        submitLabel={t('common.save')}
+        submitting={busyId === partPaying?.id}
+        onSubmit={async () => {
+          const row = partPaying;
+          if (!row || !user) return;
+          const typed = Number(partAmount);
+          if (!Number.isFinite(typed) || typed < 0) {
+            toast.error(t('event.amountInvalid'));
+            return;
+          }
+          await run(row, async () => {
+            await bookings.setPaidAmount(row, typed, user);
+            toast.success(
+              typed >= Number(row.amount) ? t('event.ticketReady') : t('event.partPaymentSaved')
+            );
+          });
+          setPartPaying(null);
+        }}
+      >
+        <Text style={styles.sheetFact}>
+          {t('event.partPaymentHelp', {
+            total: `${partPaying?.amount ?? 0} ${partPaying?.currency ?? ''}`,
+            received: `${partPaying ? bookings.receivedOn(partPaying) : 0} ${partPaying?.currency ?? ''}`,
+          })}
+        </Text>
+        <TextField
+          label={`${t('event.amountReceived')} (${partPaying?.currency ?? ''})`}
+          value={partAmount}
+          onChangeText={(v) => setPartAmount(v.replace(/[^0-9.]/g, ''))}
+          keyboardType="numeric"
+          icon="cash-outline"
+          hint={t('event.partPaymentHint')}
+          containerStyle={{ marginBottom: 0 }}
+        />
+      </FormSheet>
+
+      {/* Cancelling a booking that has been paid for.
+          The refund is recorded in the same action as the cancellation — the
+          rules refuse to touch a cancelled booking afterwards — so this is the
+          one moment the amount can be set. Typing 0 cancels and keeps the
+          money, which is a legitimate answer for a late withdrawal. */}
+      <FormSheet
+        visible={Boolean(refunding)}
+        title={t('event.refundAndCancel')}
+        onClose={() => setRefunding(null)}
+        submitLabel={t('event.refundAndCancel')}
+        submitting={busyId === refunding?.id}
+        onSubmit={async () => {
+          const row = refunding;
+          if (!row || !user) return;
+          const typed = Number(refundAmount);
+          if (!Number.isFinite(typed) || typed < 0) {
+            toast.error(t('event.amountInvalid'));
+            return;
+          }
+          await run(row, async () => {
+            await bookings.cancel(row, user, typed);
+            toast.success(typed > 0 ? t('event.refunded', { amount: typed }) : t('event.cancelled'));
+          });
+          setRefunding(null);
+        }}
+      >
+        <Text style={styles.sheetFact}>
+          {t('event.refundHelp', {
+            name: refunding?.userName ?? '',
+            held: `${refunding ? bookings.netReceivedOn(refunding) : 0} ${refunding?.currency ?? ''}`,
+          })}
+        </Text>
+        <TextField
+          label={`${t('event.refundAmount')} (${refunding?.currency ?? ''})`}
+          value={refundAmount}
+          onChangeText={(v) => setRefundAmount(v.replace(/[^0-9.]/g, ''))}
+          keyboardType="numeric"
+          icon="arrow-undo-outline"
+          hint={t('event.refundHint')}
+          containerStyle={{ marginBottom: 0 }}
+        />
+      </FormSheet>
+
       <ConfirmDialog
         visible={Boolean(confirmCancel)}
         title={t('event.cancelBooking')}
@@ -275,6 +403,30 @@ export function BookingsSheet({
   );
 }
 
+/**
+ * The payment chip's wording, which is the whole state in a few characters.
+ *
+ * "Paid" and "Not paid" no longer cover it: a deposit has to say how much of
+ * how much, or an organiser reading the list cannot tell a half-paid family
+ * from an unpaid one.
+ */
+function paymentLabel(
+  row: EventRegistration,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  const state = bookings.paymentStateOf(row);
+  if (state === 'paid') return t('event.paidYes');
+  if (state === 'unpaid') return t('event.paidNo');
+  if (state === 'refunded') {
+    return t('event.refundedChip', { amount: bookings.refundedOn(row), currency: row.currency });
+  }
+  return t('event.partPaidChip', {
+    received: bookings.receivedOn(row),
+    total: row.amount,
+    currency: row.currency,
+  });
+}
+
 function Chip({
   label,
   tone,
@@ -297,6 +449,12 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
+  sheetFact: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -27,6 +27,14 @@ function forgetBookings(): void {
 import { getSettings } from './settingsService';
 import * as audit from './auditService';
 import { formatPhone } from '@/utils/phone';
+import {
+  netReceivedOn,
+  outstandingOn,
+  paymentStateOf,
+  receivedOn,
+  refundedOn,
+  type PaymentState,
+} from '@/utils/bookingMoney';
 
 /**
  * Booking a place at an event.
@@ -395,10 +403,23 @@ export async function confirmBooking(
  */
 export async function cancel(
   registration: EventRegistration,
-  actor: AppUser
+  actor: AppUser,
+  /**
+   * Money handed back as part of the cancellation, if any.
+   *
+   * IN THE SAME WRITE AS THE CANCELLATION, and it has to be: the rules refuse
+   * every later change to a cancelled booking, on purpose, so a refund
+   * recorded afterwards would be rejected and the event would keep reporting
+   * income for a seat nobody used. Undefined means no money changes hands —
+   * a booking nobody had paid for, or one the centre is not refunding.
+   */
+  refund?: number
 ): Promise<void> {
   const eventRef = doc(db, COLLECTIONS.calendarEvents, registration.eventId);
   const bookingRef = doc(db, COLLECTIONS.eventRegistrations, registration.id);
+  // Never more than was taken: a refund is money going back, not a payment in
+  // the other direction.
+  const given = Math.max(0, Math.min(Number(refund) || 0, receivedOn(registration)));
 
   await runTransaction(db, async (tx) => {
     const fresh = await tx.get(eventRef);
@@ -407,7 +428,11 @@ export async function cancel(
     const before = (booking.data() as EventRegistration).status;
     if (before === 'cancelled') return;
 
-    tx.update(bookingRef, { status: 'cancelled', updatedAt: serverTimestamp() });
+    tx.update(bookingRef, {
+      status: 'cancelled',
+      updatedAt: serverTimestamp(),
+      ...(given > 0 ? { refundedAmount: given, refundedAt: serverTimestamp() } : {}),
+    });
 
     // Only a CONFIRMED booking was holding seats, so only a confirmed one gives
     // any back. Decrementing for a waitlisted request would hand the event free
@@ -430,7 +455,9 @@ export async function cancel(
       registration,
       actor,
       'Booking cancelled',
-      `Your booking for "${registration.eventTitle}" has been cancelled by the organisers.`
+      given > 0
+        ? `Your booking for "${registration.eventTitle}" has been cancelled and ${given} ${registration.currency} is being refunded.`
+        : `Your booking for "${registration.eventTitle}" has been cancelled by the organisers.`
     );
   }
 
@@ -439,7 +466,10 @@ export async function cancel(
     action: 'UPDATE',
     collection: COLLECTIONS.eventRegistrations,
     documentId: registration.id,
-    summary: `Cancelled ${registration.userName}'s booking for "${registration.eventTitle}"`,
+    summary:
+      given > 0
+        ? `Cancelled ${registration.userName}'s booking for "${registration.eventTitle}" and refunded ${given} ${registration.currency}`
+        : `Cancelled ${registration.userName}'s booking for "${registration.eventTitle}"`,
   });
 }
 
@@ -585,35 +615,57 @@ export function publicTicket(code: string): Promise<PublicTicket | null> {
 }
 
 /** Marks a booking as paid. Admin bookkeeping, not a payment gateway. */
-export async function setPaid(
+/*
+ * A booking's money is worked out in `@/utils/bookingMoney`, and re-exported
+ * here so every existing caller keeps one import. It lives there because the
+ * accounts need the same arithmetic, and neither service should have to load
+ * the other to get it.
+ */
+export { receivedOn, refundedOn, netReceivedOn, outstandingOn, paymentStateOf };
+export type { PaymentState };
+
+/**
+ * Records money received against a booking — all of it, or part.
+ *
+ * THE TICKET WAITS FOR THE WHOLE AMOUNT. A deposit is real money and is
+ * recorded as such, but it does not open the door: the booking stays waiting
+ * until the balance is in, and only then is the ticket issued and the person
+ * told. Recording a part payment against a booking that had been settled in
+ * full takes the ticket back out of use, which is what reversing a payment
+ * means.
+ *
+ * A booking that was never approved is left where it is: paying does not jump
+ * the queue, and a cancelled or declined one is not revived by it.
+ */
+export async function setPaidAmount(
   registration: EventRegistration,
-  paid: boolean,
+  amount: number,
   actor: AppUser
 ): Promise<void> {
-  /*
-   * Marking the money received is what issues the ticket.
-   *
-   * An approved booking is waiting for exactly this, so recording the payment
-   * confirms it in the same action - the admin does not have to remember a
-   * second step, and nobody is left holding an approved booking that never
-   * became a ticket. Unmarking it puts the booking back to waiting, which
-   * takes the ticket out of use again.
-   *
-   * A booking that was never approved is left where it is: paying does not
-   * jump the queue, and a cancelled or declined one is not revived by it.
-   */
-  // Dated here, not derived later, because this is the only moment that knows
-  // it. Cleared on unmarking so a withdrawn payment leaves no date behind.
-  const next: Partial<EventRegistration> = { paid, paidAt: paid ? new Date() : null };
-  if (paid && registration.status === 'awaitingPayment') {
+  const total = Number(registration.amount) || 0;
+  // Clamped to the booking: an organiser mistyping 5000 for 500 should not
+  // leave the event showing income it never took.
+  const received = Math.max(0, Math.min(Number(amount) || 0, total));
+  const settled = total > 0 ? received >= total : received > 0;
+
+  const next: Partial<EventRegistration> = {
+    paidAmount: received,
+    paid: settled,
+    // Dated at the moment it is recorded, since that is the only moment that
+    // knows it. Cleared when a payment is reversed to nothing.
+    paidAt: received > 0 ? new Date() : null,
+  };
+
+  if (settled && registration.status === 'awaitingPayment') {
     next.status = 'confirmed';
     next.confirmedAt = new Date();
     next.confirmedBy = actor.uid;
-  } else if (!paid && registration.status === 'confirmed') {
+  } else if (!settled && registration.status === 'confirmed') {
     next.status = 'awaitingPayment';
   }
 
   await updateDocById<EventRegistration>(COLLECTIONS.eventRegistrations, registration.id, next);
+  forgetBookings();
   await refreshPublicTicket(registration.id);
 
   if (next.status === 'confirmed') {
@@ -625,14 +677,40 @@ export async function setPaid(
         registration.id
       )} is ready - show its QR code at the entrance.`
     ).catch(() => undefined);
+  } else if (received > 0 && !settled) {
+    // Told, and told what is left. A person who paid a deposit and hears
+    // nothing assumes they are done.
+    await notify(
+      registration,
+      actor,
+      'Part payment received',
+      `${received} ${registration.currency} received for "${registration.eventTitle}". ${
+        total - received
+      } ${registration.currency} is still to pay, and the ticket follows once it is settled.`
+    ).catch(() => undefined);
   }
+
   void audit.log({
     actor,
     action: 'UPDATE',
     collection: COLLECTIONS.eventRegistrations,
     documentId: registration.id,
-    summary: `Marked ${registration.userName}'s booking ${paid ? 'paid' : 'unpaid'}`,
+    summary: `Recorded ${received} of ${total} ${registration.currency} on ${registration.userName}'s booking`,
   });
+}
+
+/**
+ * The old yes/no call, kept so nothing that used it has to change.
+ *
+ * Paid means the whole amount, unpaid means nothing received — which is
+ * exactly what this function has always meant.
+ */
+export function setPaid(
+  registration: EventRegistration,
+  paid: boolean,
+  actor: AppUser
+): Promise<void> {
+  return setPaidAmount(registration, paid ? Number(registration.amount) || 0 : 0, actor);
 }
 
 /**
@@ -661,7 +739,13 @@ export function toCsv(rows: EventRegistration[]): string {
     'Age group',
     'Price',
     'Currency',
-    'Paid',
+    // Three columns where there was one. "Paid: No" was the same answer for a
+    // family who had paid half and one who had paid nothing, and said nothing
+    // at all about money handed back on a cancellation.
+    'Payment',
+    'Received',
+    'Refunded',
+    'Outstanding',
     'Status',
     'Booked at',
   ];
@@ -700,7 +784,12 @@ export function toCsv(rows: EventRegistration[]): string {
         person.ageGroup,
         person.price,
         row.currency,
-        index === 0 ? (row.paid ? 'Yes' : 'No') : '',
+        // On the first line of a booking only, so a family reads as a block
+        // rather than repeating one payment against every name.
+        index === 0 ? paymentStateOf(row) : '',
+        index === 0 ? receivedOn(row) : '',
+        index === 0 ? refundedOn(row) || '' : '',
+        index === 0 ? outstandingOn(row) : '',
         index === 0 ? row.status : '',
         index === 0 ? toDateString(row.createdAt) : '',
       ]

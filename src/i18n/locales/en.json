@@ -1508,7 +1508,20 @@
     "ticketAwaitingTitle": "Approved — awaiting payment",
     "ticketAwaitingBody": "Your seats are held. Your ticket and its QR code appear here once the payment is received.",
     "ticketReady": "Payment received. The ticket is ready.",
-    "scanAwaitingPayment": "Approved — payment not received, not valid yet"
+    "scanAwaitingPayment": "Approved — payment not received, not valid yet",
+    "partPayment": "Part payment",
+    "partPaymentSaved": "Part payment recorded.",
+    "partPaymentHelp": "The booking is {{total}}, and {{received}} has been received so far. Enter the full amount received, not just the new payment.",
+    "partPaymentHint": "Enter the total received to date. The ticket is issued once the whole amount is in.",
+    "amountReceived": "Total received",
+    "amountInvalid": "Enter a valid amount.",
+    "partPaidChip": "Part paid {{received}} of {{total}} {{currency}}",
+    "refundAndCancel": "Refund and cancel",
+    "refundAmount": "Refund",
+    "refundHint": "Leave 0 to cancel without refunding. This is recorded with the cancellation and cannot be changed afterwards.",
+    "refundHelp": "{{name}}'s booking is cancelled by this, and {{held}} has been received. How much is being given back?",
+    "refunded": "Cancelled, and {{amount}} recorded as refunded.",
+    "refundedChip": "Refunded {{amount}} {{currency}}"
   },
   "notes": {
     "new": "New note",
@@ -1953,6 +1966,19 @@
     "budgetKind": "A planned figure — part of the budget, not money that has moved.",
     "actualKind": "Money that has actually been received or paid.",
     "budgetSpent": "Spent of budget",
-    "deleteBudget": "Remove this line from the budget? The real entries are not affected."
+    "deleteBudget": "Remove this line from the budget? The real entries are not affected.",
+    "refunded": "Refunded",
+    "perPerson": "Per person",
+    "peopleCounted": "People counted",
+    "costPerPerson": "Cost per person",
+    "breakEvenPerPerson": "Needed per person to break even",
+    "plannedCostPerPerson": "Planned cost per person",
+    "perPersonNote": "Counted over everyone attending, not over bookings — a family of five is five people. Break-even takes donations and sponsorship into account.",
+    "perPersonNobody": "Nobody has booked yet, so there is no one to divide the cost between.",
+    "reports": "Reports",
+    "reportBudget": "Budget against actual",
+    "reportBudgetHint": "Category by category, what was planned and what it came to.",
+    "reportIncome": "Income and expenses",
+    "reportIncomeHint": "Everything in and out, with the per-person figures and every entry."
   }
 }
