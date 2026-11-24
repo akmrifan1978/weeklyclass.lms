@@ -54,6 +54,7 @@ export function BookingsSheet({
   const [refundAmount, setRefundAmount] = useState('');
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [confirmDeleteOne, setConfirmDeleteOne] = useState<EventRegistration | null>(null);
 
   const load = useCallback(async () => {
     if (!event) return [] as EventRegistration[];
@@ -294,6 +295,20 @@ export function BookingsSheet({
                     />
                   </>
                 ) : null}
+
+                {/* Outside the block above on purpose: a cancelled or declined
+                    booking has no other button on its row, and that was the
+                    one state somebody most wants to clear away. Admin only,
+                    which is what the database enforces too. */}
+                {isAdmin ? (
+                  <Button
+                    label={t('common.delete')}
+                    icon="trash-outline"
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => setConfirmDeleteOne(row)}
+                  />
+                ) : null}
               </View>
             </View>
           ))
@@ -412,6 +427,28 @@ export function BookingsSheet({
           containerStyle={{ marginBottom: 0 }}
         />
       </FormSheet>
+
+      <ConfirmDialog
+        visible={Boolean(confirmDeleteOne)}
+        title={t('common.delete')}
+        message={t('event.deleteOneWarning', {
+          name: confirmDeleteOne?.userName ?? '',
+          count: confirmDeleteOne?.seats ?? 0,
+        })}
+        confirmLabel={t('common.delete')}
+        destructive
+        loading={busyId === confirmDeleteOne?.id}
+        onCancel={() => setConfirmDeleteOne(null)}
+        onConfirm={async () => {
+          const row = confirmDeleteOne;
+          if (!row || !user) return;
+          await run(row, async () => {
+            await bookings.deleteBooking(row, user);
+            toast.success(t('event.deleteOneDone'));
+          });
+          setConfirmDeleteOne(null);
+        }}
+      />
 
       {/* The warning names the number and the money, because "are you sure"
           is not information. An event's accounts are built from its bookings,
