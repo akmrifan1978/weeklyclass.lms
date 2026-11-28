@@ -11,8 +11,10 @@ import type {
   EventRegistration,
   EventRegistrationSettings,
   Gender,
+  PromoCode,
   PublicTicket,
 } from '@/types';
+import * as promo from './promoCodeService';
 
 import { forgetCollection, getById, listPage, setDocById, updateDocById, type Page } from './firestore';
 
@@ -169,7 +171,15 @@ export async function book(
   event: CalendarEvent,
   party: { name: string; gender: EventParticipant['gender']; ageGroup: AgeGroup }[],
   user: AppUser,
-  reference?: string | null
+  reference?: string | null,
+  /**
+   * A code that admits this party free, if the organiser issued one.
+   *
+   * Checked here rather than trusted from the screen, and checked again by
+   * the security rules on the write — the form's verdict is a courtesy to the
+   * person typing, not an authority on what they owe.
+   */
+  promoCode?: string | null
 ): Promise<string> {
   const named = party.filter((p) => p.name.trim().length > 0);
   if (named.length < 1) throw new AppError('event.seatsRequired', 'invalid-argument');
@@ -197,6 +207,23 @@ export async function book(
   // and a settings read is neither part of the contention nor cheap to repeat.
   const appSettings = await getSettings().catch(() => null);
   const requireApproval = appSettings?.requireBookingApproval === true;
+
+  /*
+   * The promo code, read and judged before the transaction for the same
+   * reason, and REFUSED LOUDLY rather than ignored.
+   *
+   * A code that has expired or run out must not quietly charge full price: the
+   * person typed it because they believe they have a free place, and silently
+   * billing them is how an argument starts at the door. They are told what is
+   * wrong with it and can book without it.
+   */
+  const typedCode = promo.normaliseCode(promoCode ?? '');
+  let redeemed: PromoCode | null = null;
+  if (typedCode) {
+    const verdict = promo.check(await promo.lookup(typedCode), event);
+    if (!verdict.ok) throw new AppError(verdict.reason ?? 'promo.notFound', 'failed-precondition');
+    redeemed = verdict.promo ?? null;
+  }
 
   await runTransaction(db, async (tx) => {
     const fresh = await tx.get(eventRef);
@@ -226,7 +253,20 @@ export async function book(
       ageGroup: p.ageGroup,
       price: priceFor(settings, p.ageGroup),
     }));
-    const amount = participants.reduce((sum, p) => sum + p.price, 0);
+    /*
+     * The code makes the place free, and says so on every line.
+     *
+     * Each participant's price goes to zero as well as the total, because the
+     * attendee sheet is printed per person and a row showing 30 SAR under a
+     * booking that owes nothing is a contradiction somebody has to resolve at
+     * the door. The event's own prices are untouched — this is one party
+     * admitted free, not a price change.
+     */
+    const priced = participants.reduce((sum, p) => sum + p.price, 0);
+    const amount = redeemed ? 0 : priced;
+    const finalParticipants = redeemed
+      ? participants.map((p) => ({ ...p, price: 0 }))
+      : participants;
 
     tx.set(bookingRef, {
       eventId: event.id,
@@ -235,13 +275,18 @@ export async function book(
       userName: user.fullName,
       userMobile: user.mobile ? formatPhone(user.mobile, user.mobileCountryCode) : null,
       userEmail: user.email ?? null,
-      participants,
+      participants: finalParticipants,
       seats,
       // Frozen at booking time. A price raised next week must not silently
       // change what someone already agreed to pay.
       amount,
       currency: settings.currency ?? '',
       reference: reference?.trim() || null,
+      // Recorded on the booking so the organiser can see WHY this party owes
+      // nothing, and what it would have cost — a free place that leaves no
+      // trace is indistinguishable from a mistake.
+      promoCode: redeemed ? redeemed.code : null,
+      promoWaived: redeemed ? priced : 0,
       // Availability decides, and it is decided HERE — inside the transaction,
       // against a count re-read a moment ago, not against whatever the screen
       // was showing when the button was pressed.
@@ -285,6 +330,23 @@ export async function book(
   });
   forgetBookings();
   await refreshPublicTicket(registrationId);
+
+  /*
+   * Count the redemption AFTER the booking exists, and never let it undo one.
+   *
+   * Counting first would spend a use on a booking that then failed, and a
+   * code limited to five would quietly admit four. Counting after can in
+   * theory let two people redeem the last use at the same moment — a race
+   * worth one free place at most, which is the cheaper of the two mistakes
+   * for a centre inviting guests. A failure here is swallowed for the same
+   * reason: the place has been given, and throwing now would tell the person
+   * their booking failed when it did not.
+   */
+  if (redeemed) {
+    await updateDocById<PromoCode>(COLLECTIONS.promoCodes, redeemed.code, {
+      usedCount: (redeemed.usedCount ?? 0) + 1,
+    }).catch(() => undefined);
+  }
 
   await audit
     .log({

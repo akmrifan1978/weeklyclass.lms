@@ -523,6 +523,38 @@ service cloud.firestore {
      * from their OWN booking, which they may already read - never from these
      * documents, which hold what the event cost the centre.
      */
+    /**
+     * Codes that admit somebody to an event free.
+     *
+     * THE DOCUMENT ID IS THE CODE, which is what lets `promoHonoured()` below
+     * verify a claim on a booking with one `get` instead of a query.
+     *
+     * READ BY ANYONE SIGNED IN, and only by id in practice: the booking form
+     * has to tell somebody whether the code they typed is good before they
+     * commit. Listing is staff-only, so a student cannot pull the whole set
+     * and try them — guessing one at a time is all that is left, against codes
+     * an organiser chooses.
+     *
+     * WRITTEN BY ADMINS ONLY. A code is money given away, and the person who
+     * runs the door is not automatically the person who may decide that.
+     *
+     * THE ONE EXCEPTION: anybody signed in may add one to `usedCount`, because
+     * redeeming a code is what counts it, and the person redeeming is not an
+     * admin. Nothing else may move in that write, the count may only go UP,
+     * and only by one — so a code with five uses cannot be reset to zero and
+     * used for ever.
+     */
+    match /promoCodes/{code} {
+      allow get: if isSignedIn();
+      allow list: if isStaff();
+      allow create, update, delete: if isAdmin()
+                                    || (isSignedIn()
+                                        && onlyChanged(['usedCount', 'updatedAt'])
+                                        && request.resource.data.usedCount is int
+                                        && request.resource.data.usedCount ==
+                                           resource.data.usedCount + 1);
+    }
+
     match /eventFinance/{entryId} {
       allow read: if can('VIEW_EVENT_DASHBOARD');
       allow create, update: if can('MANAGE_EVENT_FINANCE')
@@ -783,6 +815,32 @@ service cloud.firestore {
      * without reading the setting the rule would have to take the client's word
      * for it, which is exactly the thing a client should not be trusted about.
      */
+    /**
+     * Is the free place this booking claims one the centre actually issued?
+     *
+     * A booking may say it owes nothing. The rules cannot work out what it
+     * SHOULD owe — the price lives in a nested map of age bands, and the sum
+     * is arithmetic over a list — but they can insist that a booking claiming
+     * a free place names a code that exists, is switched on, and is either
+     * general or for this very event. Without that, "amount: 0" was a claim
+     * nobody could check.
+     *
+     * One document read, on the booking write only, and only when a code is
+     * claimed: a booking with no code never pays for this.
+     */
+    function promoHonoured(data) {
+      return data.get('promoCode', null) == null
+        || (exists(/databases/$(database)/documents/promoCodes/$(data.promoCode))
+            && get(/databases/$(database)/documents/promoCodes/$(data.promoCode))
+                 .data.get('active', false) == true
+            && get(/databases/$(database)/documents/promoCodes/$(data.promoCode))
+                 .data.get('deleted', false) == false
+            && (get(/databases/$(database)/documents/promoCodes/$(data.promoCode))
+                  .data.get('eventId', null) == null
+                || get(/databases/$(database)/documents/promoCodes/$(data.promoCode))
+                     .data.eventId == data.eventId));
+    }
+
     function bookingsNeedApproval() {
       return get(/databases/$(database)/documents/settings/app)
                .data.get('requireBookingApproval', false) == true;
@@ -855,6 +913,8 @@ service cloud.firestore {
                     && request.resource.data.seats is int
                     && request.resource.data.seats > 0
                     && request.resource.data.paid == false
+                    // A free place must name a code the centre issued.
+                    && promoHonoured(request.resource.data)
                     && (request.resource.data.status == 'pending'
                         || (request.resource.data.status == 'confirmed'
                             && !bookingsNeedApproval()

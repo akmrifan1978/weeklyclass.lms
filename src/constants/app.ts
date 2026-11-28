@@ -21,6 +21,12 @@ export const COLLECTIONS = {
   publicTickets: 'publicTickets',
   /** One event's income and expenses. Never more than one event per row. */
   eventFinance: 'eventFinance',
+  /**
+   * Codes that admit somebody free. The DOCUMENT ID IS THE CODE, in capitals,
+   * which is what makes uniqueness free and lets the security rules look one
+   * up without a query.
+   */
+  promoCodes: 'promoCodes',
   passwordResets: 'passwordResets',
   passwordChanges: 'passwordChanges',
   branches: 'branches',
