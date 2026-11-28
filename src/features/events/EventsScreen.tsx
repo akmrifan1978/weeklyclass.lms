@@ -98,12 +98,14 @@ export function EventsScreen({ basePath }: { basePath: string }) {
   const myBookingFor = (event: CalendarEvent) =>
     data?.mine.find((m) => m.eventId === event.id && m.status !== 'cancelled') ?? null;
 
-  const submitBooking = async (party: PartyMember[], reference: string) => {
+  const submitBooking = async (party: PartyMember[], reference: string, promoCode = '') => {
     if (!booking || !user) return;
     setBusy(true);
     try {
-      await bookings.book(booking, party, user, reference);
-      toast.success(t('event.booked'));
+      await bookings.book(booking, party, user, reference, promoCode || null);
+      // A free place is worth saying out loud: somebody who used a code should
+      // see that it worked, not just that a booking was made.
+      toast.success(t(promoCode ? 'promo.bookedFree' : 'event.booked'));
       setBooking(null);
       void reload();
     } catch (err) {

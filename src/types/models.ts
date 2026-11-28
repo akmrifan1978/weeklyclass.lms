@@ -554,6 +554,42 @@ export interface PublicTicket extends BaseDoc {
  * booking time, and a copy here would be the same riyal in two places, free to
  * disagree with itself.
  */
+/**
+ * A code that admits somebody to an event without paying.
+ *
+ * THE DOCUMENT ID IS THE CODE, in capitals. Two codes cannot collide, looking
+ * one up is a direct read rather than a query, and the security rules can
+ * check a claimed code on the booking itself — none of which is true of a
+ * code stored in a field.
+ *
+ * Only "free" exists for now, and the kind is stored anyway so that a
+ * half-price code can be added later without every existing document needing
+ * to be rewritten to say what it already is.
+ */
+export interface PromoCode extends BaseDoc {
+  /** Capitals, no spaces. Equal to the document id. */
+  code: string;
+  kind: 'free';
+  /**
+   * The one event it works on, or null for any event that charges.
+   *
+   * Scoped by default in the organiser's mind — "a code for the Umrah trip" —
+   * so the form asks for an event and only a deliberate choice makes it
+   * general.
+   */
+  eventId?: string | null;
+  eventTitle?: string | null;
+  /** Null means no limit. Counted in `usedCount` as bookings redeem it. */
+  maxUses?: number | null;
+  usedCount: number;
+  /** Off without deleting, so a code can be stopped and its history kept. */
+  active: boolean;
+  /** ISO date. Absent means it never expires. */
+  expiresOn?: string | null;
+  /** Who it was given to, or why. For the organiser's own records. */
+  note?: string | null;
+}
+
 export interface EventFinanceEntry extends BaseDoc {
   /** The event this belongs to. Every read is filtered by it. */
   eventId: string;
@@ -609,6 +645,16 @@ export interface EventRegistration extends BaseDoc {
   amount: number;
   /** Whatever `referenceLabel` asked for, if anything. */
   reference?: string | null;
+  /**
+   * The code that admitted this party free, and what it would have cost.
+   *
+   * Both recorded, because a booking owing nothing on a paid event is either
+   * an invitation or a mistake, and only the code tells them apart. The
+   * waived figure is what the accounts would have taken, which is the number
+   * an organiser wants when deciding whether to keep issuing codes.
+   */
+  promoCode?: string | null;
+  promoWaived?: number;
   /**
    * When the confirmation email went out, or null while one is owed.
    *

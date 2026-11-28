@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { brand, colors, fontSize, fontWeight, radius, spacing } from '@/constants/theme';
 import { ageGroupFromDateOfBirth } from '@/utils/date';
 import * as bookings from '@/services/eventRegistrationService';
+import * as promoService from '@/services/promoCodeService';
 import { AGE_GROUPS, type AgeGroup, type CalendarEvent, type Gender } from '@/types';
 import {
   Button,
@@ -48,7 +49,7 @@ export function BookingSheet({
   visible: boolean;
   submitting: boolean;
   onClose: () => void;
-  onConfirm: (party: PartyMember[], reference: string) => void;
+  onConfirm: (party: PartyMember[], reference: string, promoCode: string) => void;
   /**
    * An existing booking being corrected, rather than a new one being made.
    *
@@ -75,6 +76,41 @@ export function BookingSheet({
   const [editedSelfAge, setEditedSelfAge] = useState<AgeGroup>(
     editing?.party[0]?.ageGroup ?? 'adult'
   );
+
+  /**
+   * The promo code, checked while it is being typed rather than on submit.
+   *
+   * Somebody given a code wants to know it works BEFORE they commit to a
+   * booking, and an organiser reading out a code over the phone wants to hear
+   * "it says free" straight away. Checking costs one read of one document, and
+   * only when the person presses Apply — not on every keystroke.
+   */
+  const [promoCode, setPromoCode] = useState('');
+  const [promoState, setPromoState] = useState<{
+    ok: boolean;
+    checking: boolean;
+    message: string | null;
+  }>({ ok: false, checking: false, message: null });
+
+  const applyPromo = async () => {
+    const typed = promoService.normaliseCode(promoCode);
+    setPromoCode(typed);
+    if (!event || !typed) {
+      setPromoState({ ok: false, checking: false, message: null });
+      return;
+    }
+    setPromoState({ ok: false, checking: true, message: null });
+    try {
+      const verdict = await promoService.verify(typed, event);
+      setPromoState({
+        ok: verdict.ok,
+        checking: false,
+        message: verdict.ok ? t('promo.applied') : t(verdict.reason ?? 'promo.notFound'),
+      });
+    } catch {
+      setPromoState({ ok: false, checking: false, message: t('promo.notFound') });
+    }
+  };
 
   const settings = event?.registration;
 
@@ -130,7 +166,7 @@ export function BookingSheet({
       visible={visible}
       title={editing ? t('event.editBooking') : t('event.registration')}
       onClose={onClose}
-      onSubmit={() => onConfirm(party, reference)}
+      onSubmit={() => onConfirm(party, reference, promoState.ok ? promoCode : '')}
       submitting={submitting}
       submitLabel={editing ? t('common.save') : t('event.confirmBooking')}
     >
@@ -198,6 +234,35 @@ export function BookingSheet({
           icon="card-outline"
           hint={t('event.referenceOptional')}
         />
+      ) : null}
+
+      {/* Only where there is something to waive. A code box on a free event
+          asks a question with no answer. Hidden while editing too: an admin
+          correcting a booking is not redeeming a code. */}
+      {!editing && total > 0 ? (
+        <View style={styles.promoRow}>
+          <TextField
+            label={t('promo.code')}
+            value={promoCode}
+            onChangeText={(v) => {
+              setPromoCode(promoService.normaliseCode(v));
+              // A changed code is an unchecked code: the old verdict must not
+              // linger and suggest a free place that was never granted.
+              setPromoState({ ok: false, checking: false, message: null });
+            }}
+            icon="pricetag-outline"
+            autoCapitalize="characters"
+            hint={promoState.message ?? t('promo.codeOptional')}
+            containerStyle={{ flex: 1, marginBottom: 0 }}
+          />
+          <Button
+            label={t('promo.apply')}
+            size="sm"
+            variant="outline"
+            loading={promoState.checking}
+            onPress={() => void applyPromo()}
+          />
+        </View>
       ) : null}
 
       <View style={styles.familyHeader}>
@@ -278,12 +343,25 @@ export function BookingSheet({
       </View>
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>{t('event.totalFee')}</Text>
-        <Text style={styles.totalFee}>
-          {total} {settings?.currency ?? ''}
-        </Text>
+        {/* A redeemed code shows the price struck through beside the zero, so
+            the person can see what the code is worth and the organiser taking
+            the booking over the phone can read both numbers back. */}
+        {promoState.ok ? (
+          <Text style={styles.totalFee}>
+            <Text style={styles.struck}>
+              {total} {settings?.currency ?? ''}
+            </Text>
+            {'  '}
+            {t('promo.free')}
+          </Text>
+        ) : (
+          <Text style={styles.totalFee}>
+            {total} {settings?.currency ?? ''}
+          </Text>
+        )}
       </View>
 
-      <Text style={styles.payNote}>{t('event.payNote')}</Text>
+      <Text style={styles.payNote}>{t(promoState.ok ? 'promo.payNote' : 'event.payNote')}</Text>
     </FormSheet>
   );
 }
@@ -387,6 +465,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   totalLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
+  promoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  struck: { textDecorationLine: 'line-through', color: colors.textMuted },
   totalSeats: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
   totalFee: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.success },
   payNote: {
